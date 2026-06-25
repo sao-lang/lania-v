@@ -1,0 +1,59 @@
+{
+  "name": "lania-v",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "playground/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:playground",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "bench": "playwright test -c playwright.bench.config.ts && node scripts/generate-benchmark-report.mjs",
+    "bench:headed": "playwright test -c playwright.bench.config.ts --headed",
+    "bench:report": "node scripts/generate-benchmark-report.mjs",
+    "lint": "eslint . --ext .ts,.tsx,.js,.mjs,.cjs && markdownlint \"**/*.md\"",
+    "format": "prettier . --write",
+    "build:runtime": "npm run build --workspace @lania-v/runtime",
+    "build:compiler": "npm run build --workspace @lania-v/compiler-core && npm run build --workspace @lania-v/compiler-tsx && npm run build --workspace @lania-v/vite-plugin",
+    "dev:playground": "npm run dev --workspace @lania-v/playground-todo",
+    "test:coverage": "vitest run --coverage",
+    "format:check": "prettier . --check",
+    "commit": "cz",
+    "prepare": "node scripts/prepare-husky.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "npm run build && changeset publish",
+    "release:dry": "npm run build && changeset publish --dry-run"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.28.1",
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "@playwright/test": "^1.59.1",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@typescript-eslint/parser": "^8.31.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "commitizen": "^4.3.1",
+    "cz-git": "^1.11.0",
+    "eslint": "^9.24.0",
+    "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
+    "markdownlint-cli": "^0.44.0",
+    "playwright": "^1.59.1",
+    "prettier": "^3.5.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2",
+    "vitest": "^3.1.1"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-git"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@lania-v/compiler-core": ["../compiler-core/src/index.ts"],
+      "@lania-v/compiler-tsx": ["../compiler-tsx/src/index.ts"],
+      "@lania-v/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@lania-v/playground-todo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@lania-v/compiler-tsx": "0.0.0",
+    "@lania-v/runtime": "0.0.0",
+    "@lania-v/vite-plugin": "0.0.0"
+  },
+  "files": [
+    "src",
+    "dist"
+  ]
+}

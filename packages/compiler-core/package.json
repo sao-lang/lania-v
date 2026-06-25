@@ -1,0 +1,31 @@
+{
+  "name": "@lania-v/compiler-core",
+  "version": "0.0.0",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\" && tsc -p tsconfig.json && node ../../scripts/patch-esm-specifiers.mjs dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@lania-v/shared": "^0.0.0",
+    "magic-string": "^0.30.18"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false
+}

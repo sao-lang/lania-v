@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lania-v Todo playground</title>
+    <style>
+      :root {
+        --bg0: #070a12;
+        --bg1: #0b1020;
+        --card: rgba(255, 255, 255, 0.06);
+        --card-2: rgba(255, 255, 255, 0.08);
+        --border: rgba(255, 255, 255, 0.10);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --muted-2: rgba(255, 255, 255, 0.52);
+        --brand: #8b5cf6;
+        --brand-hi: #a78bfa;
+        --danger: #f87171;
+        --shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
+        --radius: 16px;
+        --radius-sm: 12px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        color: var(--text);
+        background: radial-gradient(1100px 700px at 10% -10%, rgba(139, 92, 246, 0.25), transparent 55%),
+          radial-gradient(900px 650px at 105% 20%, rgba(59, 130, 246, 0.18), transparent 55%),
+          radial-gradient(900px 650px at 40% 110%, rgba(16, 185, 129, 0.12), transparent 55%),
+          linear-gradient(180deg, var(--bg0), var(--bg1));
+      }
+
+      #app {
+        min-height: 100%;
+      }
+
+      .todo-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: var(--radius);
+        padding: 16px 16px 14px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .todo-card header h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+        letter-spacing: 0.2px;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      :focus {
+        outline: none;
+      }
+
+      :focus-visible {
+        outline: 2px solid rgba(124, 58, 237, 0.65);
+        outline-offset: 2px;
+      }
+
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .chip {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--text);
+        padding: 7px 11px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 1;
+        transition: background 140ms ease, border-color 140ms ease, transform 70ms ease;
+        user-select: none;
+      }
+
+      .chip:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+
+      .chip:active {
+        transform: translateY(1px);
+      }
+
+      .chip[aria-pressed="true"] {
+        border-color: rgba(139, 92, 246, 0.55);
+        background: rgba(139, 92, 246, 0.18);
+      }
+
+      .btn {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(139, 92, 246, 0.95), rgba(124, 58, 237, 0.95));
+        color: var(--text);
+        padding: 9px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-size: 12px;
+        transition: filter 140ms ease, transform 70ms ease, box-shadow 140ms ease;
+        user-select: none;
+        box-shadow: 0 10px 26px rgba(124, 58, 237, 0.25);
+      }
+
+      .btn:hover {
+        filter: brightness(1.06);
+        box-shadow: 0 12px 32px rgba(124, 58, 237, 0.32);
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+      }
+
+      .btn:disabled,
+      .chip:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .danger {
+        border-color: rgba(248, 113, 113, 0.55);
+        background: linear-gradient(180deg, rgba(248, 113, 113, 0.95), rgba(239, 68, 68, 0.95));
+        box-shadow: 0 10px 26px rgba(239, 68, 68, 0.22);
+      }
+
+      .input {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        outline: none;
+        transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+      }
+
+      .input:hover {
+        background: rgba(255, 255, 255, 0.055);
+      }
+
+      .input:focus-visible {
+        border-color: rgba(139, 92, 246, 0.60);
+        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.20);
+      }
+
+      .input::placeholder {
+        color: rgba(255, 255, 255, 0.35);
+      }
+
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .item {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        padding: 10px;
+      }
+
+      .item .row {
+        flex-wrap: wrap;
+      }
+
+      .item p {
+        margin: 6px 0;
+      }
+
+      .summary {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .empty {
+        margin: 0;
+        color: var(--muted-2);
+        font-size: 12px;
+        font-family: var(--mono);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .done {
+        text-decoration: line-through;
+        color: rgba(255, 255, 255, 0.55);
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      #portal-root {
+        position: fixed;
+        inset: auto 18px 18px auto;
+        width: min(420px, calc(100vw - 36px));
+        padding: 12px;
+        border-radius: var(--radius);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.42);
+        backdrop-filter: blur(10px);
+      }
+
+      #portal-root::before {
+        content: "Teleport Portal";
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="portal-root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "path": "cz-git",
+  "maxHeaderLength": 100,
+  "maxSubjectLength": 100,
+  "scopes": [
+    "runtime",
+    "compiler-core",
+    "compiler-tsx",
+    "compiler-sfc",
+    "vite-plugin",
+    "shared",
+    "playground",
+    "repo",
+    "docs",
+    "tests"
+  ],
+  "allowCustomScopes": true,
+  "allowBreakingChanges": [
+    "feat",
+    "fix",
+    "refactor"
+  ],
+  "subjectLimit": 100,
+  "messages": {
+    "type": "选择提交类型:",
+    "scope": "选择影响范围:",
+    "customScope": "输入自定义范围:",
+    "subject": "填写简短描述:",
+    "body": "填写详细描述(可选):",
+    "breaking": "填写 Breaking Change 描述(可选):",
+    "footerPrefixesSelect": "选择关联 issue 前缀(可选):",
+    "customFooterPrefix": "输入自定义前缀:",
+    "footer": "填写 issue 引用，例如 #123(可选):",
+    "confirmCommit": "确认提交?"
+  }
+}
