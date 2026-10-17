@@ -1,0 +1,85 @@
+import { describe, expect, it } from 'vitest';
+
+import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
+
+const compile = (source: string): string =>
+  compileFunctionComponentTsxToModule('FormField.tsx', source.trim());
+
+describe('compiler form value support', () => {
+  it('emits formAssociated and a synchronized effect updater', () => {
+    const moduleCode = compile(`
+import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+
+export default defineComponent(function FormField() {
+  const value = createSignal('seed');
+  useFormValue(() => value());
+  return <input value={value()} />;
+});
+`);
+
+    expect(moduleCode).toContain('static formAssociated = true;');
+    expect(moduleCode).toContain('this._setFormValue(this.value());');
+    // 复用 effect 通道：依赖必须挂到负责写表单值的 updater 上。
+    expect(moduleCode).toMatch(/const runEffect___formValue = new EffectUpdater/);
+    expect(moduleCode).toContain('runEffect___formValue.deps.add(this.value);');
+    expect(moduleCode).toContain('this.registerRuntimeUpdater(runEffect___formValue);');
+  });
+
+  it('does not treat useFormValue as a setup field', () => {
+    const moduleCode = compile(`
+import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+
+export default defineComponent(function FormField() {
+  const value = createSignal('seed');
+  useFormValue(() => value());
+  return <p>{value()}</p>;
+});
+`);
+
+    expect(moduleCode).not.toContain('useFormValue(');
+    expect(moduleCode).not.toContain('__setup_statement_');
+  });
+
+  it('supports the variable declaration form', () => {
+    const moduleCode = compile(`
+import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+
+export default defineComponent(function FormField() {
+  const value = createSignal(1);
+  const formValue = useFormValue(() => value());
+  return <p>{value()}{formValue === undefined ? '' : ''}</p>;
+});
+`);
+
+    expect(moduleCode).toContain('static formAssociated = true;');
+    expect(moduleCode).toContain('this._setFormValue(this.value());');
+  });
+
+  it('skips form association when useFormValue is absent', () => {
+    const moduleCode = compile(`
+import { createSignal, defineComponent } from '@lania-v/runtime';
+
+export default defineComponent(function PlainField() {
+  const value = createSignal('seed');
+  return <p>{value()}</p>;
+});
+`);
+
+    expect(moduleCode).not.toContain('formAssociated');
+    expect(moduleCode).not.toContain('_setFormValue');
+  });
+
+  it('rejects getters with more than one expression', () => {
+    expect(() =>
+      compile(`
+import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+
+export default defineComponent(function FormField() {
+  const value = createSignal('seed');
+  useFormValue(() => { const next = value(); return next; });
+  return <p>{value()}</p>;
+});
+`)
+    ).toThrowError(/useFormValue/);
+  });
+});

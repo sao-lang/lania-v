@@ -78,10 +78,35 @@ const createDisplayNameField = (component: ComponentIR): string => {
   return `static displayName = ${JSON.stringify(component.name)};`;
 };
 
-const createSignalFields = (component: ComponentIR): string[] => {
-  return component.signals.map((signal) => {
-    return `protected ${signal.name} = ${stringifyInitializer(signal.initializer)};`;
-  });
+const createFormAssociatedField = (component: ComponentIR): string => {
+  // 浏览器在 upgrade 时读取该静态标记；必须在 customElements.define 之前就位。
+  return component.formAssociated ? 'static formAssociated = true;' : '';
+};
+
+interface OrderedClassMember {
+  order: number;
+  code: string;
+}
+
+// signal 与 setup field 最终都落成实例字段，初始化顺序必须还原组件体内的声明顺序：
+// `const seed = read(); const count = createSignal(seed);` 一旦按类别分区输出，
+// 就会在 seed 赋值前读取它，直接抛 TypeError。
+const createFieldMembers = (component: ComponentIR): string[] => {
+  const members: OrderedClassMember[] = [
+    ...component.signals.map((signal) => ({
+      order: signal.order ?? 0,
+      code: `protected ${signal.name} = ${stringifyInitializer(signal.initializer)};`,
+    })),
+    ...component.setupBindings
+      .filter((binding) => binding.kind === 'field')
+      .map((binding) => ({
+        order: binding.order ?? 0,
+        code: `protected ${binding.name} = ${stringifyInitializer(binding.initializer)};`,
+      })),
+  ];
+
+  // sort 本身稳定：没有 order 信息时（例如类组件）维持原有的 signals -> setup 顺序。
+  return members.sort((left, right) => left.order - right.order).map((member) => member.code);
 };
 
 const createComputedFields = (component: ComponentIR): string[] => {
@@ -99,9 +124,16 @@ const createComputedFields = (component: ComponentIR): string[] => {
   });
 };
 
+// 字段型 setup 绑定已经并入 createFieldMembers，这里只处理方法与独立语句。
 const createSetupBindingMembers = (component: ComponentIR): string[] => {
-  return component.setupBindings.map((binding) => {
-    if (binding.kind === 'method') {
+  return component.setupBindings
+    .filter((binding) => binding.kind !== 'field')
+    .map((binding) => {
+      if (binding.kind === 'statement') {
+        // statement 绑定真正执行发生在 connected/disconnected 中，这里只预留清理句柄。
+        return `private ${binding.name}: (() => void) | undefined = undefined;`;
+      }
+
       const signature = binding.params.trim();
       const body = binding.body?.trim().length ? binding.body : 'return;';
 
@@ -112,15 +144,7 @@ const createSetupBindingMembers = (component: ComponentIR): string[] => {
         indent(body),
         `}`,
       ].join('\n');
-    }
-
-    if (binding.kind === 'statement') {
-      // statement 绑定真正执行发生在 connected/disconnected 中，这里只预留清理句柄。
-      return `private ${binding.name}: (() => void) | undefined = undefined;`;
-    }
-
-    return `protected ${binding.name} = ${stringifyInitializer(binding.initializer)};`;
-  });
+    });
 };
 
 const getStatementSetupBindings = (component: ComponentIR) => {
@@ -485,8 +509,9 @@ export const generateClassComponentCode = (
     observedAttributesField ?? '',
     createTagNameField(component),
     createDisplayNameField(component),
+    createFormAssociatedField(component),
     ...createPropFields(component),
-    ...createSignalFields(component),
+    ...createFieldMembers(component),
     ...createComputedFields(component),
     ...createSetupBindingMembers(component),
     ssrCode.method,

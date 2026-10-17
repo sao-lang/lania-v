@@ -327,10 +327,42 @@ DOM 事件和组件事件统一使用 `onXxx`：
 
 详细能力与约束请看 `enhanced-components.md`，阶段收敛目标见 `stages.md`。
 
+### 5.7 表单关联
+
+默认情况下组件是普通自定义元素，不参与原生表单提交。需要参与时显式声明：
+
+```tsx
+import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+
+export default defineComponent(function CredentialField() {
+  const account = createSignal('');
+
+  // 组件对外暴露的表单值
+  useFormValue(() => account());
+
+  return <input value={account()} onInput={(event) => account.set(event.target.value)} />;
+});
+```
+
+编译产物会额外生成：
+
+- `static formAssociated = true`，让浏览器在 upgrade 时把组件纳入表单；
+- 一个 effect updater，在 `account` 变化时调用 `_setFormValue(...)`。
+
+因此组件会出现在 `form.elements` 中，`new FormData(form)` 也会带上当前值（键名取宿主元素的 `name` 属性）。`null` / `undefined` 会被视为“不上报”；布尔值上报为 `'on'` / 不上报。
+
+注意：
+
+- `useFormValue` 只能接受单表达式 getter（`() => expr` 或 `() => { return expr; }`）。
+- 它是编译期 API，未收录进编译产物；在未编译的运行时里直接调用会抛错。
+
 ## 6. 当前边界
 
 当前可以明确的结论：
 
 - `FC / TSX` 主路径已经收口，可作为正式文档入口使用。
 - `.lania.tsx` 编译失败会带源码定位信息，并透传到 Vite overlay。
+- `.lania.tsx` 的模块输出只保留「业务 import + 组件类」：模块作用域里的运行时常量与函数不会进入产物。
+  需要复用的辅助逻辑请放到兄弟 `.ts` 模块再 import（参考 `playground/todo/src/todo-shared.ts`、
+  `playground/login/src/login-storage.ts`）。
 - 复杂增强组件组合、SSR / Hydration 和兼容层行为，优先以测试与 playground 为准。

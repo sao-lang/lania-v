@@ -28,6 +28,38 @@ export interface ChangedPropRecord {
 export type ChangedProps = Map<string, ChangedPropRecord>;
 export type RenderMode = 'shadow' | 'light';
 
+/**
+ * 把组件侧的值归一化成 `ElementInternals.setFormValue` 可接受的形式。
+ *
+ * 规范只接受 `string | File | FormData | null`，而组件内部通常存的是任意 signal 值，
+ * 因此在边界处统一做一次转换。
+ */
+const normalizeFormValue = (value: unknown): string | File | FormData | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  // 非浏览器环境（或旧运行时）可能没有 File / FormData 构造器。
+  if (typeof File !== 'undefined' && value instanceof File) {
+    return value;
+  }
+
+  if (typeof FormData !== 'undefined' && value instanceof FormData) {
+    return value;
+  }
+
+  if (typeof value === 'boolean') {
+    // 与原生 checkbox 保持一致：选中上报 'on'。
+    return value ? 'on' : null;
+  }
+
+  return String(value);
+};
+
 const ReactiveElementBase: typeof HTMLElement =
   (globalThis.HTMLElement ?? class {} as typeof HTMLElement);
 
@@ -39,6 +71,15 @@ export abstract class ReactiveElement extends ReactiveElementBase {
    */
   static renderMode: RenderMode = 'shadow';
   static styles?: StaticStyles;
+  /**
+   * 是否参与原生表单提交。
+   *
+   * 编译期识别到 `useFormValue(...)` 时会生成 `static formAssociated = true`，
+   * 浏览器随后会把这个自定义元素纳入 `form.elements`，并接受 `setFormValue` 上报的值。
+   */
+  static formAssociated = false;
+
+  private _internals?: ElementInternals;
 
   protected renderRoot!: ShadowRoot | this;
   protected _slots: Node[] = [];
@@ -66,6 +107,29 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     this._updateRequested = false;
     this.performUpdate();
   };
+
+  constructor() {
+    super();
+
+    const ctor = this.constructor as typeof ReactiveElement;
+    // `attachInternals` 只能在构造期调用；未声明 formAssociated 的组件不拿 Internals，
+    // 避免被意外纳入 form.elements。
+    if (ctor.formAssociated && typeof this.attachInternals === 'function') {
+      this._internals = this.attachInternals();
+    }
+  }
+
+  /** 把当前值同步给宿主表单；未声明 `useFormValue` 的组件调用时为空操作。 */
+  protected _setFormValue(value: unknown): void {
+    const internals = this._internals;
+
+    // 部分 DOM 实现（例如 jsdom）只提供 attachInternals，没有 setFormValue。
+    if (!internals || typeof internals.setFormValue !== 'function') {
+      return;
+    }
+
+    internals.setFormValue(normalizeFormValue(value));
+  }
 
   /**
    * 组件连接到 DOM 时：
@@ -290,6 +354,11 @@ export abstract class ReactiveElement extends ReactiveElementBase {
   protected registerRuntimeUpdater(updater: Updater): void {
     this._runtimeUpdaters.push(updater);
 
+    // effect 语义要求挂载后先执行一次，否则像表单值这类"只写不读"的副作用永远不会落地。
+    if ((updater as { kind?: unknown }).kind === 'effect') {
+      updater.dirty = true;
+    }
+
     if (this._isConnectedFlag) {
       updater.attach();
     }
@@ -312,19 +381,30 @@ export abstract class ReactiveElement extends ReactiveElementBase {
 
       // 运行时 updater 在组件进入一次更新周期时至少执行一轮，
       // 避免结构型 slot 的依赖遗漏导致“状态已变、分支未刷新”。
+      const forceStructuralPass = this._forceRuntimeUpdaterFlush;
+
       for (const updater of this._runtimeUpdaters) {
-        const shouldForceRun =
-          this._forceRuntimeUpdaterFlush &&
-          updater.slots.some((slot) => {
-            if (slot.type !== 'if') {
-              return false;
+        let shouldRun = updater.dirty;
+        const slots = updater.slots;
+
+        // 强制轮只补跑条件槽；普通绑定槽已经在 signal 通知时精确执行过。
+        if (!shouldRun && forceStructuralPass) {
+          for (let index = 0; index < slots.length; index += 1) {
+            if (slots[index].type === 'if') {
+              shouldRun = true;
+              break;
             }
-            return true;
-          });
-        const shouldRun =
-          shouldForceRun ||
-          updater.dirty ||
-          updater.slots.some((slot) => this._slotTable.isDirty(slot.index));
+          }
+        }
+
+        if (!shouldRun) {
+          for (let index = 0; index < slots.length; index += 1) {
+            if (this._slotTable.isDirty(slots[index].index)) {
+              shouldRun = true;
+              break;
+            }
+          }
+        }
 
         if (shouldRun) {
           updater.run();
@@ -343,6 +423,16 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     }
 
     this._autoTrackDone = true;
+
+    // 已经被 runtime updater 订阅的 signal 由各自 updater 精确驱动；
+    // 再挂组件级 requestUpdate 会让每次 set 同时走两条更新路径（重复执行）。
+    const driven = new Set<Signal<any>>();
+    for (const updater of this._runtimeUpdaters) {
+      for (const signal of updater.deps) {
+        driven.add(signal);
+      }
+    }
+
     for (const key of Object.keys(this)) {
       const value = (this as unknown as Record<string, unknown>)[key];
       if (
@@ -361,6 +451,9 @@ export abstract class ReactiveElement extends ReactiveElementBase {
         })()
       ) {
         const signal = value as Signal<any>;
+        if (driven.has(signal)) {
+          continue;
+        }
         this.trackSignal(signal);
       }
     }

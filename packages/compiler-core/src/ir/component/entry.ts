@@ -119,6 +119,7 @@ export const lowerComponentDeclarationToIR = (
       .map((signal) => ({
         name: signal.name,
         initializer: signal.initializer,
+        order: signal.order,
       })),
     computed: component.computed.map((computed) => ({
       name: computed.name,
@@ -150,7 +151,9 @@ export const lowerComponentDeclarationToIR = (
       params: binding.params,
       body: binding.body,
       initializer: binding.initializer,
+      order: binding.order,
     })),
+    formAssociated: component.formAssociated ?? false,
     template: {
       type: 'TemplateIR',
       roots: template.nodes,

@@ -61,6 +61,31 @@ const getEntryByUpdater = (
   return component.dependencyAnalysis.entries.find((entry) => entry.updater === updaterName);
 };
 
+// computed 可以继续依赖 computed，因此展开必须递归到叶子 signal。
+// 只展开一层会把中间 computed 名字留给 codegen，而 signalBindingMap 里没有这些名字，
+// 最终既不生成 `.deps.add(...)`，运行时也就永远不会订阅到底层 signal。
+const resolveLeafDependencies = (
+  computedDependencyChain: Record<string, string[]>,
+  computedNames: ReadonlySet<string>,
+  name: string,
+  chain: ReadonlySet<string> = new Set<string>()
+): string[] => {
+  if (!computedNames.has(name)) {
+    return [name];
+  }
+
+  if (chain.has(name)) {
+    // 循环引用的 computed 链在此截断，避免无限展开。
+    return [];
+  }
+
+  const nextChain = new Set(chain).add(name);
+
+  return (computedDependencyChain[name] ?? []).flatMap((dependency) =>
+    resolveLeafDependencies(computedDependencyChain, computedNames, dependency, nextChain)
+  );
+};
+
 const createSlotUpdater = (
   component: ComponentIR,
   slot: AllocatedSlotIR
@@ -96,10 +121,12 @@ const createSlotUpdater = (
 
         (entry?.signalDependencies ?? []).forEach((dependency) => {
           if (dependency.kind === 'this-property-read' && computedNames.has(dependency.name)) {
-            // 条件依赖读到 computed 时，展开成底层 signal 链，避免运行时只订阅表层 computed 名称。
-            (computedDependencyChain[dependency.name] ?? []).forEach((signalName) =>
-              dependencies.add(signalName)
-            );
+            // 条件依赖读到 computed 时递归展开成底层 signal 链，避免运行时只订阅表层 computed 名称。
+            resolveLeafDependencies(
+              computedDependencyChain,
+              computedNames,
+              dependency.name
+            ).forEach((signalName) => dependencies.add(signalName));
             return;
           }
 
@@ -130,10 +157,12 @@ const createSlotUpdater = (
 
       (entry?.signalDependencies ?? []).forEach((dependency) => {
         if (dependency.kind === 'this-property-read' && computedNames.has(dependency.name)) {
-          // 单 slot updater 也遵循同样的 computed 依赖展开规则。
-          (computedDependencyChain[dependency.name] ?? []).forEach((signalName) =>
-            dependencies.add(signalName)
-          );
+          // 单 slot updater 也遵循同样的递归 computed 依赖展开规则。
+          resolveLeafDependencies(
+            computedDependencyChain,
+            computedNames,
+            dependency.name
+          ).forEach((signalName) => dependencies.add(signalName));
           return;
         }
 

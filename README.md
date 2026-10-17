@@ -58,6 +58,7 @@ lania-v/
 │   └── shared/            跨包共享契约（增强组件注册表、协议常量）
 ├── playground/
 │   ├── todo/              默认开发入口与功能验收
+│   ├── login/             表单与交互验收（登录页）
 │   ├── compiler/          编译链路可视化
 │   └── benchmark/         横向性能基准
 ├── docs/                  文档

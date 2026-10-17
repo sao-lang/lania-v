@@ -117,9 +117,12 @@ const isPropertyRead = (node: ts.PropertyAccessExpression): boolean => {
 
   if (
     (ts.isPrefixUnaryExpression(parent) || ts.isPostfixUnaryExpression(parent)) &&
-    parent.operand === node
+    parent.operand === node &&
+    (parent.operator === ts.SyntaxKind.PlusPlusToken ||
+      parent.operator === ts.SyntaxKind.MinusMinusToken)
   ) {
-    // `++this.foo` / `this.foo++` 也属于写入语义。
+    // `++this.foo` / `this.foo++` / `--this.foo` 属于写入语义；
+    // 其余一元运算符（`!`、`-`、`typeof` 等）仍然只是读取，必须计入依赖。
     return false;
   }
 

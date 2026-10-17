@@ -37,6 +37,15 @@ import {
   getSingleArrowExpression,
 } from './helpers';
 
+/**
+ * 把“语句序号 + 语句内声明序号”压成一个可比较的顺序值。
+ *
+ * signal 与 setup 字段在 IR 中被拆进两个数组，代码生成阶段需要靠这个顺序
+ * 还原它们在组件体里的真实先后，否则会出现“先读后赋值”。
+ */
+const createDeclarationOrder = (statementIndex: number, declarationIndex = 0): number =>
+  statementIndex * 100 + declarationIndex;
+
 /** 收集 `createSignal` 形式的响应式声明。 */
 export const collectFunctionSignals = (
   functionDeclaration: FunctionComponentLike,
@@ -48,13 +57,13 @@ export const collectFunctionSignals = (
 
   const signals: SignalDeclaration[] = [];
 
-  functionDeclaration.body.statements.forEach((statement) => {
+  functionDeclaration.body.statements.forEach((statement, statementIndex) => {
     // signal 只从函数顶层变量声明里识别，避免把局部临时值误当成组件状态。
     if (!ts.isVariableStatement(statement)) {
       return;
     }
 
-    statement.declarationList.declarations.forEach((declaration) => {
+    statement.declarationList.declarations.forEach((declaration, declarationIndex) => {
       const calleeName = declaration.initializer
         && ts.isCallExpression(declaration.initializer)
         ? getCallExpressionName(declaration.initializer.expression)
@@ -104,6 +113,7 @@ export const collectFunctionSignals = (
         name: signalName,
         signalKind: 'unknown',
         initializer: declaration.initializer?.getText(sourceFile) ?? null,
+        order: createDeclarationOrder(statementIndex, declarationIndex),
       });
     });
   });
@@ -309,6 +319,51 @@ export const collectFunctionLifecycleCallbacks = (
 };
 
 // setup 绑定是最后一道兜底采集：凡是不属于专门通道的顶层声明，都在这里保留下来。
+/** 收集 `useFormValue(() => expr)` 中声明的表单值表达式。 */
+export const collectFunctionFormValue = (
+  functionDeclaration: FunctionComponentLike,
+  sourceFile: ts.SourceFile
+): string | null => {
+  if (!functionDeclaration.body || !ts.isBlock(functionDeclaration.body)) {
+    return null;
+  }
+
+  let formValue: string | null = null;
+
+  functionDeclaration.body.statements.forEach((statement) => {
+    // 支持 `useFormValue(...)` 与 `const formValue = useFormValue(...)` 两种写法。
+    const call =
+      ts.isExpressionStatement(statement)
+        ? statement.expression
+        : ts.isVariableStatement(statement) && statement.declarationList.declarations.length === 1
+          ? statement.declarationList.declarations[0]?.initializer
+          : null;
+
+    if (
+      !call ||
+      !ts.isCallExpression(call) ||
+      getCallExpressionName(call.expression) !== 'useFormValue'
+    ) {
+      return;
+    }
+
+    // getter 只能是单表达式（或单 return）的箭头/函数表达式，保证能直接内联成 effect 体。
+    const getter = call.arguments[0];
+    const expression = getSingleArrowExpression(getter, sourceFile);
+
+    if (!expression) {
+      throw new Error(
+        '`useFormValue` expects a single-expression getter, e.g. `useFormValue(() => account())`.'
+      );
+    }
+
+    formValue = expression;
+  });
+
+  return formValue;
+};
+
+// setup 绑定是最后一道兜底采集：凡是不属于专门通道的顶层声明，都在这里保留下来。
 /** 收集除响应式工厂外，其余需要提升到组件实例上的本地绑定。 */
 export const collectFunctionSetupBindings = (
   functionDeclaration: FunctionComponentLike,
@@ -321,7 +376,7 @@ export const collectFunctionSetupBindings = (
   const bindings: SetupBindingDeclaration[] = [];
   let statementIndex = 0;
 
-  functionDeclaration.body.statements.forEach((statement) => {
+  functionDeclaration.body.statements.forEach((statement, sourceIndex) => {
     // setup 区域显式跳过最终 return，模板 JSX 会由专门的模板解析阶段处理。
     if (ts.isReturnStatement(statement)) {
       return;
@@ -337,6 +392,7 @@ export const collectFunctionSetupBindings = (
           .map((childStatement) => childStatement.getText(sourceFile))
           .join('\n'),
         initializer: null,
+        order: createDeclarationOrder(sourceIndex),
       });
       return;
     }
@@ -347,6 +403,7 @@ export const collectFunctionSetupBindings = (
         (!ts.isCallExpression(statement.expression) || (() => {
           const calleeName = getCallExpressionName(statement.expression.expression);
           return !calleeName || (
+            calleeName !== 'useFormValue' &&
             !EFFECT_FACTORIES.has(calleeName) &&
             !FUNCTION_LIFECYCLE_HOOKS.has(calleeName) &&
             !REMOVED_FUNCTION_LIFECYCLE_HOOKS.has(calleeName)
@@ -361,6 +418,7 @@ export const collectFunctionSetupBindings = (
           params: '',
           body: null,
           initializer: statement.expression.getText(sourceFile),
+          order: createDeclarationOrder(sourceIndex),
         });
         statementIndex += 1;
       }
@@ -368,7 +426,7 @@ export const collectFunctionSetupBindings = (
       return;
     }
 
-    statement.declarationList.declarations.forEach((declaration) => {
+    statement.declarationList.declarations.forEach((declaration, declarationIndex) => {
       const calleeName =
         declaration.initializer && ts.isCallExpression(declaration.initializer)
           ? getCallExpressionName(declaration.initializer.expression)
@@ -376,13 +434,14 @@ export const collectFunctionSetupBindings = (
 
       if (
         calleeName &&
-        (SIGNAL_FACTORIES.has(calleeName) ||
+        (calleeName === 'useFormValue' ||
+          SIGNAL_FACTORIES.has(calleeName) ||
           COMPUTED_FACTORIES.has(calleeName) ||
           EFFECT_FACTORIES.has(calleeName) ||
           FUNCTION_LIFECYCLE_HOOKS.has(calleeName) ||
           REMOVED_FUNCTION_LIFECYCLE_HOOKS.has(calleeName))
       ) {
-        // 响应式工厂和生命周期调用有各自专门采集通道，不再重复算进 setup field。
+        // 响应式工厂、生命周期调用与表单值声明有各自专门采集通道，不再重复算进 setup field。
         return;
       }
 
@@ -402,6 +461,7 @@ export const collectFunctionSetupBindings = (
           params: '',
           body: null,
           initializer: declaration.initializer.getText(sourceFile),
+          order: createDeclarationOrder(sourceIndex),
         });
 
         declaration.name.elements.forEach((element, index) => {
@@ -421,6 +481,7 @@ export const collectFunctionSetupBindings = (
             params: '',
             body: null,
             initializer: `${tupleFieldName}[${index}]`,
+            order: createDeclarationOrder(sourceIndex, index + 1),
           });
         });
         statementIndex += 1;
@@ -439,6 +500,7 @@ export const collectFunctionSetupBindings = (
         params: '',
         body: null,
         initializer: declaration.initializer.getText(sourceFile),
+        order: createDeclarationOrder(sourceIndex, declarationIndex),
       });
     });
   });

@@ -23,6 +23,7 @@ import { rewriteBlockWithBindings, rewriteExpressionWithBindings, rewriteFunctio
 import {
   collectFunctionComputed,
   collectFunctionEffects,
+  collectFunctionFormValue,
   collectFunctionLifecycleCallbacks,
   collectFunctionLifecycleHooks,
   collectFunctionSetupBindings,
@@ -161,16 +162,34 @@ export const parseFunctionComponentTsx = (
   }));
 
   // 解析阶段在这里收束为统一组件声明，后续 compiler-core 不再关心它最初是否来自函数组件。
+  const formValueExpression = collectFunctionFormValue(functionDeclaration, sourceFile);
+  const rewrittenFormValue =
+    formValueExpression === null
+      ? null
+      : rewriteExpressionWithBindings(formValueExpression, bindings);
+
   const component: ComponentDeclaration = {
     type: 'ComponentDeclaration',
     name: functionComponent?.name ?? 'AnonymousComponent',
     componentKind: 'function',
     signals,
     computed,
-    effects,
+    effects:
+      rewrittenFormValue === null
+        ? effects
+        : [
+            ...effects,
+            {
+              // `useFormValue` 复用 effect 通道：依赖收集、调度与清理都与 createEffect 一致。
+              type: 'EffectDeclaration',
+              name: '__formValue',
+              body: `this._setFormValue(${rewrittenFormValue});`,
+            },
+          ],
     lifecycleHooks: collectFunctionLifecycleHooks(functionDeclaration),
     lifecycleCallbacks,
     setupBindings,
+    formAssociated: rewrittenFormValue !== null,
     template: rewriteFunctionTemplateNode(
       // 模板内表达式必须使用与 setup/effect 相同的访问模型，否则后续 IR 会前后不一致。
       parseFunctionReturnTemplate(sourceFile, functionDeclaration, mode),

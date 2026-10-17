@@ -1,13 +1,8 @@
 import type {
   CompilerProgram,
-  ComponentDeclaration,
   DirectiveNode,
   ElementNode,
-  EventNode,
   EventListenerOptionsNode,
-  ExpressionNode,
-  LifecycleCallbackDeclaration,
-  SetupBindingDeclaration,
   TemplateChildNode,
 } from '../../ast';
 import type { DependencyAnalysisIR } from '../../analysis/dependency';
@@ -58,6 +53,8 @@ export interface ComponentIR {
   lifecycleCallbacks: LifecycleCallbackIR[];
   setupBindings: SetupBindingIR[];
   template: TemplateIR;
+  /** 是否参与原生表单提交（由 `useFormValue` 推导）。 */
+  formAssociated?: boolean;
   renderPlan: ComponentRenderPlanIR;
   optimizationPass: OptimizationPassIR;
   dependencyAnalysis: DependencyAnalysisIR;
@@ -75,6 +72,8 @@ export interface PropIR {
 export interface SignalIR {
   name: string;
   initializer: string | null;
+  /** signal 在组件体内的源码顺序，供字段初始化顺序还原。 */
+  order?: number;
 }
 
 export interface ComputedIR {
@@ -109,6 +108,8 @@ export interface SetupBindingIR {
   params: string;
   body: string | null;
   initializer: string | null;
+  /** setup 绑定在组件体内的源码顺序，供字段初始化顺序还原。 */
+  order?: number;
 }
 
 export interface ComponentRenderPlanIR {

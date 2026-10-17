@@ -15,7 +15,7 @@
  * - flush 期间新增任务不会插入当前快照中途，而是进入下一轮消费；
  * - `tick()` 等待的是一次“稳定 flush”结束，而不只是当前队列瞬时为空。
  */
-import { emitSchedulerDebugEvent } from '../core/debug';
+import { emitSchedulerDebugEvent, isDevEnvironment } from '../core/debug';
 
 export type Job = () => void;
 export type SchedulerPriority = 'immediate' | 'high' | 'normal' | 'low' | 'idle';
@@ -74,14 +74,29 @@ export class Scheduler {
   private unitScheduled = false;
   private readonly timeSliceMs = 5;
   private readonly tickResolvers = new Set<() => void>();
+  // 维护待执行 job 计数，避免每次 size/hasQueuedJobs 都展开所有队列。
+  private pendingJobs = 0;
 
   schedule(job: Job, priority: SchedulerPriority = NORMAL): void {
-    this.queue.get(priority)?.add(job);
-    emitSchedulerDebugEvent({
-      type: 'schedule',
-      priority,
-      queueSize: this.size,
-    });
+    const bucket = this.queue.get(priority);
+
+    if (bucket) {
+      const sizeBefore = bucket.size;
+      bucket.add(job);
+
+      if (bucket.size !== sizeBefore) {
+        this.pendingJobs += 1;
+      }
+    }
+
+    if (isDevEnvironment()) {
+      emitSchedulerDebugEvent({
+        type: 'schedule',
+        priority,
+        queueSize: this.pendingJobs,
+      });
+    }
+
     this.ensureScheduled();
   }
 
@@ -91,23 +106,41 @@ export class Scheduler {
 
   scheduleLifecycle(job: Job, priority: SchedulerPriority = HIGH): void {
     // lifecycle 单独排队，避免和普通 signal job 混在同一个优先级桶里。
+    const sizeBefore = this.lifecycleQueue.size;
     this.lifecycleQueue.add(job);
-    emitSchedulerDebugEvent({
-      type: 'schedule-lifecycle',
-      priority,
-      queueSize: this.size,
-    });
+
+    if (this.lifecycleQueue.size !== sizeBefore) {
+      this.pendingJobs += 1;
+    }
+
+    if (isDevEnvironment()) {
+      emitSchedulerDebugEvent({
+        type: 'schedule-lifecycle',
+        priority,
+        queueSize: this.pendingJobs,
+      });
+    }
+
     this.ensureScheduled();
   }
 
   scheduleEffect(job: Job, _priority: SchedulerPriority = LOW): void {
     // effect 当前统一落到 effectQueue，内部时序固定在 signal/lifecycle 之后。
+    const sizeBefore = this.effectQueue.size;
     this.effectQueue.add(job);
-    emitSchedulerDebugEvent({
-      type: 'schedule-effect',
-      priority: LOW,
-      queueSize: this.size,
-    });
+
+    if (this.effectQueue.size !== sizeBefore) {
+      this.pendingJobs += 1;
+    }
+
+    if (isDevEnvironment()) {
+      emitSchedulerDebugEvent({
+        type: 'schedule-effect',
+        priority: LOW,
+        queueSize: this.pendingJobs,
+      });
+    }
+
     this.ensureScheduled();
   }
 
@@ -116,10 +149,14 @@ export class Scheduler {
     priority: SchedulerPriority = NORMAL
   ): void {
     this.unitQueue.get(priority)?.push(work);
-    emitSchedulerDebugEvent({
-      type: 'schedule-unit',
-      priority,
-    });
+
+    if (isDevEnvironment()) {
+      emitSchedulerDebugEvent({
+        type: 'schedule-unit',
+        priority,
+      });
+    }
+
     this.ensureUnitScheduled();
   }
 
@@ -130,10 +167,13 @@ export class Scheduler {
 
     this.scheduled = false;
     this.isFlushing = true;
-    emitSchedulerDebugEvent({
-      type: 'flush-start',
-      queueSize: this.size,
-    });
+
+    if (isDevEnvironment()) {
+      emitSchedulerDebugEvent({
+        type: 'flush-start',
+        queueSize: this.pendingJobs,
+      });
+    }
 
     try {
       while (this.hasQueuedJobs()) {
@@ -149,6 +189,7 @@ export class Scheduler {
 
           const jobs = [...priorityQueue];
           priorityQueue.clear();
+          this.pendingJobs -= jobs.length;
 
           for (const job of jobs) {
             job();
@@ -160,6 +201,7 @@ export class Scheduler {
           // 因而生命周期里再次触发的 schedule，最早也会在同一次 flush 的下一轮落地。
           const lifecycleJobs = [...this.lifecycleQueue];
           this.lifecycleQueue.clear();
+          this.pendingJobs -= lifecycleJobs.length;
 
           for (const job of lifecycleJobs) {
             job();
@@ -171,6 +213,7 @@ export class Scheduler {
           // 这让 effect 更接近“提交完成后的订阅回调”，而不是参与本轮状态收敛本身。
           const effectJobs = [...this.effectQueue];
           this.effectQueue.clear();
+          this.pendingJobs -= effectJobs.length;
 
           for (const job of effectJobs) {
             job();
@@ -179,10 +222,13 @@ export class Scheduler {
       }
     } finally {
       this.isFlushing = false;
-      emitSchedulerDebugEvent({
-        type: 'flush-end',
-        queueSize: this.size,
-      });
+
+      if (isDevEnvironment()) {
+        emitSchedulerDebugEvent({
+          type: 'flush-end',
+          queueSize: this.pendingJobs,
+        });
+      }
 
       this.ensureScheduled();
       this.resolveTicksIfIdle();
@@ -202,11 +248,7 @@ export class Scheduler {
   }
 
   get size(): number {
-    return (
-      [...this.queue.values()].reduce((total, jobs) => total + jobs.size, 0) +
-      this.lifecycleQueue.size +
-      this.effectQueue.size
-    );
+    return this.pendingJobs;
   }
 
   createTransition<T>(work: () => T): Promise<T> {
@@ -273,11 +315,7 @@ export class Scheduler {
   }
 
   private hasQueuedJobs(): boolean {
-    return (
-      [...this.queue.values()].some((jobs) => jobs.size > 0) ||
-      this.lifecycleQueue.size > 0 ||
-      this.effectQueue.size > 0
-    );
+    return this.pendingJobs > 0;
   }
 
   private ensureScheduled(): void {
@@ -347,10 +385,14 @@ export class Scheduler {
 
       while (queue.length > 0) {
         const work = queue[0];
-        emitSchedulerDebugEvent({
-          type: 'unit-run',
-          priority,
-        });
+
+        if (isDevEnvironment()) {
+          emitSchedulerDebugEvent({
+            type: 'unit-run',
+            priority,
+          });
+        }
+
         const completed = work.run();
 
         if (completed !== false) {

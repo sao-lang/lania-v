@@ -34,9 +34,12 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
   readonly deps = new Set<Signal<any>>();
   dirty = false;
   private attached = false;
+  private hasCommitted = false;
+  private previousValue: unknown = undefined;
   private readonly job = () => {
     this.markDirty();
-    this.scheduleRun();
+    // signal 通知时已经入队过一次，这里直接执行，避免再排队一轮。
+    this.run();
   };
 
   constructor(
@@ -60,6 +63,15 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
   run(): void {
     // 统一执行“先算值、再提交”，子类只需覆写 compute/commit 的局部差异。
     const nextValue = this.compute();
+
+    if (this.hasCommitted && Object.is(this.previousValue, nextValue)) {
+      // slot 层本身也会做等值判断，但走到那里已经付出了求值与字符串转换成本。
+      this.dirty = false;
+      return;
+    }
+
+    this.hasCommitted = true;
+    this.previousValue = nextValue;
     this.commit(nextValue);
   }
 
@@ -168,6 +180,9 @@ export class ConditionUpdater<T = unknown> extends BaseUpdater<T> {
 }
 
 export class EffectUpdater extends BaseUpdater<void> {
+  /** 供宿主识别 effect 型 updater（effect 需要在挂载后先执行一次）。 */
+  readonly kind = 'effect' as const;
+
   constructor(
     private readonly effect: () => void,
     priority: JobPriority = 'low',
@@ -181,7 +196,11 @@ export class EffectUpdater extends BaseUpdater<void> {
     this.scheduler.scheduleEffect(() => this.run(), this.priority);
   }
 
-  protected compute(): void {
+  override run(): void {
+    // effect 的返回值恒为 undefined，不能沿用基类的等值短路，否则只会执行一次。
+    this.dirty = false;
     this.effect();
   }
+
+  protected compute(): void {}
 }

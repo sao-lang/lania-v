@@ -10,6 +10,7 @@
  * 也因此它刻意不维护组件实例树、调度器或 diff，只提供“编译产物需要的最小宿主能力”。
  */
 import { consumeContext, type Context } from '../../core/context';
+import { isDevEnvironment } from '../../core/debug';
 import type { StaticStyles } from '../styles';
 import type { ReadonlySignal } from '../../reactivity/signal';
 import type { ChangedProps } from './reactive-element';
@@ -455,6 +456,9 @@ export const getComponentTagName = (ctor: unknown): string | null => {
   return typeof name === 'string' && name.trim().length > 0 ? inferComponentTagName(name) : null;
 };
 
+// 同名标签重复注册时只提示一次，避免每次渲染都刷屏。
+const reportedTagConflicts = new Set<string>();
+
 const registerComponentElement = <T extends ComponentElementConstructor>(
   ctor: T,
   options: EnsureCustomElementOptions = {}
@@ -465,22 +469,37 @@ const registerComponentElement = <T extends ComponentElementConstructor>(
     throw new TypeError('Unable to resolve a custom element tag name for the component constructor.');
   }
 
-  let registered = ctor;
   if (typeof customElements !== 'undefined' && typeof customElements.define === 'function') {
-    // 若浏览器侧已经注册过同名元素，则复用已注册构造器，避免重复 define 抛错。
     const existing = customElements.get(tagName) as T | undefined;
-    if (!existing) {
-      customElements.define(tagName, ctor);
+    if (existing) {
+      // 已注册时浏览器会以先注册的构造器为准，后到的实现会被静默丢弃。
+      // 这里显式告警，并把 styles 写回真正生效的构造器，避免版本错配难以排查。
+      if (existing !== ctor && isDevEnvironment() && !reportedTagConflicts.has(tagName)) {
+        reportedTagConflicts.add(tagName);
+        console.warn(
+          `[lania-v] <${tagName}> is already registered by another constructor; ` +
+            `the later definition (${ctor.displayName ?? ctor.name ?? 'anonymous'}) is ignored. ` +
+            'Check for duplicate bundles or mismatched versions.'
+        );
+      }
+
+      const existingStyles = options.styles ?? existing.styles;
+      if (existingStyles !== undefined) {
+        existing.styles = existingStyles;
+      }
+
+      return existing;
     }
-    registered = (customElements.get(tagName) as T | undefined) ?? ctor;
+
+    customElements.define(tagName, ctor);
   }
 
   const styles = options.styles ?? ctor.styles;
   if (styles !== undefined) {
-    registered.styles = styles;
+    ctor.styles = styles;
   }
 
-  return registered;
+  return ctor;
 };
 export const createComponentElement = <T extends ComponentElementConstructor>(
   ctor: T,
@@ -539,6 +558,19 @@ export const onCleanup = (_callback: FunctionLifecycleCallback): void => {
 export const onUnmounted = onCleanup;
 export const onUpdated = (_callback: FunctionLifecycleCallback<[ChangedProps]>): void => {
   throwCompileOnlyApiError('onUpdated');
+};
+
+/**
+ * 声明组件参与原生表单提交。
+ *
+ * 编译器会把 `useFormValue(() => expr)` 改写成两部分：
+ * - 类上生成 `static formAssociated = true`；
+ * - 一个 effect updater，在依赖变化时调用 `_setFormValue(expr)`。
+ *
+ * 因此这个函数本身只作为编译期标记存在，未编译时直接调用应显式报错。
+ */
+export const useFormValue = (_getter: () => unknown): void => {
+  throwCompileOnlyApiError('useFormValue');
 };
 
 export const withRuntimeScope = <T>(scope: RuntimeScope, run: () => T): T => {

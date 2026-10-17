@@ -31,6 +31,13 @@ export interface ComponentDeclaration {
   lifecycleCallbacks: LifecycleCallbackDeclaration[];
   setupBindings: SetupBindingDeclaration[];
   template: TemplateNode;
+  /**
+   * 组件是否参与原生表单提交。
+   *
+   * 由 `useFormValue(...)` 或类上的 `static formAssociated = true` 推导，
+   * 代码生成阶段据此输出 `static formAssociated = true;`。
+   */
+  formAssociated?: boolean;
 }
 
 /** 生命周期回调的源码片段。 */
@@ -49,6 +56,14 @@ export interface SetupBindingDeclaration {
   params: string;
   body: string | null;
   initializer: string | null;
+  /**
+   * 组件体内声明的源码顺序。
+   *
+   * signal 与 setup 字段在 IR 里被拆到不同数组，生成期若按数组分区输出，
+   * `const seed = read(); const count = createSignal(seed);` 就会先读 `seed` 再赋值。
+   * 记录该序号后，代码生成可以还原真实初始化顺序。
+   */
+  order?: number;
 }
 
 /** signal 声明。 */
@@ -58,6 +73,8 @@ export interface SignalDeclaration {
   signalKind: 'state' | 'property' | 'unknown';
   initializer: string | null;
   propertyType?: 'String' | 'Number' | 'Boolean' | 'Object';
+  /** 组件体内声明的源码顺序，含义同 `SetupBindingDeclaration.order`。 */
+  order?: number;
 }
 
 /** computed 声明。 */

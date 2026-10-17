@@ -43,4 +43,5 @@ export {
   onUnmounted,
   onUpdated,
   useContext,
+  useFormValue,
 } from './host/function-component';
