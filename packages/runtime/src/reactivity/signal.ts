@@ -1,5 +1,5 @@
 import { NORMAL, defaultScheduler, type Job, type Scheduler } from './scheduler';
-import { emitSignalDebugEvent } from '../core/debug';
+import { emitSignalDebugEvent, isDevEnvironment } from '../core/debug';
 
 /**
  * 响应式 Signal 实现（类似 Solid 的 signal / memo / effect 思路）。
@@ -159,6 +159,7 @@ export type Signal<T> = (() => T) & {
   updaters: Set<Job>;
   peek: () => T;
   set: SignalSetter<T>;
+  debugId: number;
   // Sets a raw value even if it's a function/class constructor.
   setValue: (value: T) => T;
 };
@@ -224,6 +225,8 @@ export const untrack = <T>(run: () => T): T => {
   }
 };
 
+let nextSignalDebugId = 1;
+
 export const createSignal = <T>(
   initialValue: T,
   scheduler: Scheduler = defaultScheduler
@@ -237,6 +240,7 @@ export const createSignal = <T>(
     return currentValue;
   }) as Signal<T>;
 
+  read.debugId = nextSignalDebugId++;
   read.peek = () => currentValue;
   read.updaters = updaters;
   read.set = (value) => {
@@ -252,11 +256,14 @@ export const createSignal = <T>(
 
     const previousValue = currentValue;
     currentValue = nextValue;
-    emitSignalDebugEvent({
-      type: 'set',
-      previous: previousValue,
-      current: nextValue,
-    });
+    if (isDevEnvironment()) {
+      emitSignalDebugEvent({
+        type: 'set',
+        signalId: read.debugId,
+        previous: previousValue,
+        current: nextValue,
+      });
+    }
 
     // set 只“通知”，具体执行时机交给 scheduler（避免深层嵌套 set 造成同步抖动）
     for (const updater of updaters) {

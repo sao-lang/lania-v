@@ -39,8 +39,8 @@ export interface MountedStaticTemplate {
   nodes: Node[];
   hydrated: boolean;
   // 以 slotIndex 建索引，便于在 hydration 模式下直接定位注释包围区间。
-  hydrationSlots: Map<number, HydrationSlotRecord>;
-  hydrationBoundaries: HydrationBoundaryRecord[];
+  hydrationSlots: ReadonlyMap<number, HydrationSlotRecord>;
+  hydrationBoundaries: readonly HydrationBoundaryRecord[];
 }
 
 export interface MountStaticTemplateOptions {

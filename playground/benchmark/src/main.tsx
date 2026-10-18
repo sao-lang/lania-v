@@ -22,7 +22,8 @@ import {
 
 type BenchFramework = 'lania-v' | 'react' | 'vue' | 'solid';
 type BenchTargetId = 'lania-fc' | 'react' | 'vue' | 'solid';
-type BenchCaseName = 'mount' | 'text-update' | 'list-patch' | 'toggle' | 'model-input';
+type BenchCaseName =
+  'mount' | 'text-update' | 'list-patch' | 'toggle' | 'model-input';
 
 interface BenchCaseResult {
   name: BenchCaseName;
@@ -77,7 +78,9 @@ declare global {
   }
 
   interface Window {
-    runBenchSuite: (options?: RunBenchSuiteOptions) => Promise<BenchSuiteResult>;
+    runBenchSuite: (
+      options?: RunBenchSuiteOptions
+    ) => Promise<BenchSuiteResult>;
   }
 }
 
@@ -94,7 +97,11 @@ const CASE_CONFIG: Record<
   { sampleCount: number; warmupSamples: number; operationsPerSample: number }
 > = {
   mount: { sampleCount: 12, warmupSamples: 2, operationsPerSample: 20 },
-  'text-update': { sampleCount: 24, warmupSamples: 4, operationsPerSample: 120 },
+  'text-update': {
+    sampleCount: 24,
+    warmupSamples: 4,
+    operationsPerSample: 120,
+  },
   'list-patch': { sampleCount: 20, warmupSamples: 4, operationsPerSample: 60 },
   toggle: { sampleCount: 24, warmupSamples: 4, operationsPerSample: 120 },
   'model-input': { sampleCount: 24, warmupSamples: 4, operationsPerSample: 80 },
@@ -111,7 +118,9 @@ const ReactBenchmarkComponent = () => {
   const [patchVersion, setPatchVersion] = useState(0);
   const [toggleVisible, setToggleVisible] = useState(true);
   const [draft, setDraft] = useState('seed');
-  const [middleSnapshot, setMiddleSnapshot] = useState(describeBenchItem(initialItems[BENCH_MIDDLE_ROW_INDEX]));
+  const [middleSnapshot, setMiddleSnapshot] = useState(
+    describeBenchItem(initialItems[BENCH_MIDDLE_ROW_INDEX])
+  );
 
   const increment = () => {
     setCount((value: number) => value + 1);
@@ -133,114 +142,222 @@ const ReactBenchmarkComponent = () => {
     setToggleVisible((value: boolean) => !value);
   };
 
-  return createReactElement('section', { className: 'bench-root', 'data-bench-root': 'ready', 'data-bench-ready': 'true' }, [
-    createReactElement('header', { className: 'bench-header', key: 'header' }, [
-      createReactElement('h2', { key: 'title' }, 'React benchmark'),
-      createReactElement('p', { className: 'bench-meta', key: 'meta' }, 'list size: 1000 | middle row: 501'),
-    ]),
-    createReactElement('div', { className: 'bench-grid', key: 'grid' }, [
-      createReactElement('div', { className: 'bench-card', key: 'count-card' }, [
-        createReactElement('div', { className: 'bench-toolbar', key: 'toolbar' }, [
+  return createReactElement(
+    'section',
+    {
+      className: 'bench-root',
+      'data-bench-root': 'ready',
+      'data-bench-ready': 'true',
+    },
+    [
+      createReactElement(
+        'header',
+        { className: 'bench-header', key: 'header' },
+        [
+          createReactElement('h2', { key: 'title' }, 'React benchmark'),
           createReactElement(
-            'button',
-            { className: 'bench-btn', 'data-bench-action': 'increment', onClick: increment, key: 'button' },
-            'increment'
+            'p',
+            { className: 'bench-meta', key: 'meta' },
+            'list size: 1000 | middle row: 501'
           ),
-          createReactElement(
-            'output',
-            { className: 'bench-output', 'data-bench-output': 'count', key: 'output' },
-            String(count)
-          ),
-        ]),
-        createReactElement('p', { className: 'bench-note', key: 'note' }, 'state update -> text output'),
-      ]),
-      createReactElement('div', { className: 'bench-card', key: 'patch-card' }, [
-        createReactElement('div', { className: 'bench-toolbar', key: 'toolbar' }, [
-          createReactElement(
-            'button',
-            { className: 'bench-btn', 'data-bench-action': 'patch', onClick: patchMiddle, key: 'button' },
-            'patch middle'
-          ),
-          createReactElement(
-            'output',
-            { className: 'bench-output', 'data-bench-output': 'patch-version', key: 'patch-version' },
-            String(patchVersion)
-          ),
-          createReactElement(
-            'output',
-            { className: 'bench-output bench-output-wide', 'data-bench-output': 'middle-row', key: 'middle-row' },
-            middleSnapshot
-          ),
-        ]),
+        ]
+      ),
+      createReactElement('div', { className: 'bench-grid', key: 'grid' }, [
         createReactElement(
-          'p',
-          { className: 'bench-note', key: 'note' },
-          '1000-item keyed list patch + middle row verification'
-        ),
-        createReactElement(
-          'ul',
-          { className: 'bench-list', 'data-bench-list': 'patch', key: 'list' },
-          items.map((item: BenchItem) =>
+          'div',
+          { className: 'bench-card', key: 'count-card' },
+          [
             createReactElement(
-              'li',
-              {
-                className: 'bench-list-row',
-                'data-bench-row-id': String(item.id),
-                'data-bench-row-done': item.done ? 'true' : 'false',
-                key: item.id,
-              },
-              describeBenchItem(item)
-            )
-          )
+              'div',
+              { className: 'bench-toolbar', key: 'toolbar' },
+              [
+                createReactElement(
+                  'button',
+                  {
+                    className: 'bench-btn',
+                    'data-bench-action': 'increment',
+                    onClick: increment,
+                    key: 'button',
+                  },
+                  'increment'
+                ),
+                createReactElement(
+                  'output',
+                  {
+                    className: 'bench-output',
+                    'data-bench-output': 'count',
+                    key: 'output',
+                  },
+                  String(count)
+                ),
+              ]
+            ),
+            createReactElement(
+              'p',
+              { className: 'bench-note', key: 'note' },
+              'state update -> text output'
+            ),
+          ]
         ),
-      ]),
-      createReactElement('div', { className: 'bench-card', key: 'toggle-card' }, [
-        createReactElement('div', { className: 'bench-toolbar', key: 'toolbar' }, [
-          createReactElement(
-            'button',
-            { className: 'bench-btn', 'data-bench-action': 'toggle', onClick: toggle, key: 'button' },
-            'toggle panel'
-          ),
-          createReactElement(
-            'output',
-            { className: 'bench-output', 'data-bench-output': 'toggle-state', key: 'output' },
-            toggleVisible ? 'visible' : 'hidden'
-          ),
-        ]),
-        toggleVisible
-          ? createReactElement('section', { className: 'bench-panel', 'data-bench-output': 'toggle-panel', key: 'panel' }, [
-              createReactElement('p', { className: 'bench-note', key: 'title' }, 'mounted conditional subtree'),
-              createReactElement('p', { className: 'bench-meta', key: 'body' }, 'panel body: visible'),
-            ])
-          : null,
-      ]),
-      createReactElement('div', { className: 'bench-card', key: 'input-card' }, [
-        createReactElement('div', { className: 'bench-toolbar', key: 'toolbar' }, [
-          createReactElement('input', {
-            className: 'bench-input',
-            'data-bench-input': 'model',
-            placeholder: 'type benchmark payload',
-            value: draft,
-            onInput: (event: Event) => {
-              const target = event.currentTarget as HTMLInputElement | null;
-              setDraft(target?.value ?? '');
-            },
-            key: 'input',
-          }),
-          createReactElement(
-            'output',
-            { className: 'bench-output bench-output-wide', 'data-bench-output': 'draft', key: 'output' },
-            draft
-          ),
-        ]),
         createReactElement(
-          'p',
-          { className: 'bench-note', key: 'note' },
-          'input event -> controlled value snapshot'
+          'div',
+          { className: 'bench-card', key: 'patch-card' },
+          [
+            createReactElement(
+              'div',
+              { className: 'bench-toolbar', key: 'toolbar' },
+              [
+                createReactElement(
+                  'button',
+                  {
+                    className: 'bench-btn',
+                    'data-bench-action': 'patch',
+                    onClick: patchMiddle,
+                    key: 'button',
+                  },
+                  'patch middle'
+                ),
+                createReactElement(
+                  'output',
+                  {
+                    className: 'bench-output',
+                    'data-bench-output': 'patch-version',
+                    key: 'patch-version',
+                  },
+                  String(patchVersion)
+                ),
+                createReactElement(
+                  'output',
+                  {
+                    className: 'bench-output bench-output-wide',
+                    'data-bench-output': 'middle-row',
+                    key: 'middle-row',
+                  },
+                  middleSnapshot
+                ),
+              ]
+            ),
+            createReactElement(
+              'p',
+              { className: 'bench-note', key: 'note' },
+              '1000-item keyed list patch + middle row verification'
+            ),
+            createReactElement(
+              'ul',
+              {
+                className: 'bench-list',
+                'data-bench-list': 'patch',
+                key: 'list',
+              },
+              items.map((item: BenchItem) =>
+                createReactElement(
+                  'li',
+                  {
+                    className: 'bench-list-row',
+                    'data-bench-row-id': String(item.id),
+                    'data-bench-row-done': item.done ? 'true' : 'false',
+                    key: item.id,
+                  },
+                  describeBenchItem(item)
+                )
+              )
+            ),
+          ]
+        ),
+        createReactElement(
+          'div',
+          { className: 'bench-card', key: 'toggle-card' },
+          [
+            createReactElement(
+              'div',
+              { className: 'bench-toolbar', key: 'toolbar' },
+              [
+                createReactElement(
+                  'button',
+                  {
+                    className: 'bench-btn',
+                    'data-bench-action': 'toggle',
+                    onClick: toggle,
+                    key: 'button',
+                  },
+                  'toggle panel'
+                ),
+                createReactElement(
+                  'output',
+                  {
+                    className: 'bench-output',
+                    'data-bench-output': 'toggle-state',
+                    key: 'output',
+                  },
+                  toggleVisible ? 'visible' : 'hidden'
+                ),
+              ]
+            ),
+            toggleVisible
+              ? createReactElement(
+                  'section',
+                  {
+                    className: 'bench-panel',
+                    'data-bench-output': 'toggle-panel',
+                    key: 'panel',
+                  },
+                  [
+                    createReactElement(
+                      'p',
+                      { className: 'bench-note', key: 'title' },
+                      'mounted conditional subtree'
+                    ),
+                    createReactElement(
+                      'p',
+                      { className: 'bench-meta', key: 'body' },
+                      'panel body: visible'
+                    ),
+                  ]
+                )
+              : null,
+          ]
+        ),
+        createReactElement(
+          'div',
+          { className: 'bench-card', key: 'input-card' },
+          [
+            createReactElement(
+              'div',
+              { className: 'bench-toolbar', key: 'toolbar' },
+              [
+                createReactElement('input', {
+                  className: 'bench-input',
+                  'data-bench-input': 'model',
+                  placeholder: 'type benchmark payload',
+                  value: draft,
+                  onInput: (event: Event) => {
+                    const target =
+                      event.currentTarget as HTMLInputElement | null;
+                    setDraft(target?.value ?? '');
+                  },
+                  key: 'input',
+                }),
+                createReactElement(
+                  'output',
+                  {
+                    className: 'bench-output bench-output-wide',
+                    'data-bench-output': 'draft',
+                    key: 'output',
+                  },
+                  draft
+                ),
+              ]
+            ),
+            createReactElement(
+              'p',
+              { className: 'bench-note', key: 'note' },
+              'input event -> controlled value snapshot'
+            ),
+          ]
         ),
       ]),
-    ]),
-  ]);
+    ]
+  );
 };
 
 const mountLaniaBenchmark = (
@@ -618,18 +735,38 @@ app.innerHTML = `
   </main>
 `;
 
-const mountSurface = app.querySelector('[data-page-mount]') as HTMLElement | null;
-const statusNode = app.querySelector('[data-page-status]') as HTMLElement | null;
-const resultsNode = app.querySelector('[data-page-results]') as HTMLElement | null;
-const targetButtons = Array.from(app.querySelectorAll<HTMLButtonElement>('[data-page-target]'));
-const runButton = app.querySelector<HTMLButtonElement>('[data-page-action="run-suite"]');
-const remountButton = app.querySelector<HTMLButtonElement>('[data-page-action="remount"]');
+const mountSurface = app.querySelector(
+  '[data-page-mount]'
+) as HTMLElement | null;
+const statusNode = app.querySelector(
+  '[data-page-status]'
+) as HTMLElement | null;
+const resultsNode = app.querySelector(
+  '[data-page-results]'
+) as HTMLElement | null;
+const targetButtons = Array.from(
+  app.querySelectorAll<HTMLButtonElement>('[data-page-target]')
+);
+const runButton = app.querySelector<HTMLButtonElement>(
+  '[data-page-action="run-suite"]'
+);
+const remountButton = app.querySelector<HTMLButtonElement>(
+  '[data-page-action="remount"]'
+);
 
-if (!mountSurface || !statusNode || !resultsNode || !runButton || !remountButton) {
+if (
+  !mountSurface ||
+  !statusNode ||
+  !resultsNode ||
+  !runButton ||
+  !remountButton
+) {
   throw new Error('Benchmark playground UI failed to initialize.');
 }
 
-let currentTarget: BenchTargetId = resolveTarget(new URLSearchParams(window.location.search).get('target'));
+let currentTarget: BenchTargetId = resolveTarget(
+  new URLSearchParams(window.location.search).get('target')
+);
 let currentMount: BenchMountController | null = null;
 let running = false;
 
@@ -675,24 +812,42 @@ const getBenchContainer = (): ParentNode | null => {
   return currentMount?.getQueryRoot() ?? null;
 };
 
-const nextTick = async (): Promise<void> => {
+const nextMacrotask = async (): Promise<void> => {
   await new Promise((resolve) => {
     window.setTimeout(resolve, 0);
   });
 };
 
+/**
+ * 等待 DOM 反映目标状态。
+ *
+ * 先做一轮微任务让步：把更新合并到微任务里提交的框架（例如 lania-v / Vue）
+ * 可以立即完成，不会额外支付浏览器对嵌套 `setTimeout` 的 4ms 钳制开销。
+ * 只有真正需要宏任务的框架（例如 React 的调度器）才回退到 timers，
+ * 这样测得的是框架提交延迟，而不是轮询器的计时粒度。
+ */
 async function waitFor<T>(
   read: () => T | null | undefined | false,
   label: string,
   timeoutMs = 5_000
 ): Promise<T> {
   const start = performance.now();
+
+  for (let spin = 0; spin < 8; spin += 1) {
+    const value = read();
+    if (value) {
+      return value;
+    }
+    // 依次让出微任务队列，让已排队的 flush 先执行。
+    await Promise.resolve();
+  }
+
   while (performance.now() - start < timeoutMs) {
     const value = read();
     if (value) {
       return value;
     }
-    await nextTick();
+    await nextMacrotask();
   }
 
   throw new Error(`Timed out while waiting for ${label}.`);
@@ -725,20 +880,24 @@ const ensureMounted = async (): Promise<void> => {
   );
 };
 
-const clickBenchAction = (name: 'increment' | 'patch' | 'toggle') => {
-  const button = queryBench<HTMLButtonElement>(`[data-bench-action="${name}"]`);
-  if (!button) {
-    throw new Error(`Benchmark action button "${name}" was not found.`);
+const requireBenchElement = <T extends Element>(selector: string): T => {
+  const element = queryBench<T>(selector);
+  if (!element) {
+    throw new Error(`Benchmark element "${selector}" was not found.`);
   }
-  button.click();
+  return element;
 };
 
-const setModelInputValue = (value: string) => {
-  const input = queryBench<HTMLInputElement>('[data-bench-input="model"]');
-  if (!input) {
-    throw new Error('Benchmark model input was not found.');
-  }
+// 元素在单个样本内保持稳定，提前解析可避免把 querySelector 的遍历成本算进框架耗时。
+const resolveActionButton = (
+  name: 'increment' | 'patch' | 'toggle'
+): HTMLButtonElement => {
+  return requireBenchElement<HTMLButtonElement>(
+    `[data-bench-action="${name}"]`
+  );
+};
 
+const dispatchModelInput = (input: HTMLInputElement, value: string) => {
   input.value = value;
   input.dispatchEvent(
     new Event('input', {
@@ -762,78 +921,102 @@ const runMountSample = async (operationsPerSample: number): Promise<number> => {
   return totalMs;
 };
 
-const runTextUpdateSample = async (operationsPerSample: number): Promise<number> => {
+const runTextUpdateSample = async (
+  operationsPerSample: number
+): Promise<number> => {
   await ensureMounted();
   const startValue = Number(readText('[data-bench-output="count"]'));
   const expectedValue = startValue + operationsPerSample;
+  const button = resolveActionButton('increment');
   const start = performance.now();
 
   for (let index = 0; index < operationsPerSample; index += 1) {
-    clickBenchAction('increment');
+    button.click();
   }
 
   await waitFor(
-    () => (readText('[data-bench-output="count"]') === String(expectedValue) ? true : null),
+    () =>
+      readText('[data-bench-output="count"]') === String(expectedValue)
+        ? true
+        : null,
     'text update'
   );
   return performance.now() - start;
 };
 
-const runListPatchSample = async (operationsPerSample: number): Promise<number> => {
+const runListPatchSample = async (
+  operationsPerSample: number
+): Promise<number> => {
   await ensureMounted();
   const startVersion = Number(readText('[data-bench-output="patch-version"]'));
   const expectedVersion = startVersion + operationsPerSample;
   const expectedMiddleText = `Item ${BENCH_MIDDLE_ROW_ID} v${expectedVersion}|${expectedVersion % 2 === 1 ? '1' : '0'}`;
+  const button = resolveActionButton('patch');
   const start = performance.now();
 
   for (let index = 0; index < operationsPerSample; index += 1) {
-    clickBenchAction('patch');
+    button.click();
   }
 
-  await waitFor(
-    () => {
-      const versionReady = readText('[data-bench-output="patch-version"]') === String(expectedVersion);
-      const middleSnapshot = readText('[data-bench-output="middle-row"]');
-      const middleRowText = readText(`[data-bench-row-id="${BENCH_MIDDLE_ROW_ID}"]`);
-      return versionReady &&
-        middleSnapshot === expectedMiddleText &&
-        middleRowText === expectedMiddleText
-        ? true
-        : null;
-    },
-    'list patch'
-  );
+  await waitFor(() => {
+    const versionReady =
+      readText('[data-bench-output="patch-version"]') ===
+      String(expectedVersion);
+    const middleSnapshot = readText('[data-bench-output="middle-row"]');
+    const middleRowText = readText(
+      `[data-bench-row-id="${BENCH_MIDDLE_ROW_ID}"]`
+    );
+    return versionReady &&
+      middleSnapshot === expectedMiddleText &&
+      middleRowText === expectedMiddleText
+      ? true
+      : null;
+  }, 'list patch');
   return performance.now() - start;
 };
 
-const runToggleSample = async (operationsPerSample: number): Promise<number> => {
+const runToggleSample = async (
+  operationsPerSample: number
+): Promise<number> => {
   await ensureMounted();
   const startState = readText('[data-bench-output="toggle-state"]');
-  const expectedState = operationsPerSample % 2 === 0 ? startState : startState === 'visible' ? 'hidden' : 'visible';
+  const expectedState =
+    operationsPerSample % 2 === 0
+      ? startState
+      : startState === 'visible'
+        ? 'hidden'
+        : 'visible';
+  const button = resolveActionButton('toggle');
   const start = performance.now();
 
   for (let index = 0; index < operationsPerSample; index += 1) {
-    clickBenchAction('toggle');
+    button.click();
   }
 
-  await waitFor(
-    () => {
-      const stateReady = readText('[data-bench-output="toggle-state"]') === expectedState;
-      const panelVisible = hasBenchNode('[data-bench-output="toggle-panel"]');
-      return stateReady && panelVisible === (expectedState === 'visible') ? true : null;
-    },
-    'toggle state'
-  );
+  await waitFor(() => {
+    const stateReady =
+      readText('[data-bench-output="toggle-state"]') === expectedState;
+    const panelVisible = hasBenchNode('[data-bench-output="toggle-panel"]');
+    return stateReady && panelVisible === (expectedState === 'visible')
+      ? true
+      : null;
+  }, 'toggle state');
   return performance.now() - start;
 };
 
-const runModelInputSample = async (sampleIndex: number, operationsPerSample: number): Promise<number> => {
+const runModelInputSample = async (
+  sampleIndex: number,
+  operationsPerSample: number
+): Promise<number> => {
   await ensureMounted();
   const lastValue = `payload-${sampleIndex}-${operationsPerSample - 1}`;
+  const input = requireBenchElement<HTMLInputElement>(
+    '[data-bench-input="model"]'
+  );
   const start = performance.now();
 
   for (let index = 0; index < operationsPerSample; index += 1) {
-    setModelInputValue(`payload-${sampleIndex}-${index}`);
+    dispatchModelInput(input, `payload-${sampleIndex}-${index}`);
   }
 
   await waitFor(
@@ -850,13 +1033,18 @@ const summarizeSamples = (
   operationsPerSample: number,
   batchSamples: number[]
 ): BenchCaseResult => {
-  const perOperationSamples = batchSamples.map((value) => value / operationsPerSample);
-  const sortedPerOp = [...perOperationSamples].sort((left, right) => left - right);
+  const perOperationSamples = batchSamples.map(
+    (value) => value / operationsPerSample
+  );
+  const sortedPerOp = [...perOperationSamples].sort(
+    (left, right) => left - right
+  );
   const sortedBatch = [...batchSamples].sort((left, right) => left - right);
   const perOpTotal = perOperationSamples.reduce((sum, value) => sum + value, 0);
   const batchTotal = batchSamples.reduce((sum, value) => sum + value, 0);
 
-  const pickP95 = (values: number[]) => values[Math.max(0, Math.ceil(values.length * 0.95) - 1)] ?? 0;
+  const pickP95 = (values: number[]) =>
+    values[Math.max(0, Math.ceil(values.length * 0.95) - 1)] ?? 0;
 
   return {
     name,
@@ -869,7 +1057,9 @@ const summarizeSamples = (
     medianMs: roundMetric(sortedPerOp[Math.floor(sortedPerOp.length / 2)] ?? 0),
     p95Ms: roundMetric(pickP95(sortedPerOp)),
     batchMeanMs: roundMetric(batchTotal / Math.max(1, batchSamples.length)),
-    batchMedianMs: roundMetric(sortedBatch[Math.floor(sortedBatch.length / 2)] ?? 0),
+    batchMedianMs: roundMetric(
+      sortedBatch[Math.floor(sortedBatch.length / 2)] ?? 0
+    ),
     batchP95Ms: roundMetric(pickP95(sortedBatch)),
     samplesMs: perOperationSamples.map(roundMetric),
     sampleBatchMs: batchSamples.map(roundMetric),
@@ -883,7 +1073,11 @@ const runCase = async (name: BenchCaseName): Promise<BenchCaseResult> => {
     `Running ${targetRegistry[currentTarget].label} / ${name} (warmup ${config.warmupSamples}, samples ${config.sampleCount}, ops ${config.operationsPerSample})`
   );
 
-  for (let sampleIndex = 0; sampleIndex < config.warmupSamples; sampleIndex += 1) {
+  for (
+    let sampleIndex = 0;
+    sampleIndex < config.warmupSamples;
+    sampleIndex += 1
+  ) {
     if (name === 'mount') {
       await runMountSample(config.operationsPerSample);
     } else if (name === 'text-update') {
@@ -897,7 +1091,11 @@ const runCase = async (name: BenchCaseName): Promise<BenchCaseResult> => {
     }
   }
 
-  for (let sampleIndex = 0; sampleIndex < config.sampleCount; sampleIndex += 1) {
+  for (
+    let sampleIndex = 0;
+    sampleIndex < config.sampleCount;
+    sampleIndex += 1
+  ) {
     let batchMs = 0;
     if (name === 'mount') {
       batchMs = await runMountSample(config.operationsPerSample);
@@ -908,7 +1106,10 @@ const runCase = async (name: BenchCaseName): Promise<BenchCaseResult> => {
     } else if (name === 'toggle') {
       batchMs = await runToggleSample(config.operationsPerSample);
     } else {
-      batchMs = await runModelInputSample(sampleIndex + config.warmupSamples, config.operationsPerSample);
+      batchMs = await runModelInputSample(
+        sampleIndex + config.warmupSamples,
+        config.operationsPerSample
+      );
     }
     batchSamples.push(batchMs);
   }
@@ -922,7 +1123,9 @@ const runCase = async (name: BenchCaseName): Promise<BenchCaseResult> => {
   );
 };
 
-const runBenchSuite = async (options: RunBenchSuiteOptions = {}): Promise<BenchSuiteResult> => {
+const runBenchSuite = async (
+  options: RunBenchSuiteOptions = {}
+): Promise<BenchSuiteResult> => {
   const target = resolveTarget(options.target ?? currentTarget);
   if (target !== currentTarget) {
     currentTarget = target;
@@ -977,7 +1180,9 @@ targetButtons.forEach((button) => {
     updateUrl();
     mountCurrentTarget();
     await ensureMounted();
-    setStatus(`Mounted ${targetRegistry[currentTarget].label} benchmark component.`);
+    setStatus(
+      `Mounted ${targetRegistry[currentTarget].label} benchmark component.`
+    );
   });
 });
 
@@ -988,7 +1193,9 @@ remountButton.addEventListener('click', async () => {
 
   mountCurrentTarget();
   await ensureMounted();
-  setStatus(`Remounted ${targetRegistry[currentTarget].label} benchmark component.`);
+  setStatus(
+    `Remounted ${targetRegistry[currentTarget].label} benchmark component.`
+  );
 });
 
 runButton.addEventListener('click', async () => {
@@ -1003,7 +1210,9 @@ runButton.addEventListener('click', async () => {
 syncTargetUi();
 mountCurrentTarget();
 void ensureMounted().then(() => {
-  setStatus(`Mounted ${targetRegistry[currentTarget].label} benchmark component.`);
+  setStatus(
+    `Mounted ${targetRegistry[currentTarget].label} benchmark component.`
+  );
 });
 
 function resolveTarget(value: string | null | undefined): BenchTargetId {

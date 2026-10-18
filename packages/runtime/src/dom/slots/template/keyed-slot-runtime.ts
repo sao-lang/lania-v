@@ -4,7 +4,7 @@
  * 这些工具围绕带开始/结束注释锚点的 block 工作，供 `ForSlot` 在 diff 时复用。
  */
 import { collectKeyedBlockNodes } from '../core';
-import { mountHydratedBinding, mountTemplateBinding } from './template-factory';
+import { mountHydratedBinding, mountTemplateBinding, mountTemplateBindingInto } from './template-factory';
 import type {
   KeyedBlock,
   KeyedSlotInstance,
@@ -13,33 +13,36 @@ import type {
   SlotListPayload,
 } from './template-types';
 
-// 正常挂载路径直接创建 binding 实例并把 fragment 插入到 block 结束锚点前。
+// MountedBindingInstance 已经满足 KeyedSlotInstance 的结构（多一个 fragment），
+// 直接复用同一个对象，避免每条 item 再包一层闭包壳。
+const toKeyedSlotInstance = (instance: MountedBindingInstance): KeyedSlotInstance => instance;
+
+// 正常挂载路径直接创建 binding 实例并把 fragment 插入到给定锚点前。
 export const createKeyedSlotInstance = (
   parent: Node,
-  block: KeyedBlock,
+  anchor: Node | null,
   payload: KeyedSlotPayload,
   item: unknown,
   index: number
 ): KeyedSlotInstance => {
   const instance = mountTemplateBinding(payload.template, payload.bindings, item, index);
-  parent.insertBefore(instance.fragment, block.end);
-  return {
-    mounted: instance.mounted,
-    nodes: instance.nodes,
-    slots: instance.slots,
-    update(item: unknown, index: number) {
-      instance.update(item, index);
-    },
-    activate() {
-      instance.activate();
-    },
-    deactivate() {
-      instance.deactivate();
-    },
-    destroy() {
-      instance.destroy();
-    },
-  };
+  parent.insertBefore(instance.fragment, anchor);
+  return toKeyedSlotInstance(instance);
+};
+
+/**
+ * 把条目模板直接挂载到离屏容器（批量首次挂载路径）。
+ * 调用方负责把 block 的边界按正确顺序放进同一容器。
+ */
+export const createKeyedSlotInstanceInto = (
+  container: Node,
+  payload: KeyedSlotPayload,
+  item: unknown,
+  index: number
+): KeyedSlotInstance => {
+  return toKeyedSlotInstance(
+    mountTemplateBindingInto(container, payload.template, payload.bindings, item, index)
+  );
 };
 
 // hydration 场景优先复用 block 区间内已有节点，缺失时再退回全新挂载。
@@ -57,23 +60,7 @@ export const createHydratedKeyed = (
 
   instance.update(item, index);
 
-  return {
-    mounted: instance.mounted,
-    nodes: instance.nodes,
-    slots: instance.slots,
-    update(nextItem: unknown, nextIndex: number) {
-      instance.update(nextItem, nextIndex);
-    },
-    activate() {
-      instance.activate();
-    },
-    deactivate() {
-      instance.deactivate();
-    },
-    destroy() {
-      instance.destroy();
-    },
-  };
+  return toKeyedSlotInstance(instance);
 };
 
 // SSR 回填时通过注释对扫描出一组组 hydrated keyed block。
@@ -94,6 +81,7 @@ export const collectHydratedKeyedBlocks = (nodes: readonly Node[]): KeyedBlock[]
         key: Symbol('hydrated-keyed-block'),
         start: pendingStart,
         end: node,
+        element: null,
         value: undefined,
       });
       pendingStart = null;
@@ -112,7 +100,19 @@ export const createSlotListInstance = (
 };
 
 export const removeKeyedBlock = (parent: Node, block: KeyedBlock): void => {
-  let current: ChildNode | null = block.start;
+  if (block.element) {
+    if (block.element.parentNode === parent) {
+      parent.removeChild(block.element);
+    }
+    return;
+  }
+
+  const start = block.start;
+  if (!start) {
+    return;
+  }
+
+  let current: ChildNode | null = start;
   while (current) {
     const next: ChildNode | null = current.nextSibling;
     parent.removeChild(current);
@@ -128,13 +128,21 @@ export const replaceKeyedContent = (
   block: KeyedBlock,
   nodes: readonly Node[]
 ): void => {
+  const start = block.start;
+  const end = block.end;
+
+  if (!start || !end) {
+    // 元素自锚定模式不参与这条“整段替换”路径（它只用于 keyed-slots）。
+    return;
+  }
+
   // Remove everything between start and end (exclusive).
-  while (block.start.nextSibling && block.start.nextSibling !== block.end) {
-    parent.removeChild(block.start.nextSibling);
+  while (start.nextSibling && start.nextSibling !== end) {
+    parent.removeChild(start.nextSibling);
   }
 
   nodes.forEach((node) => {
-    parent.insertBefore(node, block.end);
+    parent.insertBefore(node, end);
   });
 };
 
@@ -147,19 +155,42 @@ export const moveKeyedBlockBefore = (
   let resolvedBeforeNode =
     beforeNode && beforeNode.parentNode === parent ? beforeNode : null;
 
+  if (block.element) {
+    const element = block.element;
+
+    // 引用节点若落在元素内部，搬移会抛 NotFoundError，直接退回追加。
+    if (resolvedBeforeNode && element.contains(resolvedBeforeNode)) {
+      resolvedBeforeNode = null;
+    }
+
+    if (element.parentNode === parent && element.nextSibling === resolvedBeforeNode) {
+      return;
+    }
+
+    parent.insertBefore(element, resolvedBeforeNode);
+    return;
+  }
+
+  const start = block.start;
+  const end = block.end;
+
+  if (!start || !end) {
+    return;
+  }
+
   // Defensive: if the reference node is inside the block range we are moving,
   // it will be detached while building the fragment, causing `insertBefore` to throw.
   // Fall back to appending to keep updates alive under unusual host/anchor movements.
   if (
     resolvedBeforeNode &&
-    block.start.parentNode === parent &&
-    block.end.parentNode === parent
+    start.parentNode === parent &&
+    end.parentNode === parent
   ) {
-    if (resolvedBeforeNode === block.start || resolvedBeforeNode === block.end) {
+    if (resolvedBeforeNode === start || resolvedBeforeNode === end) {
       resolvedBeforeNode = null;
     } else {
-      const startToBefore = block.start.compareDocumentPosition(resolvedBeforeNode);
-      const beforeToEnd = resolvedBeforeNode.compareDocumentPosition(block.end);
+      const startToBefore = start.compareDocumentPosition(resolvedBeforeNode);
+      const beforeToEnd = resolvedBeforeNode.compareDocumentPosition(end);
       const isAfterStart = Boolean(startToBefore & Node.DOCUMENT_POSITION_FOLLOWING);
       const isBeforeEnd = Boolean(beforeToEnd & Node.DOCUMENT_POSITION_FOLLOWING);
       if (isAfterStart && isBeforeEnd) {
@@ -168,16 +199,16 @@ export const moveKeyedBlockBefore = (
     }
   }
   // If already positioned immediately before `beforeNode`, no-op.
-  if (resolvedBeforeNode && block.end.nextSibling === resolvedBeforeNode) {
+  if (resolvedBeforeNode && end.nextSibling === resolvedBeforeNode) {
     return;
   }
 
   const fragment = document.createDocumentFragment();
-  let current: ChildNode | null = block.start;
+  let current: ChildNode | null = start;
   while (current) {
     const next: ChildNode | null = current.nextSibling;
     fragment.appendChild(current);
-    if (current === block.end) {
+    if (current === end) {
       break;
     }
     current = next;

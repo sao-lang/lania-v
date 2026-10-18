@@ -6,6 +6,7 @@ import {
 } from '../reactivity/scheduler';
 import { SlotTable } from './slot-table';
 import type { Slot } from './slots';
+import { emitDevtoolsEvent, hasDevtoolsSubscribers, isDevEnvironment } from '../core/debug';
 
 /**
  * DOM updater 抽象：把“计算”与“提交到 slot/DOM”拆开。
@@ -21,6 +22,7 @@ import type { Slot } from './slots';
  */
 
 export interface Updater {
+  debugId: number;
   deps: Set<Signal<any>>;
   slots: Slot[];
   priority: JobPriority;
@@ -30,7 +32,10 @@ export interface Updater {
   detach(): void;
 }
 
+let nextUpdaterDebugId = 1;
+
 export abstract class BaseUpdater<T = unknown> implements Updater {
+  readonly debugId = nextUpdaterDebugId++;
   readonly deps = new Set<Signal<any>>();
   dirty = false;
   private attached = false;
@@ -52,7 +57,13 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
   protected markDirty(): void {
     this.dirty = true;
     // 额外把 slot 索引标记到表里，便于外层容器按脏位裁剪 flush 范围。
-    this.slotTable?.markDirtySlots(this.slots.map((slot) => slot.index));
+    const slotTable = this.slotTable;
+
+    if (slotTable) {
+      for (let index = 0; index < this.slots.length; index += 1) {
+        slotTable.markDirty(this.slots[index]!.index);
+      }
+    }
   }
 
   protected scheduleRun(): void {
@@ -62,6 +73,7 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
 
   run(): void {
     // 统一执行“先算值、再提交”，子类只需覆写 compute/commit 的局部差异。
+    this.emitRunDebugEvent();
     const nextValue = this.compute();
 
     if (this.hasCommitted && Object.is(this.previousValue, nextValue)) {
@@ -102,6 +114,30 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
 
   protected abstract compute(): T;
 
+  protected emitRunDebugEvent(): void {
+    if (!isDevEnvironment() || !hasDevtoolsSubscribers()) {
+      return;
+    }
+
+    emitDevtoolsEvent('updater-run', {
+      updaterId: this.debugId,
+      dependencyIds: [...this.deps].map((signal) => signal.debugId),
+      slots: this.slots.map((slot) => ({ type: slot.type, index: slot.index })),
+    });
+  }
+
+  protected writeSlot(slot: Slot, value: unknown): void {
+    if (isDevEnvironment() && hasDevtoolsSubscribers()) {
+      emitDevtoolsEvent('slot-write', {
+        updaterId: this.debugId,
+        slotType: slot.type,
+        slotIndex: slot.index,
+      });
+    }
+
+    slot.write(value);
+  }
+
   protected commit(_value: T): void {
     this.dirty = false;
 
@@ -128,7 +164,7 @@ export class SimpleUpdater<T = unknown> extends BaseUpdater<T> {
 
   protected override commit(value: T): void {
     // 单槽位路径直接写第一个 slot，是最常见的文本/属性更新场景。
-    this.slots[0].write(value);
+    this.writeSlot(this.slots[0], value);
     super.commit(value);
   }
 }
@@ -151,7 +187,7 @@ export class MultiSlotUpdater<T = unknown> extends BaseUpdater<T> {
   protected override commit(value: T): void {
     // 一个求值结果广播到多个 slot，适合同值多点复用的编译产物。
     for (const slot of this.slots) {
-      slot.write(value);
+      this.writeSlot(slot, value);
     }
 
     super.commit(value);
@@ -174,7 +210,7 @@ export class ConditionUpdater<T = unknown> extends BaseUpdater<T> {
   }
 
   protected override commit(value: T): void {
-    this.slots[0].write(value);
+    this.writeSlot(this.slots[0], value);
     super.commit(value);
   }
 }
@@ -198,6 +234,7 @@ export class EffectUpdater extends BaseUpdater<void> {
 
   override run(): void {
     // effect 的返回值恒为 undefined，不能沿用基类的等值短路，否则只会执行一次。
+    this.emitRunDebugEvent();
     this.dirty = false;
     this.effect();
   }

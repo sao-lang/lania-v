@@ -26,6 +26,7 @@ export interface SchedulerDebugEvent {
 
 export interface SignalDebugEvent {
   type: 'set';
+  signalId: number;
   previous: unknown;
   current: unknown;
 }
@@ -100,6 +101,11 @@ export const emitDevtoolsEvent = (type: string, payload?: unknown): void => {
   runtimeDebugHooks.forEach((hooks) => {
     hooks.onDevtoolsEvent?.(event);
   });
+};
+
+/** 是否存在 devtools 订阅者；热路径可据此跳过事件对象构造。 */
+export const hasDevtoolsSubscribers = (): boolean => {
+  return runtimeDebugHooks.size > 0;
 };
 
 export const warning = (message: string, condition = false): boolean => {

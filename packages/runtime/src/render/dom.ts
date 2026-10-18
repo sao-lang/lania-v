@@ -28,6 +28,18 @@ import type {
   StaticTemplate,
 } from './types';
 
+// 非 hydration 挂载占绝大多数，共享只读空集合可省掉每个模板实例两次分配。
+const EMPTY_HYDRATION_SLOTS: ReadonlyMap<number, HydrationSlotRecord> = new Map();
+const EMPTY_HYDRATION_BOUNDARIES: readonly HydrationBoundaryRecord[] = Object.freeze([]);
+
+export const getEmptyHydrationSlots = (): ReadonlyMap<number, HydrationSlotRecord> => {
+  return EMPTY_HYDRATION_SLOTS;
+};
+
+export const getEmptyHydrationBoundaries = (): readonly HydrationBoundaryRecord[] => {
+  return EMPTY_HYDRATION_BOUNDARIES;
+};
+
 // 很多 hydration 判断都需要区分注释节点，因为 slot/boundary marker 都以注释形式存在。
 const isCommentNode = (node: Node): node is Comment => {
   return node.nodeType === Node.COMMENT_NODE;
@@ -355,8 +367,8 @@ export const mountStaticTemplate = (
   return {
     nodes,
     hydrated: false,
-    hydrationSlots: new Map(),
-    hydrationBoundaries: [],
+    hydrationSlots: EMPTY_HYDRATION_SLOTS,
+    hydrationBoundaries: EMPTY_HYDRATION_BOUNDARIES,
   };
 };
 
@@ -389,9 +401,9 @@ export const resolveTemplateNode = (
     throw new Error(`Template root node at index ${path[0]} was not found.`);
   }
 
-  for (const index of path.slice(1)) {
+  for (let index = 1; index < path.length; index += 1) {
     // 非 hydration 模式下可以直接按物理 childNodes 下标逐层下钻。
-    current = current.childNodes[index];
+    current = current.childNodes[path[index]!];
 
     if (!current) {
       throw new Error(`Template node path "${path.join('.')}" was not found.`);

@@ -29,6 +29,10 @@ import {
   __resetSharedKeepAliveStateForTests,
 } from '../../component/lifecycle/keepalive-registry';
 import type { StaticTemplate } from '../../render/types';
+import {
+  getEmptyHydrationBoundaries,
+  getEmptyHydrationSlots,
+} from '../../render/dom';
 import { acquireSlotNodeBuffer, releaseSlotNodeBuffer } from '../slot-pool';
 import { removeNodes, type Slot } from './core';
 import {
@@ -132,13 +136,12 @@ const createHydratedBinding = (
   const retainedNodes = [...nodes];
 
   return {
-    fragment: document.createDocumentFragment(),
     nodes: retainedNodes,
     mounted: {
       nodes: retainedNodes,
       hydrated: true,
-      hydrationSlots: new Map(),
-      hydrationBoundaries: [],
+      hydrationSlots: getEmptyHydrationSlots(),
+      hydrationBoundaries: getEmptyHydrationBoundaries(),
     },
     slots: [],
     update() {},
