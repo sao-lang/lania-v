@@ -23,6 +23,7 @@
   -> `packages/compiler-tsx/src`
 - 想改增强组件：`enhanced-components.md` -> `runtime-api.md` -> `fc-binding-apis.md`
 - 想改 SSR / Hydration：`ssr-hydration.md` -> `tests/runtime-render.test.ts` -> `tests/e2e/*`
+- 想接手 e2e 剩余问题：`showcase-e2e-followup.md`
 - 想看工程流程：`engineering-conventions.md` -> `release.md` -> `benchmark.md`
 
 ## 文档分层
@@ -33,6 +34,7 @@
 - SSR 主文档：`ssr-hydration.md`
 - 专题补充：`enhanced-components.md`、`fc-binding-apis.md`
 - 执行与阶段：`plan.md`、`stages.md`
+- 收尾/交接：`showcase-e2e-followup.md`（FC Showcase e2e 剩余问题与排查步骤）
 - 工程流程：`engineering-conventions.md`、`release.md`、`benchmark.md`
 
 ## 源码阅读路线

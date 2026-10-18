@@ -41,6 +41,7 @@ describe('enhanced registry and contract drafts', () => {
       'Each',
       'Teleport',
       'Fragment',
+      'Slot',
       'Dynamic',
       'KeepAlive',
       'Transition',

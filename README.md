@@ -118,6 +118,7 @@ npm run build           # 构建所有包
 - [阶段收敛](docs/stages.md)
 - [发布流程](docs/release.md)
 - [性能基准](docs/benchmark.md)
+- [Showcase e2e 收尾方案](docs/showcase-e2e-followup.md)
 
 ## License
 

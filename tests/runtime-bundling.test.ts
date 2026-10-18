@@ -1,15 +1,26 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { build } from 'vite';
 
 import runtimePackage from '../packages/runtime/package.json';
-import { isDevEnvironment, setDevEnvironmentOverride } from '@lania-v/runtime/core';
 
-const workspaceRoot = '/Users/bytedance/Desktop/files/self/lania-zip/lania-v';
+const workspaceRoot = fileURLToPath(new URL('..', import.meta.url));
+
+type DevEnvironmentModule = {
+  isDevEnvironment: () => boolean;
+  setDevEnvironmentOverride: (value: boolean | null) => void;
+};
+
+// dist 的 dev/prod 入口共享 dist 内的 core/debug 模块实例，
+// 因此断言必须读取同一份产物，而不是 workspace 里被 alias 到 src 的那份。
+const distDebugEntry = pathToFileURL(
+  path.join(workspaceRoot, 'packages/runtime/dist/core/debug.js')
+).href;
+let distDevEnvironment: DevEnvironmentModule | null = null;
 const createdTempDirs: string[] = [];
 const originalHTMLElement = globalThis.HTMLElement;
 
@@ -56,7 +67,8 @@ const buildBundle = async (
 };
 
 afterEach(async () => {
-  setDevEnvironmentOverride(null);
+  distDevEnvironment?.setDevEnvironmentOverride(null);
+  distDevEnvironment = null;
   if (originalHTMLElement) {
     globalThis.HTMLElement = originalHTMLElement;
   } else {
@@ -88,10 +100,12 @@ describe('runtime bundling', () => {
     ]);
 
     await import(`${devEntry}?entry=dev`);
-    expect(isDevEnvironment()).toBe(true);
+    const devEnvironment = (await import(distDebugEntry)) as DevEnvironmentModule;
+    distDevEnvironment = devEnvironment;
+    expect(devEnvironment.isDevEnvironment()).toBe(true);
 
     await import(`${prodEntry}?entry=prod`);
-    expect(isDevEnvironment()).toBe(false);
+    expect(devEnvironment.isDevEnvironment()).toBe(false);
   });
 
   it('replaces compile-time dev constants during bundling', async () => {

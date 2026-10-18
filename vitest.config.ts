@@ -23,6 +23,18 @@ export default defineConfig({
         ),
       },
       {
+        find: '@lania-v/runtime/core',
+        replacement: fileURLToPath(
+          new URL('./packages/runtime/src/core/index.ts', import.meta.url)
+        ),
+      },
+      {
+        find: '@lania-v/runtime/reactivity',
+        replacement: fileURLToPath(
+          new URL('./packages/runtime/src/reactivity/index.ts', import.meta.url)
+        ),
+      },
+      {
         find: '@lania-v/runtime/advanced',
         replacement: fileURLToPath(
           new URL('./packages/runtime/src/entry/advanced.ts', import.meta.url)
