@@ -60,7 +60,8 @@ lania-v/
 │   ├── todo/              默认开发入口与功能验收
 │   ├── login/             表单与交互验收（登录页）
 │   ├── compiler/          编译链路可视化
-│   └── benchmark/         横向性能基准
+│   ├── benchmark/         横向性能基准
+│   └── mouse-hook/        lania-v 鼠标 Hook 与 React 集成示例
 ├── docs/                  文档
 └── tests/                 测试
 ```
@@ -102,6 +103,14 @@ npm run build           # 构建所有包
 2. Vite 插件自动拦截 `.lania.tsx` 文件，调用 `compiler-tsx` → `compiler-core` 完成编译
 3. 编译产物由 `runtime` 接管，ReactiveElement 挂载后按 `renderPlan` 执行渲染
 4. 数据变更时，Signal 触发 Scheduler → Updater → Slot 的精确更新链路
+
+### 在 Login playground 观察编译与更新
+
+启动 Login playground 后打开浏览器开发者工具的 Console：
+
+- 首次加载会输出可展开的 `[lania-v] compile: LoginPage` 分组，包含 TSX/FC 声明、Component IR、renderPlan 和生成模块快照。
+- 操作表单时会输出 `Signal.set → Scheduler.* → Updater.run → Slot.write`，现有 `[mutation]` 日志展示对应的 DOM 变化。
+- 运行时日志只输出 Signal ID 和更新元数据，不输出 Signal 的前后值；编译快照仅由 Login playground 的 Vite 开发配置启用，不进入生产构建。
 
 ## 文档索引
 
