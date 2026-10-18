@@ -121,6 +121,7 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
 
     emitDevtoolsEvent('updater-run', {
       updaterId: this.debugId,
+      updaterKind: this.constructor.name,
       dependencyIds: [...this.deps].map((signal) => signal.debugId),
       slots: this.slots.map((slot) => ({ type: slot.type, index: slot.index })),
     });

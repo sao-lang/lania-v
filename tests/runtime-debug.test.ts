@@ -8,6 +8,8 @@ import {
   clearRuntimeDebugHooks,
   clearRuntimePlugins,
   createSignal,
+  SimpleUpdater,
+  TextSlot,
   registerRuntimeDebugHooks,
   setDevEnvironmentOverride,
   useRuntimePlugin,
@@ -53,6 +55,49 @@ describe('runtime debug hooks', () => {
     expect(schedulerEvents).toContain('schedule');
     expect(schedulerEvents).toContain('flush-start');
     expect(schedulerEvents).toContain('flush-end');
+  });
+
+  it('emits value-free signal, updater, and slot events with correlatable ids', async () => {
+    setDevEnvironmentOverride(true);
+    const events: Array<{ type: string; payload?: unknown }> = [];
+    registerRuntimeDebugHooks({
+      onDevtoolsEvent(event) {
+        events.push(event);
+      },
+      onSignalEvent(event) {
+        events.push({
+          type: `signal-${event.type}`,
+          payload: { signalId: event.signalId },
+        });
+      },
+    });
+
+    const signal = createSignal('secret-value');
+    const slot = new TextSlot(document.createTextNode(''), 4);
+    const updater = new SimpleUpdater(() => signal(), slot);
+    updater.deps.add(signal);
+    updater.attach();
+    signal.set('changed-secret');
+    await flushMicrotasks();
+
+    const signalEvent = events.find((event) => event.type === 'signal-set');
+    const updaterEvent = events.find((event) => event.type === 'updater-run');
+    const slotEvent = events.find((event) => event.type === 'slot-write');
+
+    expect(signalEvent?.payload).toMatchObject({
+      signalId: expect.any(Number),
+    });
+    expect(updaterEvent?.payload).toMatchObject({
+      updaterId: expect.any(Number),
+      slots: [{ type: 'text', index: 4 }],
+    });
+    expect(slotEvent?.payload).toMatchObject({
+      updaterId: expect.any(Number),
+      slotType: 'text',
+      slotIndex: 4,
+    });
+    expect(JSON.stringify(events)).not.toContain('secret-value');
+    expect(JSON.stringify(events)).not.toContain('changed-secret');
   });
 
   it('emits lifecycle logs and runtime plugin devtools events', async () => {

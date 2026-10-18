@@ -92,6 +92,11 @@ export const setDevEnvironmentOverride = (value: boolean | null): void => {
 };
 
 export const emitDevtoolsEvent = (type: string, payload?: unknown): void => {
+  // 没有订阅者时不构造事件对象，避免高频 updater/slot 路径产生无谓分配。
+  if (runtimeDebugHooks.size === 0) {
+    return;
+  }
+
   const event: DevtoolsEvent = {
     type,
     payload,
