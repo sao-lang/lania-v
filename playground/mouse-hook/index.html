@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lania-v mouse hook in React</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: #0b1020;
+        color: #e8ecf5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(
+            900px 540px at 8% -12%,
+            rgba(139, 92, 246, 0.25),
+            transparent 58%
+          ),
+          radial-gradient(
+            760px 520px at 105% 18%,
+            rgba(59, 130, 246, 0.16),
+            transparent 60%
+          ),
+          #0b1020;
+      }
+
+      #root {
+        width: min(900px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 48px 0;
+      }
+
+      .mouse-page-header {
+        margin: 42px 0 26px;
+      }
+
+      .mouse-overline {
+        margin: 0 0 10px;
+        color: #a78bfa;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .mouse-page-header h1 {
+        margin: 0;
+        font-size: clamp(28px, 5vw, 42px);
+        letter-spacing: -0.04em;
+      }
+
+      .mouse-page-header > p:last-child,
+      .mouse-page-note {
+        max-width: 680px;
+        color: #aab5c9;
+        line-height: 1.6;
+      }
+
+      .mouse-react-host {
+        margin-top: 24px;
+      }
+
+      @media (max-width: 640px) {
+        #root {
+          width: min(100% - 28px, 900px);
+          padding: 28px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/mouseDemo.react.tsx"></script>
+  </body>
+</html>
