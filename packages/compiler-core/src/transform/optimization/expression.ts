@@ -207,6 +207,55 @@ export const applyComputedInlineToExpression = (
   return currentExpression;
 };
 
+/**
+ * 计算哪些 computed 必须保留成实例字段。
+ *
+ * computed 内联进模板后通常可以从类里删掉，但只要 effect / 生命周期 / setup 绑定
+ * 或另一个保留下来的 computed 还引用它，就必须继续暴露可读句柄，
+ * 否则 `this.xxx` 会变成 undefined 而不是 memo。
+ */
+export const collectRetainedComputedNames = (component: ComponentIR): Set<string> => {
+  const names = component.computed.map((computed) => computed.name);
+
+  if (names.length === 0) {
+    return new Set<string>();
+  }
+
+  const patterns = names.map((name) => ({
+    name,
+    pattern: new RegExp(`\\bthis\\.${escapeRegExp(name)}\\b`),
+  }));
+
+  const collectReferences = (source: string): string[] =>
+    patterns.filter((entry) => entry.pattern.test(source)).map((entry) => entry.name);
+
+  const expressions = new Map(
+    component.computed.map((computed) => [computed.name, computed.expression ?? ''])
+  );
+  const retained = new Set<string>();
+  const pending = [
+    ...component.effects.map((effect) => effect.body ?? ''),
+    ...component.lifecycleCallbacks.map((callback) => callback.body ?? ''),
+    ...component.setupBindings.flatMap((binding) => [
+      binding.body ?? '',
+      binding.initializer ?? '',
+    ]),
+  ].flatMap(collectReferences);
+
+  while (pending.length > 0) {
+    const name = pending.pop()!;
+
+    if (retained.has(name)) {
+      continue;
+    }
+
+    retained.add(name);
+    pending.push(...collectReferences(expressions.get(name) ?? ''));
+  }
+
+  return retained;
+};
+
 export const tryExtractStaticSignalValue = (initializer: string | null): string | null => {
   if (!initializer) {
     return null;

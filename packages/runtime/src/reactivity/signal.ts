@@ -163,6 +163,11 @@ export type Signal<T> = (() => T) & {
   setValue: (value: T) => T;
 };
 
+/** 编译产物里的 computed 字段：可调用、可 peek，但不带 setter。 */
+export type ComputedAccessor<T> = (() => T) & {
+  peek: () => T;
+};
+
 /**
  * 在 `run` 执行期间收集依赖：所有被读取的 signal 会被加入 deps。
  * 返回值包含本次执行结果与 deps 集合。
@@ -269,6 +274,19 @@ export const createSignal = <T>(
     return read.set(value);
   };
 
+  return read;
+};
+
+/**
+ * 创建一个惰性可读句柄：每次调用都重新求值，不参与调度。
+ *
+ * 编译产物用它承载 `createMemo` 的实例字段语义：
+ * 调用 `this.x()` 总能拿到最新派生值，裸引用 `this.x` 得到的对象与 signal 形态一致。
+ * 因为不缓存，也不会把调度顺序问题带进组件更新链路。
+ */
+export const createComputedAccessor = <T>(compute: () => T): ComputedAccessor<T> => {
+  const read = (() => compute()) as ComputedAccessor<T>;
+  read.peek = () => compute();
   return read;
 };
 

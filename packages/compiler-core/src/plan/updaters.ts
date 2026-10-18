@@ -61,6 +61,19 @@ const getEntryByUpdater = (
   return component.dependencyAnalysis.entries.find((entry) => entry.updater === updaterName);
 };
 
+// computed 以 memo 字段暴露后，读取既可能表现为调用 `this.x()`，
+// 也可能表现为裸属性读取 `this.x`，两种形态都要按 computed 处理。
+const isComputedDependency = (
+  dependency: DependencyEntryIR['signalDependencies'][number],
+  computedNames: ReadonlySet<string>
+): boolean => {
+  if (dependency.kind !== 'this-property-read' && dependency.kind !== 'this-signal-call') {
+    return false;
+  }
+
+  return computedNames.has(dependency.name);
+};
+
 // computed 可以继续依赖 computed，因此展开必须递归到叶子 signal。
 // 只展开一层会把中间 computed 名字留给 codegen，而 signalBindingMap 里没有这些名字，
 // 最终既不生成 `.deps.add(...)`，运行时也就永远不会订阅到底层 signal。
@@ -120,7 +133,7 @@ const createSlotUpdater = (
         const computedDependencyChain = component.dependencyAnalysis.computedDependencyChain;
 
         (entry?.signalDependencies ?? []).forEach((dependency) => {
-          if (dependency.kind === 'this-property-read' && computedNames.has(dependency.name)) {
+          if (isComputedDependency(dependency, computedNames)) {
             // 条件依赖读到 computed 时递归展开成底层 signal 链，避免运行时只订阅表层 computed 名称。
             resolveLeafDependencies(
               computedDependencyChain,
@@ -156,7 +169,7 @@ const createSlotUpdater = (
       const computedDependencyChain = component.dependencyAnalysis.computedDependencyChain;
 
       (entry?.signalDependencies ?? []).forEach((dependency) => {
-        if (dependency.kind === 'this-property-read' && computedNames.has(dependency.name)) {
+        if (isComputedDependency(dependency, computedNames)) {
           // 单 slot updater 也遵循同样的递归 computed 依赖展开规则。
           resolveLeafDependencies(
             computedDependencyChain,

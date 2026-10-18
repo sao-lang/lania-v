@@ -111,16 +111,15 @@ const createFieldMembers = (component: ComponentIR): string[] => {
 
 const createComputedFields = (component: ComponentIR): string[] => {
   return component.computed.map((computed) => {
-    // 缺失表达式时仍输出一个稳定 getter，避免生成代码缺口。
-    const body = computed.expression?.trim().length
-      ? `return ${computed.expression};`
-      : 'return undefined;';
+    // computed 与 signal 共用同一实例语义：字段上是一个可调用句柄。
+    // 读取写 `this.x()`，裸引用则拿到该句柄本身。
+    // 这里用惰性求值而非 memo：模板 updater 依赖由编译期静态注入，
+    // 不需要额外调度，也就不会出现 memo 与 DOM updater 的先后顺序问题。
+    const expression = computed.expression?.trim().length
+      ? computed.expression
+      : 'undefined';
 
-    return [
-      `get ${computed.name}(): unknown {`,
-      indent(body),
-      `}`,
-    ].join('\n');
+    return `protected ${computed.name} = createComputedAccessor(() => ${expression});`;
   });
 };
 

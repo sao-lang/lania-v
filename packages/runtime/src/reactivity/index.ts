@@ -8,6 +8,7 @@ export * from './resource';
 export * from './scheduler';
 export * from './store';
 export {
+  createComputedAccessor,
   createDeferred,
   createEffect,
   createMemo,
@@ -15,6 +16,7 @@ export {
   readonly,
   untrack,
   watch,
+  type ComputedAccessor,
   type DeferredOptions,
   type EffectCallback,
   type EffectCleanup,

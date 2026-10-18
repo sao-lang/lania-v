@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Scheduler, batch } from '@lania-v/runtime';
-import { createSignal } from '@lania-v/runtime';
+import { createComputedAccessor, createSignal } from '@lania-v/runtime';
 
 const flushMicrotasks = async (times = 1): Promise<void> => {
   for (let index = 0; index < times; index += 1) {
@@ -81,5 +81,22 @@ describe('createSignal', () => {
     expect(calls).not.toContain(3);
     expect(calls).not.toContain(8);
     expect(signal.updaters.size).toBe(10);
+  });
+});
+
+describe('createComputedAccessor', () => {
+  it('recomputes on every read and exposes the same call style as a signal', () => {
+    const count = createSignal(1);
+    const doubled = createComputedAccessor(() => count() * 2);
+
+    expect(typeof doubled).toBe('function');
+    expect(doubled()).toBe(2);
+    expect(doubled.peek()).toBe(2);
+
+    count.set(3);
+
+    // 编译产物依赖静态注入的订阅，句柄本身不缓存，因此读到的永远是最新值。
+    expect(doubled()).toBe(6);
+    expect(doubled.peek()).toBe(6);
   });
 });

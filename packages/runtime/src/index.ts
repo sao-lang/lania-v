@@ -58,12 +58,14 @@ import {
   type WatchStopHandle,
 } from './reactivity/signal';
 export {
+  createComputedAccessor,
   createDeferred,
   createEffect,
   createMemo,
   createSignal,
   readonly,
   untrack,
+  type ComputedAccessor,
   type DeferredOptions,
   type EffectCallback,
   type EffectCleanup,

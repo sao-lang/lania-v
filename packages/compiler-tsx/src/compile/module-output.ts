@@ -38,6 +38,7 @@ const TSX_RUNTIME_BINDINGS = [
   'ReactiveElement',
   'createSignal',
   'createMemo',
+  'createComputedAccessor',
   'createEffect',
   'batch',
   'createTransition',

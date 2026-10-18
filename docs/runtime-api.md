@@ -24,6 +24,26 @@ const count = createSignal(1);
 const doubled = createMemo(() => count() * 2);
 ```
 
+在 `FC / .lania.tsx` 里，`createMemo` 声明的计算属性会被编译成组件实例上的**可读句柄字段**：
+
+```ts
+const account = createSignal('');
+const accountMissing = createMemo(() => account().trim().length === 0);
+
+onMount(() => {
+  // 裸引用拿到的是句柄本身，和 signal 一样是可调用对象
+  console.log(accountMissing);
+  // 取值统一写成调用形式
+  console.log(accountMissing());
+});
+```
+
+对应的实例字段形如 `protected accountMissing = createComputedAccessor(() => ...)`：
+
+- `this.accountMissing()` 读取派生值，`this.accountMissing.peek()` 跳过调用直接取值。
+- `this.accountMissing` 不调用时得到的是句柄，而不是布尔值，便于把计算属性当参数传递。
+- 句柄不缓存，每次读取都重新求值；模板 updater 的订阅依赖由编译期静态注入，不依赖运行时调度。
+
 ### `createEffect()`
 
 ```ts

@@ -84,4 +84,57 @@ export default defineComponent(function NestedComputedHost() {
 
     expect(readUpdaterDependencies(moduleCode, 'class')).toEqual(['this.count']);
   });
+
+  it('rewrites signal and computed references in lifecycle callbacks', () => {
+    const moduleCode = compile(`
+import {
+  createMemo,
+  createSignal,
+  defineComponent,
+  onMount,
+} from '@lania-v/runtime';
+
+export default defineComponent(function LifecycleBindingsHost() {
+  const account = createSignal('');
+  const accountMissing = createMemo(() => account().trim().length === 0);
+  onMount(() => {
+    console.log({ account: account, accountMissing: accountMissing });
+  });
+  return <p>{accountMissing() ? 'missing' : 'present'}</p>;
+});
+`);
+
+    expect(moduleCode).toContain(
+      'console.log({ account: this.account, accountMissing: this.accountMissing });'
+    );
+    // computed 与 signal 共用可读句柄语义：取值必须保留调用括号。
+    expect(moduleCode).toContain(
+      'protected accountMissing = createComputedAccessor(() => this.account().trim().length === 0);'
+    );
+  });
+
+  it('keeps computed call syntax and nested computed chains', () => {
+    const moduleCode = compile(`
+import { createMemo, createSignal, defineComponent, onMount } from '@lania-v/runtime';
+
+export default defineComponent(function ComputedParityHost() {
+  const count = createSignal(0);
+  const positive = createMemo(() => count() > 0);
+  const label = createMemo(() => (positive() ? 'on' : 'off'));
+  onMount(() => {
+    console.log(label);
+  });
+  return <p className={label()}>{label()}</p>;
+});
+`);
+
+    // 模板里被内联的 computed，只要实例侧（生命周期 / effect / setup）还引用，就必须保留 memo 字段。
+    expect(moduleCode).toContain('protected positive = createComputedAccessor(() => this.count() > 0);');
+    expect(moduleCode).toContain(
+      "protected label = createComputedAccessor(() => (this.positive() ? 'on' : 'off'));"
+    );
+    expect(moduleCode).toContain('console.log(this.label);');
+    // 即使 computed 以调用形态出现，updater 仍要订阅到叶子 signal。
+    expect(moduleCode).toContain('.deps.add(this.count);');
+  });
 });

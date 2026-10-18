@@ -1,5 +1,5 @@
 import type { ComponentIR } from '../../ir/component';
-import { buildStaticSignalFoldMap } from './expression';
+import { buildStaticSignalFoldMap, collectRetainedComputedNames } from './expression';
 import { analyzeExpressionMerges, rebuildRenderPlan } from './render-plan';
 import {
   applySlotPacking,
@@ -36,6 +36,9 @@ export const optimizeComponentTemplate = (component: ComponentIR): void => {
   const packedNodes = applySlotPacking(optimizedNodes, slotPackingMap);
   const rebuiltRenderPlan = rebuildRenderPlan(packedNodes);
 
+  // computed 只有在完全内联且没有实例侧引用时才允许从类里删掉。
+  const retainedComputed = collectRetainedComputedNames(component);
+
   component.template.roots = packedNodes;
   component.template.slotCount = rebuiltRenderPlan.slotCount;
   component.renderPlan = {
@@ -54,7 +57,7 @@ export const optimizeComponentTemplate = (component: ComponentIR): void => {
     storeBindingMap: component.renderPlan.storeBindingMap,
   };
   component.computed = component.computed.filter(
-    (computed) => !usedComputed.has(computed.name)
+    (computed) => !usedComputed.has(computed.name) || retainedComputed.has(computed.name)
   );
   const usedSignals = collectUsedSignalNames(component);
   optimization.staticSignalFolds = Object.entries(staticSignals).map(([signal, folded]) => ({
