@@ -134,13 +134,13 @@ const lowerTransitionElement = (
   domIndex: number,
   lowerTemplateChildren: TemplateLowerer
 ): LowerTemplateResult => {
-  // 过渡块的 children 仍按普通模板递归 lowering，只是在外层额外挂一层 transition payload。
+  // 过渡块的 children 会被提取成独立模板，路径同样必须相对模板根重新起算。
   const loweredChildren = lowerTemplateChildren(
     child.children,
-    parentPath,
+    [],
     nextSlotIndex,
     transitionIndex + 1,
-    domIndex
+    0
   );
   const fallbackExpression = getAttributeExpression(child, 'fallback');
   const fallbackTemplateHtml = fallbackExpression
@@ -191,12 +191,14 @@ const lowerBoundaryElement = (
   lowerTemplateChildren: TemplateLowerer
 ): LowerTemplateResult => {
   // Boundary 同样先降子树，再把错误边界所需运行时上下文打包进 payload。
+  // 子树会被提取成独立的 child template，因此路径必须相对该模板根重新起算，
+  // 否则运行时按父模板坐标（如 [0, 2]）去 child template 里找节点必然失败。
   const loweredChildren = lowerTemplateChildren(
     child.children,
-    parentPath,
+    [],
     nextSlotIndex,
     boundaryIndex + 1,
-    domIndex
+    0
   );
   const fallbackExpression = getAttributeExpression(child, 'fallback');
   const fallbackTemplateHtml = fallbackExpression

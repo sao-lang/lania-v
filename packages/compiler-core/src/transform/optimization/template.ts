@@ -121,13 +121,29 @@ export const collectUsedSignalNames = (component: ComponentIR): Set<string> => {
 
 // 递归优化模板节点树。
 // 结构上尽量保持原节点类型不变，只有在表达式可折叠成纯文本时才降级为 `TextIR`。
+//
+// `insideBlockTemplate` 表示当前是否处于 block 自己的模板（If / Dynamic / Boundary…）。
+// 这类模板的 HTML 在 lowering 阶段就已固化成字符串，优化阶段不会重建，
+// 因此在这里折叠表达式会把 `__LANIA_SLOT_n__` 占位留在 HTML 里而丢掉对应 binding。
 export const optimizeTemplateNodes = (
   nodes: TemplateIRNode[],
   component: ComponentIR,
   optimization: OptimizationPassIR,
   usedComputed: Set<string>,
-  staticSignals: Record<string, string>
+  staticSignals: Record<string, string>,
+  insideBlockTemplate = false
 ): TemplateIRNode[] => {
+  const optimizeChildren = (children: TemplateIRNode[], insideBlock = insideBlockTemplate) => {
+    return optimizeTemplateNodes(
+      children,
+      component,
+      optimization,
+      usedComputed,
+      staticSignals,
+      insideBlock
+    );
+  };
+
   return nodes.map((node): TemplateIRNode => {
     if (node.type === 'TextIR') {
       return node;
@@ -153,13 +169,7 @@ export const optimizeTemplateNodes = (
             usedComputed
           ),
         })),
-        children: optimizeTemplateNodes(
-          node.children,
-          component,
-          optimization,
-          usedComputed,
-          staticSignals
-        ),
+        children: optimizeChildren(node.children),
       };
     }
 
@@ -167,13 +177,7 @@ export const optimizeTemplateNodes = (
       // 边界类节点本身的核心语义不动，只继续向子树传播优化。
       return {
         ...node,
-        children: optimizeTemplateNodes(
-          node.children,
-          component,
-          optimization,
-          usedComputed,
-          staticSignals
-        ),
+        children: optimizeChildren(node.children, true),
       };
     }
 
@@ -196,7 +200,9 @@ export const optimizeTemplateNodes = (
     // 先做静态 signal 替换，再做 computed 内联，保证表达式来源尽量收敛成最终形态。
 
     if (node.type === 'ExpressionIR') {
-      const folded = tryEvaluateConstantExpression(inlinedExpression);
+      const folded = insideBlockTemplate
+        ? null
+        : tryEvaluateConstantExpression(inlinedExpression);
 
       if (folded !== null) {
         // 纯常量文本表达式可以直接退化成静态 TextIR，彻底消除运行时 slot。
@@ -238,9 +244,7 @@ export const optimizeTemplateNodes = (
       return {
         ...node,
         targetExpression: inlinedExpression,
-        children: node.children
-          ? optimizeTemplateNodes(node.children, component, optimization, usedComputed, staticSignals)
-          : undefined,
+        children: node.children ? optimizeChildren(node.children, true) : undefined,
       };
     }
 
@@ -262,9 +266,7 @@ export const optimizeTemplateNodes = (
           component,
           usedComputed
         ),
-        children: node.children
-          ? optimizeTemplateNodes(node.children, component, optimization, usedComputed, staticSignals)
-          : undefined,
+        children: node.children ? optimizeChildren(node.children, true) : undefined,
       };
     }
 
@@ -273,9 +275,7 @@ export const optimizeTemplateNodes = (
       return {
         ...node,
         payloadExpression: inlinedExpression,
-        children: node.children
-          ? optimizeTemplateNodes(node.children, component, optimization, usedComputed, staticSignals)
-          : undefined,
+        children: node.children ? optimizeChildren(node.children, true) : undefined,
       };
     }
 
@@ -292,17 +292,9 @@ export const optimizeTemplateNodes = (
       const ifNode: IfIR = {
         ...node,
         expression: inlinedExpression,
-        children: node.children
-          ? optimizeTemplateNodes(node.children, component, optimization, usedComputed, staticSignals)
-          : undefined,
+        children: node.children ? optimizeChildren(node.children, true) : undefined,
         fallbackChildren: node.fallbackChildren
-          ? optimizeTemplateNodes(
-              node.fallbackChildren,
-              component,
-              optimization,
-              usedComputed,
-              staticSignals
-            )
+          ? optimizeChildren(node.fallbackChildren, true)
           : undefined,
       };
 

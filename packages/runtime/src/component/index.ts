@@ -33,6 +33,7 @@ export {
   createComponentElement,
   createRoot,
   defineComponent,
+  getComponentCreationProps,
   getComponentTagName,
   isComponentElementConstructor,
   lazy,

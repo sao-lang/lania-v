@@ -187,14 +187,16 @@ const collectKeyedItemAttributeBindings = (
     }
 
     const name = restoreBindingName(prop.name.getText(sourceFile));
+    // JSX 的 `className` 落到 HTML 时必须写成 `class`，否则会生成非法属性名。
+    const htmlName = name === 'className' ? 'class' : name;
     const value = prop.initializer;
 
     if (!value) {
-      return [name];
+      return [htmlName];
     }
 
     if (ts.isStringLiteral(value)) {
-      return [`${name}="${value.text}"`];
+      return [`${htmlName}="${value.text}"`];
     }
 
     if (!ts.isJsxExpression(value) || !value.expression) {

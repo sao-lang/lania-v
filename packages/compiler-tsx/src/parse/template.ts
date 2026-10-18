@@ -965,7 +965,9 @@ const parseJsxChild = (
 ): TemplateChildNode[] => {
   if (ts.isJsxText(node)) {
     // JSX 文本节点需要先按模板语义压缩空白，再决定是否保留。
-    const value = normalizeJsxText(node.getText(sourceFile));
+    // 这里用 `getFullText`：TS 会把紧邻前一个元素的空白算进前导 trivia，
+    // 只用 `getText` 会丢掉 `</span> | next` 这类空格，渲染结果与 JSX 语义不一致。
+    const value = normalizeJsxText(node.getFullText(sourceFile));
     return value.length > 0 ? [createTextNode(value)] : [];
   }
 

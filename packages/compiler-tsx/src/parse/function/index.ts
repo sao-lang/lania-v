@@ -149,7 +149,7 @@ export const parseFunctionComponentTsx = (
         ? null
         : rewriteBlockWithBindings(callback.body, bindings),
   }));
-  const setupBindings = rawSetupBindings.map((binding) => ({
+  const rewrittenSetupBindings = rawSetupBindings.map((binding) => ({
     ...binding,
     body:
       binding.body === null
@@ -160,6 +160,24 @@ export const parseFunctionComponentTsx = (
         ? null
         : rewriteExpressionWithBindings(binding.initializer, bindings),
   }));
+
+  // 组件字段初始化发生在构造期，此时宿主还没机会逐项写 props。
+  // 这里注入一个最靠前的 `props` 字段，承接构造期注入的 props 快照，
+  // 让 `bindProps(props)` 这类整体引用在编译产物里仍然可用。
+  const setupBindings = functionProps.propAlias
+    ? [
+        {
+          type: 'SetupBindingDeclaration' as const,
+          name: 'props',
+          kind: 'field' as const,
+          params: '',
+          body: null,
+          initializer: 'getComponentCreationProps() ?? {}',
+          order: -1,
+        },
+        ...rewrittenSetupBindings,
+      ]
+    : rewrittenSetupBindings;
 
   // 解析阶段在这里收束为统一组件声明，后续 compiler-core 不再关心它最初是否来自函数组件。
   const formValueExpression = collectFunctionFormValue(functionDeclaration, sourceFile);

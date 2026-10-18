@@ -60,7 +60,9 @@ const TSX_RUNTIME_BINDINGS = [
   'createRef',
   'createContext',
   'provideContextHere',
+  'provideContext',
   'consumeContext',
+  'getComponentCreationProps',
   'registerDirective',
   'When',
   'Each',
@@ -158,14 +160,83 @@ const createRuntimeBindingBlock = (
   ].join('\n');
 };
 
+// 用户源码里的 runtime 具名导入会被前导过滤掉，因此需要收集回来统一注入，
+// 否则 `bindProps` / `bindHandlers` 这类业务侧 API 会在运行时报未定义。
+const collectUserRuntimeBindings = (
+  fileName: string,
+  source: string
+): { root: string[]; advanced: string[] } => {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.ESNext,
+    true,
+    ts.ScriptKind.TSX
+  );
+  const root: string[] = [];
+  const advanced: string[] = [];
+
+  sourceFile.statements.forEach((stmt) => {
+    if (!ts.isImportDeclaration(stmt) || !stmt.moduleSpecifier || !stmt.importClause) {
+      return;
+    }
+
+    const specifier = stmt.moduleSpecifier.getText(sourceFile);
+    if (!RUNTIME_IMPORT_PATTERN.test(specifier)) {
+      return;
+    }
+
+    const clause = stmt.importClause;
+    const namedBindings = clause.namedBindings;
+    if (clause.isTypeOnly || !namedBindings || !ts.isNamedImports(namedBindings)) {
+      return;
+    }
+
+    const moduleName = specifier.slice(1, -1);
+    // advanced 入口不在 runtime 根导出里，必须各自走对应模块。
+    const target = moduleName === '@lania-v/runtime/advanced' ? advanced : root;
+    namedBindings.elements.forEach((element) => {
+      if (element.isTypeOnly) {
+        return;
+      }
+      target.push(element.name.text);
+    });
+  });
+
+  return { root, advanced };
+};
+
+const mergeBindingNames = (
+  base: readonly string[],
+  extras: readonly string[]
+): string[] => {
+  const merged = [...base];
+  const seen = new Set(merged);
+
+  extras.forEach((name) => {
+    if (seen.has(name)) {
+      return;
+    }
+    seen.add(name);
+    merged.push(name);
+  });
+
+  return merged;
+};
+
 // 最终模块文本由运行时前导、编译后的类代码以及默认/具名导出三部分组成。
-const createLaniaTsxModuleCode = (className: string, classCode: string): string => {
+const createLaniaTsxModuleCode = (
+  className: string,
+  classCode: string,
+  runtimeBindings: readonly string[] = TSX_RUNTIME_BINDINGS,
+  advancedBindings: readonly string[] = TSX_ADVANCED_RUNTIME_BINDINGS
+): string => {
   return [
-    createRuntimeBindingBlock('__lania', '@lania-v/runtime', TSX_RUNTIME_BINDINGS),
+    createRuntimeBindingBlock('__lania', '@lania-v/runtime', runtimeBindings),
     createRuntimeBindingBlock(
       '__laniaAdvanced',
       '@lania-v/runtime/advanced',
-      TSX_ADVANCED_RUNTIME_BINDINGS
+      advancedBindings
     ),
     '',
     classCode,
@@ -209,11 +280,14 @@ export const emitFunctionComponentTsxModule = (
   // 先保留用户原始 import，再拼接运行时代码与编译后的组件类定义。
   // 这样集成层既能继续解析用户依赖，也不会漏掉编译器自动注入的 runtime 能力。
   const preambleCode = extractNonRuntimeImports(fileName, source);
+  const userRuntimeBindings = collectUserRuntimeBindings(fileName, source);
   const moduleCode = [
     preambleCode,
     createLaniaTsxModuleCode(
       compiled.className,
-      normalizeModelObjectUpdaters(compiled.classCode.code)
+      normalizeModelObjectUpdaters(compiled.classCode.code),
+      mergeBindingNames(TSX_RUNTIME_BINDINGS, userRuntimeBindings.root),
+      mergeBindingNames(TSX_ADVANCED_RUNTIME_BINDINGS, userRuntimeBindings.advanced)
     ),
   ]
     .filter((chunk) => chunk.trim().length > 0)

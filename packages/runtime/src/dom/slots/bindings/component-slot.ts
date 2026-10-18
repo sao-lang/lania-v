@@ -46,13 +46,16 @@ export class ComponentSlot<
   }
 
   // 目标既可能是原生标签，也可能是自定义元素构造器或工厂函数。
-  private createElement(): TElement {
+  private createElement(props?: Record<string, unknown>): TElement {
     if (typeof this.target === 'string') {
       return document.createElement(this.target) as TElement;
     }
 
     if (isComponentElementConstructor(this.target)) {
-      return createComponentElement(this.target) as TElement;
+      return createComponentElement(
+        this.target,
+        props ? { props } : {}
+      ) as TElement;
     }
 
     return this.target();
@@ -64,12 +67,14 @@ export class ComponentSlot<
       return;
     }
 
+    const props = value as Record<string, unknown>;
+
     if (!this.instance) {
-      this.instance = this.createElement();
+      // 首次创建时把 props 一并传入，让组件在字段初始化阶段就能读到真实 props。
+      this.instance = this.createElement(props);
       this.node.parentNode?.insertBefore(this.instance, this.node);
     }
 
-    const props = value as Record<string, unknown>;
     const eventBindings = readDynamicEvents(props);
     const directiveBindings = readDynamicDirectives(props);
 

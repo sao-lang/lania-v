@@ -501,6 +501,34 @@ const registerComponentElement = <T extends ComponentElementConstructor>(
 
   return ctor;
 };
+/**
+ * 组件构造期可用的 props 快照栈。
+ *
+ * Custom Element 的字段初始化发生在构造器里，此时 `document.createElement` 还没返回，
+ * 外部也无法再注入 props。这里在构造期间临时暴露本次要传入的 props，
+ * 让编译产物里的 `props` 字段能在字段初始化阶段拿到真实对象。
+ */
+const componentCreationPropsStack: Array<Record<string, unknown>> = [];
+
+export const getComponentCreationProps = (): Record<string, unknown> | null => {
+  return componentCreationPropsStack.length > 0
+    ? componentCreationPropsStack[componentCreationPropsStack.length - 1]!
+    : null;
+};
+
+const createElementWithProps = <T>(
+  props: Record<string, unknown>,
+  create: () => T
+): T => {
+  componentCreationPropsStack.push(props);
+
+  try {
+    return create();
+  } finally {
+    componentCreationPropsStack.pop();
+  }
+};
+
 export const createComponentElement = <T extends ComponentElementConstructor>(
   ctor: T,
   options: CreateComponentElementOptions = {}
@@ -512,8 +540,12 @@ export const createComponentElement = <T extends ComponentElementConstructor>(
     throw new TypeError('Unable to create a component element without a resolved tag name.');
   }
 
-  const element = document.createElement(tagName) as InstanceType<T>;
   const props = options.props ?? {};
+  // `document.createElement` 会同步执行构造器与字段初始化，因此 props 必须在这之前入栈。
+  const element = createElementWithProps(props, () => {
+    return document.createElement(tagName) as InstanceType<T>;
+  });
+
   for (const [key, value] of Object.entries(props)) {
     // 这里走 property 赋值，而不是 attribute，便于直接传对象/函数等运行时值。
     (element as Record<string, unknown>)[key] = value;
