@@ -63,6 +63,25 @@ function title() {
     expect(generatedStaticHtml).toBe('<article>__LANIA_SLOT_0__</article>');
   });
 
+  it('rewrites local component tags to instance members', () => {
+    const source = `
+import { lazy } from '@lania-v/runtime';
+
+function PluginHost() {
+  const LazyHello = lazy(async () => ({
+    default: (props: { name: string }) => <p>{props.name}</p>,
+  }));
+  return <section><LazyHello name="lania" /></section>;
+}
+`.trim();
+
+    const moduleCode = compileFunctionComponentTsxToModule('PluginHost.tsx', source);
+
+    expect(moduleCode).toContain('LazyHello = lazy(');
+    expect(moduleCode).toContain('component: this.LazyHello');
+    expect(moduleCode).not.toMatch(/component:\s*LazyHello/);
+  });
+
   it('separates compile and emit stages for TSX module output', () => {
     const source = `
 import helper from './helper';

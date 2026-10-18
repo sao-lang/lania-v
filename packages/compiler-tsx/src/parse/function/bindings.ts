@@ -42,6 +42,12 @@ const isPropertyNameIdentifier = (node: ts.Identifier): boolean => {
     (ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) ||
     (ts.isPropertyAssignment(node.parent) && node.parent.name === node) ||
     (ts.isMethodDeclaration(node.parent) && node.parent.name === node) ||
+    (ts.isJsxAttribute(node.parent) && node.parent.name === node) ||
+    // JSX 标签名（`<p>` 这类原生标签）不是变量引用，改写会直接破坏模板结构。
+    ((ts.isJsxOpeningElement(node.parent) ||
+      ts.isJsxClosingElement(node.parent) ||
+      ts.isJsxSelfClosingElement(node.parent)) &&
+      node.parent.tagName === node) ||
     ts.isShorthandPropertyAssignment(node.parent)
   );
 };
@@ -150,10 +156,15 @@ const createBindingTransformer = (
         }
 
         if (bindings.computedNames.has(node.expression.text)) {
-          // computed 在实例模型里表现为 getter，重写后不再保留调用括号。
-          return ts.factory.createPropertyAccessExpression(
-            ts.factory.createThis(),
-            node.expression.text
+          // computed 在实例模型里是 memo 字段，读取与 signal 一样保留调用括号。
+          return ts.factory.updateCallExpression(
+            node,
+            ts.factory.createPropertyAccessExpression(
+              ts.factory.createThis(),
+              node.expression.text
+            ),
+            node.typeArguments,
+            node.arguments
           );
         }
 
@@ -278,7 +289,8 @@ const createBindingTransformer = (
       if (
         ts.isPropertyAccessExpression(node) &&
         ts.isIdentifier(node.expression) &&
-        bindings.signalNames.has(node.expression.text)
+        (bindings.signalNames.has(node.expression.text) ||
+          bindings.computedNames.has(node.expression.text))
       ) {
         if (isShadowedByLocalScope(node.expression.text)) {
           return ts.visitEachChild(node, visit, context);
@@ -306,10 +318,27 @@ const createBindingTransformer = (
         );
       }
 
+      // 整体引用 props（如 `bindProps(props)`、`createExpose(props, ...)`）时，
+      // 实例模型里没有原始形参，改用构造期由宿主注入的 `this.props` 快照。
+      if (
+        ts.isIdentifier(node) &&
+        bindings.propAlias &&
+        node.text === bindings.propAlias &&
+        !isShadowedByLocalScope(node.text) &&
+        !isDeclarationIdentifier(node) &&
+        !isPropertyNameIdentifier(node)
+      ) {
+        return ts.factory.createPropertyAccessExpression(
+          ts.factory.createThis(),
+          'props'
+        );
+      }
+
       // 其余本地绑定在引用位置都提升为实例字段访问。
       if (
         ts.isIdentifier(node) &&
-        bindings.signalNames.has(node.text) &&
+        (bindings.signalNames.has(node.text) ||
+          bindings.computedNames.has(node.text)) &&
         !isShadowedByLocalScope(node.text) &&
         !isDeclarationIdentifier(node) &&
         !isPropertyNameIdentifier(node) &&
@@ -428,9 +457,18 @@ export const rewriteFunctionTemplateNode = (
       }
 
       if (child.type === 'ElementNode') {
+        // 组件标签名不经表达式重写，但本地组件绑定（如 `const LazyHello = lazy(...)`）
+        // 已被提升为实例字段，这里需要同步改写，否则生成代码会引用未定义标识符。
+        const tagName =
+          /^[A-Z][A-Za-z0-9_$]*$/.test(child.tagName) &&
+          bindings.localBindingNames.has(child.tagName)
+            ? `this.${child.tagName}`
+            : child.tagName;
+
         // 模板树里的动态属性、事件、指令最终都复用同一套表达式重写口径。
         return {
           ...child,
+          tagName,
           attributes: child.attributes.map((attribute) => ({
             ...attribute,
             value:

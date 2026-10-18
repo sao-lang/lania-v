@@ -62,11 +62,34 @@ export interface Slot<T = unknown> {
   destroy(): void;
 }
 
+const isNodeLike = (value: unknown): value is Node | DocumentFragment | readonly Node[] => {
+  if (value == null || value === false) {
+    return false;
+  }
+
+  if (value instanceof Node || value instanceof DocumentFragment) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(
+      (entry) =>
+        entry == null ||
+        entry === false ||
+        entry instanceof Node ||
+        Array.isArray(entry)
+    );
+  }
+
+  return false;
+};
+
 // TextSlot 是最轻量的 slot：只负责把值写进单个 Text 节点。
 export class TextSlot implements Slot<unknown> {
   readonly type = 'text';
   readonly frequency = 'normal';
   private previous: string;
+  injectedNodes: Node[] = [];
 
   constructor(
     public readonly node: Text,
@@ -75,7 +98,42 @@ export class TextSlot implements Slot<unknown> {
     this.previous = node.data;
   }
 
+  // 结构型调用方（KeepAlive/Transition 等）按 `currentNodes` 读取区间，
+  // 注入节点必须一并暴露，否则会被当成“空文本槽”而漏搬真实 DOM。
+  get currentNodes(): Node[] | null {
+    return this.injectedNodes.length > 0 ? [this.node, ...this.injectedNodes] : null;
+  }
+
+  private clearInjectedNodes(): void {
+    if (this.injectedNodes.length === 0) {
+      return;
+    }
+
+    this.injectedNodes.forEach((node) => {
+      node.parentNode?.removeChild(node);
+    });
+    this.injectedNodes.length = 0;
+  }
+
   write(value: unknown): void {
+    if (isNodeLike(value)) {
+      this.clearInjectedNodes();
+      const nextNodes = normalizeDynamicResult(value);
+      const parent = this.node.parentNode;
+      if (parent) {
+        let anchor: Node = this.node;
+        nextNodes.forEach((node) => {
+          parent.insertBefore(node, anchor.nextSibling);
+          anchor = node;
+        });
+      }
+      this.injectedNodes = nextNodes;
+      this.node.data = '';
+      this.previous = '';
+      return;
+    }
+
+    this.clearInjectedNodes();
     const nextValue = value == null ? '' : String(value);
     if (this.previous === nextValue) {
       return;
@@ -85,6 +143,7 @@ export class TextSlot implements Slot<unknown> {
   }
 
   destroy(): void {
+    this.clearInjectedNodes();
     if (this.previous === '') {
       return;
     }
@@ -402,13 +461,22 @@ export const appendNodesBeforeAnchor = (parent: Node, anchor: Node, nodes: reado
 
 export const insertNodeBeforeSafe = (parent: Node, node: Node, beforeNode: Node | null): void => {
   const resolvedBeforeNode = beforeNode && beforeNode.parentNode === parent ? beforeNode : null;
-  parent.insertBefore(node, resolvedBeforeNode);
+  // appendChild 比 insertBefore(node, null) 少一次空值分支处理，是离屏拼装的常用路径。
+  if (resolvedBeforeNode) {
+    parent.insertBefore(node, resolvedBeforeNode);
+    return;
+  }
+  parent.appendChild(node);
 };
 
 export const collectKeyedBlockElements = (block: KeyedBlock): HTMLElement[] => {
   // keyed block 主要服务于 TransitionGroup/For 等需要回看一段 DOM 区间的场景。
+  if (block.element) {
+    return block.element instanceof HTMLElement ? [block.element] : [];
+  }
+
   const elements: HTMLElement[] = [];
-  let current: ChildNode | null = block.start.nextSibling;
+  let current: ChildNode | null = block.start?.nextSibling ?? null;
   while (current && current !== block.end) {
     if (current instanceof HTMLElement) {
       elements.push(current);
@@ -419,8 +487,12 @@ export const collectKeyedBlockElements = (block: KeyedBlock): HTMLElement[] => {
 };
 
 export const collectKeyedBlockNodes = (block: KeyedBlock): Node[] => {
+  if (block.element) {
+    return [block.element];
+  }
+
   const nodes: Node[] = [];
-  let current: ChildNode | null = block.start.nextSibling;
+  let current: ChildNode | null = block.start?.nextSibling ?? null;
   while (current && current !== block.end) {
     nodes.push(current);
     current = current.nextSibling;

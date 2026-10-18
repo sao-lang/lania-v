@@ -42,7 +42,7 @@ import {
   RefSlot,
   createDirectiveSlotForBinding,
 } from '../bindings/directive-slots';
-import type { MountedBindingInstance, RetainedSlotLifecycle, TemplateBindingPayload } from './template-types';
+import type { MountedBindingInstance, MountedFragmentBindingInstance, RetainedSlotLifecycle, TemplateBindingPayload } from './template-types';
 
 const createTemplateSlot = (
   mounted: MountedStaticTemplate,
@@ -158,14 +158,41 @@ const createTemplateSlot = (
   }
 };
 
-const writeTemplateBindingSlot = (
+const STRUCTURAL_BINDING_KINDS = new Set<TemplateBindingPayload['kind']>([
+  'for',
+  'if',
+  'dynamic',
+  'boundary',
+  'teleport',
+  'keepalive',
+]);
+
+const hasStructuralBindings = (
+  bindings: readonly TemplateBindingPayload[]
+): boolean => {
+  for (let index = 0; index < bindings.length; index += 1) {
+    if (STRUCTURAL_BINDING_KINDS.has(bindings[index]!.kind)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// keyed 列表的常见调用形态是 (item, index)，直接透传两个参数可以省掉一次 rest 展开。
+const evaluateBinding = (
+  binding: TemplateBindingPayload,
+  args: readonly unknown[]
+): unknown => {
+  return args.length === 2
+    ? binding.evaluate(args[0], args[1])
+    : binding.evaluate(...args);
+};
+
+const commitBindingValue = (
   slot: Slot<unknown>,
   binding: TemplateBindingPayload,
-  ...args: unknown[]
-): unknown => {
-  // evaluate 在这里统一执行，保证挂载与后续 update 走同一条写入路径。
-  const nextValue = binding.evaluate(...args);
-
+  nextValue: unknown
+): void => {
   if (binding.kind === 'event') {
     // 事件绑定先包一层 modifier 适配，再把最终 handler 写入 EventSlot。
     const handler =
@@ -176,7 +203,7 @@ const writeTemplateBindingSlot = (
           )
         : null;
     slot.write(handler);
-    return nextValue;
+    return;
   }
 
   if (binding.kind === 'directive' && binding.directiveKind === 'use') {
@@ -185,89 +212,143 @@ const writeTemplateBindingSlot = (
       name: binding.name ?? '',
       value: nextValue,
     });
-    return nextValue;
+    return;
   }
 
   slot.write(nextValue);
+};
+
+const writeTemplateBindingSlot = (
+  slot: Slot<unknown>,
+  binding: TemplateBindingPayload,
+  args: readonly unknown[]
+): unknown => {
+  // evaluate 在这里统一执行，保证挂载与后续 update 走同一条写入路径。
+  const nextValue = evaluateBinding(binding, args);
+  commitBindingValue(slot, binding, nextValue);
   return nextValue;
+};
+
+// 用一个哨兵替代额外的 hasPreviousValue 数组，按条目挂载时可以少一次分配。
+const UNINITIALIZED = Symbol('lania-binding-uninitialized');
+
+class MountedBindingInstanceImpl implements MountedBindingInstance {
+  constructor(
+    public readonly nodes: Node[],
+    public readonly mounted: MountedStaticTemplate,
+    public readonly slots: Slot<unknown>[],
+    private readonly bindings: readonly TemplateBindingPayload[],
+    private readonly previousValues: unknown[]
+  ) {}
+
+  update(...nextArgs: unknown[]): void {
+    for (let bindingIndex = 0; bindingIndex < this.bindings.length; bindingIndex += 1) {
+      const slot = this.slots[bindingIndex];
+      if (!slot) {
+        continue;
+      }
+
+      const binding = this.bindings[bindingIndex]!;
+      const nextValue = evaluateBinding(binding, nextArgs);
+      const previousValue = this.previousValues[bindingIndex];
+      if (previousValue !== UNINITIALIZED && Object.is(previousValue, nextValue)) {
+        continue;
+      }
+
+      commitBindingValue(slot, binding, nextValue);
+      this.previousValues[bindingIndex] = nextValue;
+    }
+  }
+
+  activate(): void {
+    for (let index = 0; index < this.slots.length; index += 1) {
+      (this.slots[index] as Partial<RetainedSlotLifecycle>).activate?.();
+    }
+  }
+
+  deactivate(): void {
+    for (let index = 0; index < this.slots.length; index += 1) {
+      (this.slots[index] as Partial<RetainedSlotLifecycle>).deactivate?.();
+    }
+  }
+
+  destroy(): void {
+    for (let index = 0; index < this.slots.length; index += 1) {
+      this.slots[index]!.destroy();
+    }
+  }
+}
+
+const createMountedBindingInstance = (
+  root: Node,
+  template: StaticTemplate,
+  bindings: readonly TemplateBindingPayload[],
+  args: readonly unknown[]
+): MountedBindingInstance => {
+  // 先把静态模板克隆到 root（fragment 或调用方提供的离屏容器），
+  // 再基于 mounted 结果解析各个 slot 的节点位置。
+  const previousTail = root.lastChild;
+  const mounted = mountStaticTemplate(root, template, { hydrate: false });
+  const slots = bindings.map((binding, bindingIndex) =>
+    createTemplateSlot(mounted, binding, binding.slotIndex >= 0 ? binding.slotIndex : bindingIndex)
+  );
+  const previousBindingValues: unknown[] = new Array(bindings.length).fill(UNINITIALIZED);
+  // 首次挂载后立刻执行一轮写入，让模板克隆结果与初始上下文同步。
+  for (let bindingIndex = 0; bindingIndex < bindings.length; bindingIndex += 1) {
+    const binding = bindings[bindingIndex]!;
+    const slot = slots[bindingIndex];
+    if (slot) {
+      previousBindingValues[bindingIndex] = writeTemplateBindingSlot(slot, binding, args);
+    }
+  }
+
+  // 结构型 slot 或文本槽注入节点时，都会在首次写入阶段追加节点，
+  // 因此需要按“本次挂载新增区间”收集；其余纯写入型绑定直接复用模板节点快照。
+  const hasInjectedNodes = slots.some((slot) => {
+    const injected = (slot as { injectedNodes?: readonly Node[] }).injectedNodes;
+    return injected !== undefined && injected.length > 0;
+  });
+  let nodes = mounted.nodes;
+  if (hasStructuralBindings(bindings) || hasInjectedNodes) {
+    nodes = [];
+    let current = previousTail ? previousTail.nextSibling : root.firstChild;
+    while (current) {
+      nodes.push(current);
+      current = current.nextSibling;
+    }
+  }
+
+  return new MountedBindingInstanceImpl(
+    nodes,
+    mounted,
+    slots,
+    bindings,
+    previousBindingValues
+  );
 };
 
 export const mountTemplateBinding = (
   template: StaticTemplate,
   bindings: readonly TemplateBindingPayload[],
   ...args: unknown[]
-): MountedBindingInstance => {
+): MountedFragmentBindingInstance => {
   const fragment = document.createDocumentFragment();
-  // 先把静态模板完整克隆到 fragment，再基于 mounted 结果解析各个 slot 的节点位置。
-  const mounted = mountStaticTemplate(fragment, template, { hydrate: false });
-  const slots = bindings.map((binding, bindingIndex) =>
-    createTemplateSlot(mounted, binding, binding.slotIndex >= 0 ? binding.slotIndex : bindingIndex)
-  );
-  const previousBindingValues: unknown[] = new Array(bindings.length);
-  const hasPreviousBindingValue = new Array(bindings.length).fill(false);
-  // 首次挂载后立刻执行一轮写入，让模板克隆结果与初始上下文同步。
-  bindings.forEach((binding, bindingIndex) => {
-    const slot = slots[bindingIndex];
-    if (slot) {
-      previousBindingValues[bindingIndex] = writeTemplateBindingSlot(slot, binding, ...args);
-      hasPreviousBindingValue[bindingIndex] = true;
-    }
-  });
+  const instance = createMountedBindingInstance(fragment, template, bindings, args);
+  // 直接挂到实例上，避免再包一层对象；fragment 仅供调用方整体搬运节点。
+  return Object.assign(instance, { fragment }) as MountedFragmentBindingInstance;
+};
 
-  return {
-    fragment,
-    nodes: [...fragment.childNodes],
-    mounted,
-    slots,
-    update(...nextArgs: unknown[]) {
-      bindings.forEach((binding, bindingIndex) => {
-        const slot = slots[bindingIndex];
-        if (slot) {
-          const nextValue = binding.evaluate(...nextArgs);
-          if (
-            hasPreviousBindingValue[bindingIndex] &&
-            Object.is(previousBindingValues[bindingIndex], nextValue)
-          ) {
-            return;
-          }
-
-          if (binding.kind === 'event') {
-            const handler =
-              typeof nextValue === 'function'
-                ? withEventModifiers(
-                    nextValue as (event: Event) => unknown,
-                    (binding.modifiers ?? []) as readonly EventModifier[]
-                  )
-                : null;
-            slot.write(handler);
-          } else if (binding.kind === 'directive' && binding.directiveKind === 'use') {
-            slot.write({
-              name: binding.name ?? '',
-              value: nextValue,
-            });
-          } else {
-            slot.write(nextValue);
-          }
-
-          previousBindingValues[bindingIndex] = nextValue;
-          hasPreviousBindingValue[bindingIndex] = true;
-        }
-      });
-    },
-    activate() {
-      slots.forEach((slot) => {
-        (slot as Partial<RetainedSlotLifecycle>).activate?.();
-      });
-    },
-    deactivate() {
-      slots.forEach((slot) => {
-        (slot as Partial<RetainedSlotLifecycle>).deactivate?.();
-      });
-    },
-    destroy() {
-      slots.forEach((slot) => slot.destroy());
-    },
-  };
+/**
+ * 把模板直接挂载到调用方提供的容器（常见于 keyed 列表的批量首次挂载）。
+ * 省去「临时 fragment + 再搬家」的一次节点迁移，容器可以是离屏 fragment。
+ */
+export const mountTemplateBindingInto = (
+  container: Node,
+  template: StaticTemplate,
+  bindings: readonly TemplateBindingPayload[],
+  ...args: unknown[]
+): MountedBindingInstance => {
+  return createMountedBindingInstance(container, template, bindings, args);
 };
 
 type HydratableTemplateSlot = Slot<unknown> & {
@@ -353,8 +434,7 @@ export const mountHydratedBinding = (
       binding.slotIndex >= 0 ? binding.slotIndex : bindingIndex
     )
   );
-  const previousBindingValues: unknown[] = new Array(bindings.length);
-  const hasPreviousBindingValue = new Array(bindings.length).fill(false);
+  const previousBindingValues: unknown[] = new Array(bindings.length).fill(UNINITIALIZED);
 
   bindings.forEach((binding, bindingIndex) => {
     const slot = slots[bindingIndex];
@@ -364,62 +444,14 @@ export const mountHydratedBinding = (
 
     // 先 hydrate 再 write，确保 slot 内部拿到的是服务端已有 DOM，而不是新建节点。
     hydrateTemplateSlot(mounted, binding, slot, ...args);
-    previousBindingValues[bindingIndex] = writeTemplateBindingSlot(slot, binding, ...args);
-    hasPreviousBindingValue[bindingIndex] = true;
+    previousBindingValues[bindingIndex] = writeTemplateBindingSlot(slot, binding, args);
   });
 
-  return {
-    fragment: document.createDocumentFragment(),
-    nodes: [...nodes],
+  return new MountedBindingInstanceImpl(
+    [...nodes],
     mounted,
     slots,
-    update(...nextArgs: unknown[]) {
-      bindings.forEach((binding, bindingIndex) => {
-        const slot = slots[bindingIndex];
-        if (slot) {
-          const nextValue = binding.evaluate(...nextArgs);
-          if (
-            hasPreviousBindingValue[bindingIndex] &&
-            Object.is(previousBindingValues[bindingIndex], nextValue)
-          ) {
-            return;
-          }
-
-          if (binding.kind === 'event') {
-            const handler =
-              typeof nextValue === 'function'
-                ? withEventModifiers(
-                    nextValue as (event: Event) => unknown,
-                    (binding.modifiers ?? []) as readonly EventModifier[]
-                  )
-                : null;
-            slot.write(handler);
-          } else if (binding.kind === 'directive' && binding.directiveKind === 'use') {
-            slot.write({
-              name: binding.name ?? '',
-              value: nextValue,
-            });
-          } else {
-            slot.write(nextValue);
-          }
-
-          previousBindingValues[bindingIndex] = nextValue;
-          hasPreviousBindingValue[bindingIndex] = true;
-        }
-      });
-    },
-    activate() {
-      slots.forEach((slot) => {
-        (slot as Partial<RetainedSlotLifecycle>).activate?.();
-      });
-    },
-    deactivate() {
-      slots.forEach((slot) => {
-        (slot as Partial<RetainedSlotLifecycle>).deactivate?.();
-      });
-    },
-    destroy() {
-      slots.forEach((slot) => slot.destroy());
-    },
-  };
+    bindings,
+    previousBindingValues
+  );
 };

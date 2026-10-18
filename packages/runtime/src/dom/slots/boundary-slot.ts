@@ -30,26 +30,38 @@ import {
   executeSuspenseBoundary,
   readBoundaryComponent,
 } from '../../component/lifecycle/boundary-registry';
+import { renderTransition } from '../../component/transition/host';
+import type { LeaveFinalizeHost } from '../../component/transition/registry';
+import { renderGroup } from '../../component/transition/group-registry';
+import { collectRenderableNodes } from '../../component/enhanced-components/utils/renderable';
+import type { TransitionPayload } from '@lania-v/shared';
 import { acquireSlotNodeBuffer, releaseSlotNodeBuffer } from '../slot-pool';
-import { appendNodesBeforeAnchor, removeNodes, type Slot } from './core';
+import {
+  appendNodesBeforeAnchor,
+  normalizeDynamicResult,
+  reconcileNodesBeforeAnchor,
+  removeNodes,
+  type Slot,
+} from './core';
 import {
   attachNestedReplay,
-  canReplayBoundarySlotRange,
   createBoundarySlotRangeHost,
-  ensureRangeAnchors,
   hydrateSlotRange,
   readRangeContentNodes,
   readMountedNodes,
   replayBoundarySlotHost,
   renderBoundarySlotRange,
   type BoundaryBlockPayload,
-  type BoundarySlotRangeHost,
   type IfBlockPayload,
   type MountedBindingInstance,
   type TemplateBindingPayload,
 } from './template/template-types';
 import type { HydrationBoundaryRecord, StaticTemplate } from '../../render/types';
 import { parseBoundaryMarker } from '../../render/markers';
+import {
+  getEmptyHydrationBoundaries,
+  getEmptyHydrationSlots,
+} from '../../render/dom';
 import {
   mountHydratedBinding,
   mountTemplateBinding,
@@ -65,6 +77,30 @@ const readBoundaryBlock = (value: unknown): BoundaryBlockPayload | null => {
     typeof value === 'object' &&
     (value as { __lania_boundary?: unknown }).__lania_boundary === 'block'
     ? (value as BoundaryBlockPayload)
+    : null;
+};
+
+const readBoundaryFallbackValue = (payload: unknown): unknown => {
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const metadata = (payload as { metadata?: unknown }).metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return undefined;
+  }
+
+  return (metadata as Record<string, unknown>).fallback;
+};
+
+const readTransitionPayload = (payload: unknown): TransitionPayload | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const candidate = payload as Partial<TransitionPayload>;
+  return candidate.payloadKind === 'transition' && candidate.transition
+    ? (candidate as TransitionPayload)
     : null;
 };
 
@@ -214,6 +250,15 @@ export class BoundarySlot implements Slot<unknown> {
     }
 
     this.lastValue = block;
+    const transitionPayload = readTransitionPayload(block.payload);
+
+    // 编译产物把 Transition / TransitionGroup 也落在 boundary block 外壳里，
+    // 这里需要把它们转交给过渡运行时，而不是当作普通子块直接渲染。
+    if (transitionPayload) {
+      this.writeTransition(transitionPayload, block.bindings ?? []);
+      return;
+    }
+
     const component = readBoundaryComponent(block.payload);
 
     // boundary 的真正行为由 payload 中登记的组件类型决定，这里只做分发。
@@ -418,6 +463,112 @@ export class BoundarySlot implements Slot<unknown> {
     });
   }
 
+  private writeTransition(
+    payload: TransitionPayload,
+    bindings: readonly TemplateBindingPayload[]
+  ): void {
+    // 离场动画结束后需要重放当前 boundary，才能把已 finalize 的快照从 DOM 中清掉。
+    const host: LeaveFinalizeHost = {
+      requestUpdate: () => this.replayCurrentBoundary(),
+    };
+    const getElements = (value: unknown): Element[] =>
+      collectRenderableNodes(value as never).filter(
+        (node): node is Element => node instanceof Element
+      );
+
+    if (payload.component === 'TransitionGroup') {
+      const instance = this.ensureChildInstance(bindings);
+      const anchorNode =
+        (instance.slots[0] as { node?: Node } | undefined)?.node ?? this.node;
+
+      // 首次写入先把子实例的完整区间（含列表锚点）搬进 boundary range；
+      // 后续只调整条目顺序，避免把 ForSlot 的锚点留在离屏 fragment 里。
+      if (this.activeBranch === null || anchorNode.parentNode === null) {
+        this.renderNodes(readMountedNodes(instance));
+      }
+
+      const currentElements = readRangeContentNodes(this.host, this.ensureCurrentNodes()).filter(
+        (node) => !(node instanceof Comment)
+      );
+      const { result } = renderGroup<Node>({
+        payload,
+        host,
+        getElements,
+        renderEntries: () => this.readTransitionGroupEntries(bindings),
+      });
+      const nextElements = normalizeDynamicResult(result).filter(
+        (node) => !(node instanceof Comment)
+      );
+      const parent = anchorNode.parentNode;
+      if (parent) {
+        reconcileNodesBeforeAnchor(parent, anchorNode, currentElements, nextElements);
+      }
+      this.activeBranch = 'child';
+      return;
+    }
+
+    const instance = this.ensureChildInstance(bindings);
+    const structuralSlot =
+      instance.slots.length === 1
+        ? (instance.slots[0] as {
+            node?: Node;
+            currentNodes?: Node[] | null;
+          })
+        : null;
+
+    if (!structuralSlot || structuralSlot.currentNodes === undefined) {
+      const nodes = readMountedNodes(instance);
+      const visible = nodes.some((node) => node.nodeType !== Node.COMMENT_NODE);
+      const { result } = renderTransition<Node[]>({
+        payload,
+        visible,
+        rendered: nodes,
+        host,
+        getElements,
+      });
+      this.renderNodes(normalizeDynamicResult(result));
+      this.activeBranch = visible ? 'child' : 'fallback';
+      return;
+    }
+
+    // 结构型子 slot 的 `currentNodes` 只反映当前真实内容；
+    // 锚点必须随内容一起搬进 boundary range，否则下一次 update 会把它当成空分支。
+    const anchorNode = structuralSlot.node ?? this.node;
+    if (this.activeBranch === null || anchorNode.parentNode !== this.node.parentNode) {
+      this.renderNodes(readMountedNodes(instance));
+    }
+
+    const activeNodes = structuralSlot.currentNodes ?? [];
+    const visible = activeNodes.some((node) => node.nodeType !== Node.COMMENT_NODE);
+    const currentElements = readRangeContentNodes(this.host, this.ensureCurrentNodes()).filter(
+      (node) => !(node instanceof Comment)
+    );
+    const { result } = renderTransition<Node[]>({
+      payload,
+      visible,
+      rendered: activeNodes,
+      host,
+      getElements,
+    });
+    const nextElements = normalizeDynamicResult(result).filter(
+      (node) => !(node instanceof Comment)
+    );
+    const parent = anchorNode.parentNode;
+    if (parent) {
+      reconcileNodesBeforeAnchor(parent, anchorNode, currentElements, nextElements);
+    }
+    this.activeBranch = visible ? 'child' : 'fallback';
+  }
+
+  private readTransitionGroupEntries(
+    bindings: readonly TemplateBindingPayload[]
+  ): Element[] {
+    const instance = this.ensureChildInstance(bindings);
+    return readMountedNodes(instance).filter(
+      (node): node is Element => node instanceof Element
+    );
+  }
+
   private writeLazyLoad(block: BoundaryBlockPayload): void {
     // LazyLoad 由 host 决定当前展示 child 还是带 sentinel 的 fallback。
     // slot 只负责把 child/fallback 的具体渲染动作注入给 host，
@@ -437,6 +588,8 @@ export class BoundarySlot implements Slot<unknown> {
   }
 
   private writeErrorBoundary(block: BoundaryBlockPayload): void {
+    // 函数式 fallback 无法静态展开成模板，payload.metadata 会携带原始表达式。
+    const fallbackValue = readBoundaryFallbackValue(block.payload);
     // 发生错误时销毁 child 实例，避免后续 fallback 与旧 child 节点共存。
     // 这里故意不保留错误前的 child instance，因为 ErrorBoundary 语义要求失败子树彻底退出当前分支。
     executeErrorBoundary({
@@ -446,9 +599,21 @@ export class BoundarySlot implements Slot<unknown> {
         renderChild: () => {
           this.renderChild(block.bindings ?? []);
         },
-        renderFallback: (_error) => {
+        renderFallback: (error, reset) => {
           this.childInstance?.destroy();
           this.childInstance = null;
+          if (fallbackValue !== undefined) {
+            const resolved =
+              typeof fallbackValue === 'function'
+                ? (fallbackValue as (cause: unknown, reset: () => void) => unknown)(
+                    error,
+                    reset
+                  )
+                : fallbackValue;
+            this.renderNodes(collectRenderableNodes(resolved as never));
+            this.activeBranch = 'fallback';
+            return;
+          }
           this.renderFallback();
         },
       }),
@@ -517,13 +682,12 @@ export class IfSlot implements Slot<boolean> {
           : [rendered];
     // 旧工厂路径没有真正的 mounted 模板元数据，只暴露一份最小生命周期壳层。
     return {
-      fragment: document.createDocumentFragment(),
       nodes,
       mounted: {
         nodes,
         hydrated: false,
-        hydrationSlots: new Map(),
-        hydrationBoundaries: [],
+        hydrationSlots: getEmptyHydrationSlots(),
+        hydrationBoundaries: getEmptyHydrationBoundaries(),
       },
       slots: [],
       update() {},
@@ -592,13 +756,12 @@ export class IfSlot implements Slot<boolean> {
     if (nodes.length > 0) {
       const hydratedNodes = [...nodes];
       this.setInstance(activeBranch, {
-        fragment: document.createDocumentFragment(),
         nodes: hydratedNodes,
         mounted: {
           nodes: hydratedNodes,
           hydrated: true,
-          hydrationSlots: new Map(),
-          hydrationBoundaries: [],
+          hydrationSlots: getEmptyHydrationSlots(),
+          hydrationBoundaries: getEmptyHydrationBoundaries(),
         },
         slots: [],
         update() {},

@@ -18,8 +18,14 @@ export type KeyedForPayload = {
 
 export type KeyedBlock = {
   key: unknown;
-  start: Comment;
-  end: Comment;
+  /**
+   * 注释锚点模式：`start` / `end` 包围 block 内容，`element` 为 null。
+   * 元素自锚定模式：`element` 指向唯一条目根元素，两个锚点均为 null。
+   * 后者用于没有过渡/保活宿主钩子的普通列表，省掉每条 item 两个注释节点。
+   */
+  start: Comment | null;
+  end: Comment | null;
+  element: Element | null;
   value: unknown;
   instance?: KeyedSlotInstance;
   record?: DomHostBlockRecord;
@@ -94,7 +100,6 @@ export type BoundarySlotRangeHost = {
 };
 
 export type MountedBindingInstance = {
-  fragment: DocumentFragment;
   nodes: Node[];
   mounted: MountedStaticTemplate;
   slots: Slot<unknown>[];
@@ -102,6 +107,24 @@ export type MountedBindingInstance = {
   activate(): void;
   deactivate(): void;
   destroy(): void;
+};
+
+/** 带临时 fragment 的挂载实例；只有需要整体搬运节点的调用方会用到。 */
+export type MountedFragmentBindingInstance = MountedBindingInstance & {
+  fragment: DocumentFragment;
+};
+
+// 结构型 slot 暴露的节点可能只是“内容”，而锚点仍然记录在 instance.nodes 里。
+// 把两部分按文档顺序合并，才能保证搬移后嵌套 slot 仍能通过锚点定位自己的区间。
+const mergeNodesInDocumentOrder = (nodes: readonly Node[]): Node[] => {
+  const unique = [...new Set(nodes)];
+  unique.sort((left, right) => {
+    if (left === right) {
+      return 0;
+    }
+    return left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+  });
+  return unique;
 };
 
 // 优先返回真实仍挂在 DOM 中的节点；结构型 slot 需要特殊读取其内部节点。
@@ -124,7 +147,17 @@ export const readMountedNodes = (instance: MountedBindingInstance): Node[] => {
         return liveNodes;
       }
       if (liveStructuralNodes.length > 0) {
-        return liveStructuralNodes;
+        // 排除已经被 instance 节点包含的结构节点，避免同一个元素被搬移两次。
+        const detachedStructuralNodes = liveStructuralNodes.filter(
+          (node) => !liveNodes.some((liveNode) => liveNode !== node && liveNode.contains(node))
+        );
+        if (liveNodes.length > 0 && detachedStructuralNodes.length > 0) {
+          return mergeNodesInDocumentOrder([...liveNodes, ...detachedStructuralNodes]);
+        }
+        return detachedStructuralNodes.length > 0 ? detachedStructuralNodes : liveStructuralNodes;
+      }
+      if (liveNodes.length > 0) {
+        return liveNodes;
       }
       return structuralNodes;
     }
@@ -294,7 +327,11 @@ export const readKeepAliveEntryNodes = (instance: MountedBindingInstance): Node[
     pushUnique(structuralSlot.currentNodes);
     pushUnique(structuralSlot.mountedNodes);
     structuralSlot.keyedBlocks?.forEach((block) => {
-      pushUnique([block.start, ...collectKeyedBlockNodes(block), block.end]);
+      pushUnique([
+        ...(block.start ? [block.start] : []),
+        ...collectKeyedBlockNodes(block),
+        ...(block.end ? [block.end] : []),
+      ]);
       pushUnique(block.instance?.nodes);
     });
 
@@ -355,7 +392,7 @@ export const readKeepAliveEntryNodes = (instance: MountedBindingInstance): Node[
   return readMountedNodes(instance);
 };
 
-export type KeyedSlotInstance = Omit<MountedBindingInstance, 'fragment'>;
+export type KeyedSlotInstance = MountedBindingInstance;
 
 export type RetainedSlotLifecycle = {
   activate(): void;

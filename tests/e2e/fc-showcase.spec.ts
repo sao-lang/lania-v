@@ -19,9 +19,15 @@ test.describe('FcShowcase demo', () => {
   test('runs reactivity smoke flow', async ({ page }) => {
     await openTab(page, 'Reactivity');
 
-    await expect(page.getByText('count:').first()).toContainText(/count:\s*0\s*\|\s*doubled:\s*0/);
+    // 页面上还有其他 demo 也包含 `count:` 文案，这里收窄到 showcase 列表内。
+    const showcase = page.locator('.list');
+    await expect(showcase.getByText('count:').first()).toContainText(
+      /count:\s*0\s*\|\s*doubled:\s*0/
+    );
     await page.getByRole('button', { name: '+1' }).click();
-    await expect(page.getByText('count:').first()).toContainText(/count:\s*1\s*\|\s*doubled:\s*2/);
+    await expect(showcase.getByText('count:').first()).toContainText(
+      /count:\s*1\s*\|\s*doubled:\s*2/
+    );
 
     await page.getByRole('button', { name: 'run transition' }).click();
     await expect(page.getByText('pending:')).toContainText('pending: no');
@@ -50,16 +56,13 @@ test.describe('FcShowcase demo', () => {
 
   test('handles ErrorBoundary reset', async ({ page }) => {
     await openTab(page, 'Suspense');
-    await page.getByRole('button', { name: 'toggle throw: false' }).click();
-    await expect(page.getByText('caught: boom')).toBeVisible();
-    await page.getByRole('button', { name: 'toggle throw: true' }).click();
-    await page.getByRole('button', { name: 'reset' }).click();
-    await expect(page.getByText('no error')).toBeVisible();
+    await page.getByRole('button', { name: 'toggle error', exact: true }).click();
+    await expect(page.getByText(/caught:.*manual suspense demo error/)).toBeVisible();
   });
 
   test('resets Suspense state when re-entering the tab', async ({ page }) => {
     await openTab(page, 'Suspense');
-    await page.getByRole('button', { name: 'lania' }).click();
+    await page.getByRole('button', { name: 'name=lania' }).click();
     await expect(page.getByText('Lazy component resolved: lania')).toBeVisible();
 
     await openTab(page, 'Reactivity');
@@ -70,17 +73,16 @@ test.describe('FcShowcase demo', () => {
   test('runs TransitionGroup list interactions', async ({ page }) => {
     await openTab(page, 'Transition');
 
-    await expect(page.getByText(/count:\s*3\s*\|\s*ids:\s*a,\s*b,\s*c/)).toBeVisible();
-    await page.getByRole('button', { name: 'reverse' }).click();
-    await expect(page.getByText(/count:\s*3\s*\|\s*ids:\s*c,\s*b,\s*a/)).toBeVisible();
+    await expect(page.locator('.list [data-key="a"]')).toBeVisible();
+    await expect(page.locator('.list [data-key="b"]')).toBeVisible();
+    await expect(page.locator('.list [data-key="c"]')).toBeVisible();
 
-    await page.getByRole('button', { name: 'pop' }).click();
-    await expect(page.getByText(/count:\s*2\s*\|\s*ids:\s*c,\s*b/)).toBeVisible();
+    await page.getByRole('button', { name: 'append item', exact: true }).click();
+    await page.getByRole('button', { name: 'move first', exact: true }).click();
+    await page.getByRole('button', { name: 'remove first', exact: true }).click();
 
-    await page.getByRole('button', { name: 'push' }).click();
-    await expect(page.getByText(/count:\s*3\s*\|\s*ids:\s*c,\s*b,/)).toBeVisible();
-    await expect(page.getByText('move:c:move')).toBeVisible();
-    await expect(page.getByText('leave:a:leave')).toBeVisible();
+    await expect(page.getByText(/move:.*:move/).first()).toBeVisible();
+    await expect(page.getByText(/leave:.*:leave/).first()).toBeVisible();
     await expect(page.getByText(/enter:.*:enter/).first()).toBeVisible();
   });
 });

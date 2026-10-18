@@ -77,6 +77,12 @@ const isSuspenseBoundaryComponentName = (
   return componentName === 'Suspense';
 };
 
+const isErrorBoundaryComponentName = (
+  componentName: string
+): componentName is 'ErrorBoundary' => {
+  return componentName === 'ErrorBoundary';
+};
+
 // 用一个品牌对象包裹“原样表达式”，避免被误当成普通字符串再做 JSON.stringify。
 interface RawExpressionValue {
   readonly __rawExpression: string;
@@ -458,6 +464,25 @@ export const buildBoundaryPayloadExpression = (
     return '{}';
   }
 
+  // ErrorBoundary 的 fallback 可能是 `(error) => <p>…</p>` 这类函数值，
+  // 无法静态展开成模板，需要把表达式原样带给运行时，由 fallback 分支求值。
+  const boundaryMetadata =
+    isErrorBoundaryComponentName(componentName) &&
+    options.fallbackTemplateHtml === undefined &&
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    !Array.isArray(metadata)
+      ? (() => {
+          const fallbackExpression = getAttributeExpression(child, 'fallback');
+          return fallbackExpression
+            ? {
+                ...(metadata as Record<string, PayloadExpressionValue>),
+                fallback: rawExpression(fallbackExpression),
+              }
+            : metadata;
+        })()
+      : metadata;
+
   const boundaryPayload = {
     protocol: ENHANCED_CONTRACT_PROTOCOL,
     version: ENHANCED_CONTRACT_VERSION,
@@ -469,7 +494,7 @@ export const buildBoundaryPayloadExpression = (
     initialState: getDefaultBoundaryState(componentName),
     childrenTemplate: buildTemplateContractValue(options.childTemplateHtml, undefined),
     fallbackTemplate: buildTemplateContractValue(options.fallbackTemplateHtml, undefined),
-    metadata,
+    metadata: boundaryMetadata,
   } satisfies PayloadExpressionValue;
 
   return serializePayloadExpressionValue(boundaryPayload);

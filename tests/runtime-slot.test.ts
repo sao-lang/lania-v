@@ -154,6 +154,36 @@ describe('TextSlot', () => {
     expect(node.data).toBe('');
   });
 
+  it('injects node values written into a text slot and restores text afterwards', () => {
+    const host = document.createElement('div');
+    const textNode = document.createTextNode('placeholder');
+    host.appendChild(textNode);
+    const slot = new TextSlot(textNode, 0);
+
+    const element = document.createElement('strong');
+    element.textContent = 'node';
+    slot.write(element);
+
+    expect(textNode.data).toBe('');
+    expect(host.firstChild).toBe(textNode);
+    expect(host.querySelector('strong')).toBe(element);
+
+    slot.write('plain text');
+    expect(host.querySelector('strong')).toBeNull();
+    expect(textNode.data).toBe('plain text');
+
+    const first = document.createElement('i');
+    first.textContent = '1';
+    const second = document.createElement('b');
+    second.textContent = '2';
+    slot.write([first, second]);
+    expect([...host.children].map((node) => node.tagName)).toEqual(['I', 'B']);
+
+    slot.destroy();
+    expect(host.children).toHaveLength(0);
+    expect(textNode.data).toBe('');
+  });
+
   it('writes and clears HTML attributes', () => {
     const node = document.createElement('div');
     const slot = new AttrSlot(node, 'data-state', 1);
@@ -360,6 +390,60 @@ describe('TextSlot', () => {
     const second = host.querySelector('span');
     expect(second).toBe(first);
     expect(second?.getAttribute('data-label')).toBe('A2');
+  });
+
+  it('renders element-anchored keyed blocks without per-item comment anchors', () => {
+    const host = document.createElement('div');
+    const anchor = document.createComment('for');
+    host.appendChild(anchor);
+    const slot = new ForSlot(anchor, 61);
+
+    const template = createStaticTemplate('<li>__LANIA_SLOT_0__</li>');
+    const createPayload = (items: Array<{ id: string; label: string }>) => ({
+      __lania_for: 'keyed-slots' as const,
+      items,
+      key: (item: { id: string }) => item.id,
+      template,
+      bindings: [
+        {
+          kind: 'text' as const,
+          slotIndex: 0,
+          path: [0, 0],
+          evaluate: (item: { label: string }) => item.label,
+        },
+      ],
+    });
+
+    slot.write(createPayload([
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ]));
+
+    const children = [...host.childNodes];
+    // 只有 ForSlot 自己的锚点注释，条目本身不再产生 start/end 注释。
+    expect(children.filter((node) => node.nodeType === Node.COMMENT_NODE)).toHaveLength(1);
+    expect(children.filter((node) => node instanceof HTMLLIElement)).toHaveLength(2);
+
+    const firstItems = [...host.querySelectorAll('li')];
+    expect(firstItems.map((node) => node.textContent)).toEqual(['A', 'B']);
+
+    slot.write(createPayload([
+      { id: 'b', label: 'B' },
+      { id: 'a', label: 'A' },
+    ]));
+
+    const reordered = [...host.querySelectorAll('li')];
+    expect(reordered.map((node) => node.textContent)).toEqual(['B', 'A']);
+    // 重排复用同一批元素，不重建节点。
+    expect(reordered[0]).toBe(firstItems[1]);
+    expect(reordered[1]).toBe(firstItems[0]);
+
+    slot.write(createPayload([{ id: 'a', label: 'A' }]));
+
+    const remaining = [...host.querySelectorAll('li')];
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).toBe(firstItems[0]);
+    expect([...host.childNodes].filter((node) => node.nodeType === Node.COMMENT_NODE)).toHaveLength(1);
   });
 
   it('renders non-keyed slot payload items with nested text bindings', () => {
@@ -3082,6 +3166,52 @@ describe('BoundarySlot', () => {
     });
 
     expect(host.textContent).toBe('failed');
+  });
+
+  it('renders function fallback carried by ErrorBoundary payload metadata', () => {
+    const host = document.createElement('div');
+    const anchor = document.createComment('boundary-error-fn');
+    host.appendChild(anchor);
+
+    const slot = new BoundarySlot(
+      anchor,
+      createStaticTemplate('<span>__LANIA_SLOT_0__</span>'),
+      311
+    );
+
+    slot.write({
+      __lania_boundary: 'block',
+      payload: {
+        protocol: ENHANCED_CONTRACT_PROTOCOL,
+        version: ENHANCED_CONTRACT_VERSION,
+        payloadKind: 'boundary',
+        component: 'ErrorBoundary',
+        irKind: 'BoundaryIR',
+        boundaryIndex: 2,
+        initialState: 'idle',
+        childrenTemplate: {},
+        metadata: {
+          boundaryKey: 'slot-error-fn',
+          fallback: (error: unknown) => {
+            const node = document.createElement('p');
+            node.textContent = `caught: ${String(error)}`;
+            return node;
+          },
+        },
+      },
+      bindings: [
+        {
+          kind: 'text',
+          slotIndex: 0,
+          path: [0, 0],
+          evaluate: () => {
+            throw new Error('manual boom');
+          },
+        },
+      ],
+    });
+
+    expect(host.textContent).toBe('caught: Error: manual boom');
   });
 
   it('renders LazyLoad fallback and auto-replays children after observer visibility', () => {
