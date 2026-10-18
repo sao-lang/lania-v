@@ -24,6 +24,7 @@ describe('Vite compiler debug trace', () => {
     expect(result?.code).toContain('Component IR');
     expect(result?.code).toContain('renderPlan');
     expect(result?.code).toContain('Generated module');
+    expect(result?.code).toContain('__laniaCompile');
   });
 
   it('does not inject compile snapshots into production builds', async () => {

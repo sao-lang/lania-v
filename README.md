@@ -106,11 +106,30 @@ npm run build           # 构建所有包
 
 ### 在 Login playground 观察编译与更新
 
-启动 Login playground 后打开浏览器开发者工具的 Console：
+```bash
+npm run dev --workspace @lania-v/playground-login
+```
 
-- 首次加载会输出可展开的 `[lania-v] compile: LoginPage` 分组，包含 TSX/FC 声明、Component IR、renderPlan 和生成模块快照。
-- 操作表单时会输出 `Signal.set → Scheduler.* → Updater.run → Slot.write`，现有 `[mutation]` 日志展示对应的 DOM 变化。
+打开页面和 DevTools Console，把过滤级别设为 `All levels`（运行时日志用 `console.log` 输出）：
+
+- 首次加载会输出可展开的 `[lania-v] compile: LoginPage` 分组，包含 TSX/FC 声明、Component IR、renderPlan 和生成模块快照；这些是真实对象，可以逐层展开。
+- 操作表单时会依次输出 `Signal.set → Scheduler.* → Updater.run → Slot.write`，现有 `[mutation]` 日志展示最终落到 DOM 的变化。
 - 运行时日志只输出 Signal ID 和更新元数据，不输出 Signal 的前后值；编译快照仅由 Login playground 的 Vite 开发配置启用，不进入生产构建。
+
+控制台还暴露了 `__lania` 检查器，可在交互后直接读取快照：
+
+```js
+__lania.compile().LoginPage.ir.signals        // 编译期 signal 声明
+__lania.compile().LoginPage.ir.slotAllocation // slot 分配：索引、类型、绑定
+__lania.compile().LoginPage.ir.updaterGeneration // updater 规划：deps、目标 slot、优先级
+__lania.compile().LoginPage.renderPlan        // 最终渲染计划
+__lania.snapshot()                            // 每个 signal 的 set 次数、每个 updater 的 run 次数
+console.table(__lania.snapshot().updaters)    // 交互后再执行一次，可直接对比计数变化
+__lania.trace.slice(-10)                      // 最近 10 条事件，含时间戳与 payload
+__lania.clear()                               // 清空计数与历史，便于重新观察一次交互
+```
+
+`Updater.run.dependencyIds` 对应 `__lania.snapshot().signals` 里的 `signalId`；`slots` 与 `ir.slotAllocation.slots` 的 `index` 一一对应，可据此把一次更新追溯到具体的 IR 绑定。
 
 ## 文档索引
 

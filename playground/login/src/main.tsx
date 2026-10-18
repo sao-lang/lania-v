@@ -3,11 +3,45 @@ import LoginPage from './LoginPage.lania.tsx';
 import { loginStyles } from './login-styles';
 
 if (import.meta.env.DEV) {
+  interface TraceEntry {
+    at: number;
+    stage: string;
+    detail: unknown;
+  }
+
+  interface UpdaterSnapshot {
+    updaterId: number;
+    kind: string;
+    dependencyIds: number[];
+    slots: unknown[];
+    runs: number;
+    lastAt: number;
+  }
+
+  const trace: TraceEntry[] = [];
+  const updaters = new Map<number, UpdaterSnapshot>();
+  const signals = new Map<number, { signalId: number; sets: number; lastAt: number }>();
+  const MAX_TRACE_ENTRIES = 2000;
+
+  const record = (stage: string, detail: unknown): void => {
+    trace.push({ at: performance.now(), stage, detail });
+    if (trace.length > MAX_TRACE_ENTRIES) {
+      trace.splice(0, trace.length - MAX_TRACE_ENTRIES);
+    }
+  };
+
   const stopRuntimeTrace = registerRuntimeDebugHooks({
     onSignalEvent(event) {
+      const previous = signals.get(event.signalId);
+      signals.set(event.signalId, {
+        signalId: event.signalId,
+        sets: (previous?.sets ?? 0) + 1,
+        lastAt: performance.now(),
+      });
       console.log('[lania-v] Signal.set', { signalId: event.signalId });
     },
     onSchedulerEvent(event) {
+      record(`Scheduler.${event.type}`, event);
       console.log(`[lania-v] Scheduler.${event.type}`, {
         priority: event.priority,
         queueSize: event.queueSize,
@@ -15,12 +49,50 @@ if (import.meta.env.DEV) {
     },
     onDevtoolsEvent(event) {
       if (event.type === 'updater-run') {
-        console.log('[lania-v] Updater.run', event.payload);
+        const payload = event.payload as {
+          updaterId: number;
+          updaterKind: string;
+          dependencyIds: number[];
+          slots: unknown[];
+        };
+        const previous = updaters.get(payload.updaterId);
+        const snapshot: UpdaterSnapshot = {
+          updaterId: payload.updaterId,
+          kind: payload.updaterKind,
+          dependencyIds: payload.dependencyIds,
+          slots: payload.slots,
+          runs: (previous?.runs ?? 0) + 1,
+          lastAt: performance.now(),
+        };
+        updaters.set(payload.updaterId, snapshot);
+        record('Updater.run', payload);
+        console.log('[lania-v] Updater.run', payload);
       } else if (event.type === 'slot-write') {
+        record('Slot.write', event.payload);
         console.log('[lania-v] Slot.write', event.payload);
       }
     },
   });
+
+  // 控制台检查器：`__lania.compile()` 看编译快照，`__lania.snapshot()` 看运行时计数与事件历史。
+  Object.assign(globalThis, {
+    __lania: {
+      trace,
+      compile: () =>
+        (globalThis as { __laniaCompile?: Record<string, unknown> }).__laniaCompile ?? {},
+      snapshot: () => ({
+        signals: [...signals.values()],
+        updaters: [...updaters.values()],
+        traceLength: trace.length,
+      }),
+      clear: () => {
+        trace.length = 0;
+        signals.clear();
+        updaters.clear();
+      },
+    },
+  });
+
   import.meta.hot?.dispose(stopRuntimeTrace);
 }
 

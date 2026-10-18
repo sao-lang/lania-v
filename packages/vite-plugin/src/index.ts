@@ -89,15 +89,29 @@ const compileFcModule = (
   let moduleCode = compiled.compiled.moduleCode;
 
   if (includeDebugTrace) {
+    // 用对象字面量而不是 JSON 字符串，控制台里才能逐层展开；这些对象是编译期快照，不会被运行时改写。
     const traceCode = [
+      `const __laniaIr = ${JSON.stringify(compiled.compiled.ir)};`,
+      `const __laniaComponent = ${JSON.stringify(compiled.compiled.componentAst)};`,
+      `globalThis.__laniaCompile = Object.assign(globalThis.__laniaCompile ?? {}, {`,
+      `  ${JSON.stringify(compiled.compiled.className)}: {`,
+      `    fileName: ${JSON.stringify(fileName)},`,
+      '    source: __laniaSource,',
+      '    component: __laniaComponent,',
+      '    ir: __laniaIr,',
+      '    renderPlan: __laniaIr.renderPlan,',
+      `    moduleCode: ${JSON.stringify(moduleCode)},`,
+      '  },',
+      '});',
       `console.groupCollapsed(${JSON.stringify(`[lania-v] compile: ${compiled.compiled.className}`)});`,
-      `console.log('TSX / FC', ${JSON.stringify({ fileName, source: code, component: compiled.compiled.componentAst })});`,
-      `console.log('Component IR', ${JSON.stringify(compiled.compiled.ir)});`,
-      `console.log('renderPlan', ${JSON.stringify(compiled.compiled.ir.renderPlan)});`,
+      `console.log('TSX / FC', { fileName: ${JSON.stringify(fileName)}, source: __laniaSource, component: __laniaComponent });`,
+      `console.log('Component IR', __laniaIr);`,
+      `console.log('renderPlan', __laniaIr.renderPlan);`,
       `console.log('Generated module', ${JSON.stringify(moduleCode)});`,
       'console.groupEnd();',
     ].join('\n');
-    moduleCode = `${moduleCode}\n${traceCode}\n`;
+    const sourceLiteral = `const __laniaSource = ${JSON.stringify(code)};\n`;
+    moduleCode = `${moduleCode}\n${sourceLiteral}${traceCode}\n`;
   }
 
   return transpileModuleCode(fileName, moduleCode, ts.JsxEmit.ReactJSX);

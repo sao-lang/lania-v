@@ -34,3 +34,7 @@ pnpm-debug.log*
 .DS_Store
 
 graphify-out
+.npm-cache
+.tmp-cat
+.tmp-dshhome
+.pnpm-store
