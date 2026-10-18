@@ -1,5 +1,14 @@
-import { createMemo, createSignal, defineComponent, useFormValue, When } from '@lania-v/runtime';
+import {
+  createMemo,
+  createSignal,
+  defineComponent,
+  useFormValue,
+  When,
+} from '@lania-v/runtime';
 import { readRememberedAccount, writeRememberedAccount } from './login-storage';
+// import { watch } from '@lania-v/runtime';
+import { createEffect } from '@lania-v/runtime';
+import { onMount } from '@lania-v/runtime';
 
 type LoginStatus = 'idle' | 'submitting' | 'success';
 
@@ -22,9 +31,20 @@ export default defineComponent(function LoginPage() {
   const accountMissing = createMemo(() => account().trim().length === 0);
   const passwordMissing = createMemo(() => password().length === 0);
   const submitting = createMemo(() => status() === 'submitting');
-  const canSubmit = createMemo(() => !accountMissing() && !passwordMissing() && !submitting());
+  const canSubmit = createMemo(
+    () => !accountMissing() && !passwordMissing() && !submitting()
+  );
   const accountInvalid = createMemo(() => accountTouched() && accountMissing());
-  const passwordInvalid = createMemo(() => passwordTouched() && passwordMissing());
+  const passwordInvalid = createMemo(
+    () => passwordTouched() && passwordMissing()
+  );
+  // watch(password, (current) => {
+  //   console.log({ current });
+  // });
+  createEffect(() => {
+    console.log({ account: account() });
+    console.log({ passwordLength: password().length });
+  });
 
   const readInputValue = (event: Event): string => {
     const target = event.target as HTMLInputElement | null;
@@ -40,6 +60,10 @@ export default defineComponent(function LoginPage() {
     password.set(readInputValue(event));
     status.set('idle');
   };
+
+  onMount(() => {
+    console.log({ account: account, accountMissing: accountMissing });
+  });
 
   const onSubmit = () => {
     accountTouched.set(true);
@@ -64,7 +88,9 @@ export default defineComponent(function LoginPage() {
         <span className="brand-mark">L</span>
         <span className="brand-text">
           <span className="brand-name">lania-v</span>
-          <span className="brand-tag">编译优先的细粒度 Web Components 框架</span>
+          <span className="brand-tag">
+            编译优先的细粒度 Web Components 框架
+          </span>
         </span>
       </div>
 
@@ -133,7 +159,12 @@ export default defineComponent(function LoginPage() {
         <span className="env-note">演示环境 · 任意账号密码均可登录</span>
       </div>
 
-      <button className="submit" type="button" disabled={!canSubmit()} onClick={onSubmit}>
+      <button
+        className="submit"
+        type="button"
+        disabled={!canSubmit()}
+        onClick={onSubmit}
+      >
         <When when={submitting()}>
           <span className="spinner"></span>
         </When>
