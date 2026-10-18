@@ -105,10 +105,10 @@ export const lowerDynamicElement = (
     propsExpression,
     templateHtml: template.staticHtml,
     hoistName: `__dynamic_slot_${path.join('_') || 'root'}_${slotIndex}`,
+    island: child.island,
     children: template.nodes,
   };
 };
-
 export const lowerComponentReferenceElement = (
   child: ElementNode,
   path: number[],
@@ -132,6 +132,7 @@ export const lowerComponentReferenceElement = (
     propsExpression: buildRuntimePropsExpression(child, ['props']),
     templateHtml: template.staticHtml,
     hoistName: `__dynamic_slot_${path.join('_') || 'root'}_${slotIndex}`,
+    island: child.island,
     children: template.nodes,
   };
 };

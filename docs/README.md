@@ -10,8 +10,9 @@
 2. `technical-scheme.md`：理解项目的唯一主线和分层边界。
 3. `module-architecture.md`：查看模块职责、模块联动和完整链路。
 4. `runtime-api.md`：查看运行时 API 与 `FC / TSX` 主路径。
-5. `ssr-hydration.md`：查看 SSR / Hydration 能力边界。
-6. `stages.md`：查看当前阶段结论、版本目标和历史说明。
+5. `ssr-hydration.md`：查看 SSR / Hydration / Declarative Shadow DOM / 部分水合能力边界。
+6. `hmr.md`：查看开发态组件热更新与状态保留语义。
+7. `stages.md`：查看当前阶段结论、版本目标和历史说明。
 
 ## 按目标阅读
 
@@ -23,6 +24,7 @@
   -> `packages/compiler-tsx/src`
 - 想改增强组件：`enhanced-components.md` -> `runtime-api.md` -> `fc-binding-apis.md`
 - 想改 SSR / Hydration：`ssr-hydration.md` -> `tests/runtime-render.test.ts` -> `tests/e2e/*`
+- 想改开发态热更新：`hmr.md` -> `tests/runtime-hmr.test.ts`
 - 想接手 e2e 剩余问题：`showcase-e2e-followup.md`
 - 想看工程流程：`engineering-conventions.md` -> `release.md` -> `benchmark.md`
 
@@ -32,7 +34,8 @@
 - 模块总览：`module-architecture.md`
 - 运行时主文档：`runtime-api.md`
 - SSR 主文档：`ssr-hydration.md`
-- 专题补充：`enhanced-components.md`、`fc-binding-apis.md`
+- 专题补充：`enhanced-components.md`、`fc-binding-apis.md`、`compiler-report.md`、`prop-options.md`
+- 开发态：`hmr.md`
 - 执行与阶段：`plan.md`、`stages.md`
 - 收尾/交接：`showcase-e2e-followup.md`（FC Showcase e2e 剩余问题与排查步骤）
 - 工程流程：`engineering-conventions.md`、`release.md`、`benchmark.md`

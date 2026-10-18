@@ -1,4 +1,8 @@
-import { emitLifecycleDebugEvent } from '../../core/debug';
+import { emitLifecycleDebugEvent, isDevEnvironment, warning } from '../../core/debug';
+import {
+  isComponentHmrEnabled,
+} from '../../dev/hmr';
+import type { PropOptionsMap } from './prop-options';
 import type { Signal } from '../../reactivity/signal';
 import {
   HIGH,
@@ -6,10 +10,11 @@ import {
   type Scheduler,
 } from '../../reactivity/scheduler';
 import { SlotTable } from '../../dom/slot-table';
-import { adoptStyles, type StaticStyles } from '../styles';
+import { adoptStyles, registerAppliedStyleTexts, type StaticStyles } from '../styles';
 import type { Slot } from '../../dom/slots';
 import type { Updater } from '../../dom/updaters';
 import { withContextHost } from './function-component';
+import { attachDeclarativeShadowRoot } from '../../render/dsd';
 
 /**
  * 运行时组件基类（Custom Element）。
@@ -27,6 +32,12 @@ export interface ChangedPropRecord {
 
 export type ChangedProps = Map<string, ChangedPropRecord>;
 export type RenderMode = 'shadow' | 'light';
+/**
+ * 水合策略：
+ * - `eager`：连接 DOM 后立即挂载（默认）；
+ * - `manual`：保留 SSR 内容，等待 `hydrate()`（由部分水合调度器触发）。
+ */
+export type HydrationStrategy = 'eager' | 'manual';
 
 /**
  * 把组件侧的值归一化成 `ElementInternals.setFormValue` 可接受的形式。
@@ -70,6 +81,13 @@ export abstract class ReactiveElement extends ReactiveElementBase {
    * - `light`: 直接在宿主元素上渲染
    */
   static renderMode: RenderMode = 'shadow';
+  /**
+   * 水合策略。
+   *
+   * 部分水合场景下把组件设为 `manual`，SSR 输出会原样保留，
+   * 直到调度器调用 `hydrate()` 才接管 DOM。
+   */
+  static hydration: HydrationStrategy = 'eager';
   static styles?: StaticStyles;
   /**
    * 是否参与原生表单提交。
@@ -78,6 +96,16 @@ export abstract class ReactiveElement extends ReactiveElementBase {
    * 浏览器随后会把这个自定义元素纳入 `form.elements`，并接受 `setFormValue` 上报的值。
    */
   static formAssociated = false;
+  /** 编译期从 `defineComponent(fn, { props })` 生成的 prop 选项。 */
+  static propOptions?: PropOptionsMap;
+  /** 编译期从 `defineComponent(fn, { emits })` 生成的事件名单。 */
+  static emits?: readonly string[];
+  /**
+   * 浏览器在 `customElements.define()` 时读取一次的属性名单。
+   *
+   * 编译产物会在类求值时按 prop 选项生成；声明在这里只是给运行时一个稳定类型。
+   */
+  static observedAttributes?: readonly string[];
 
   private _internals?: ElementInternals;
 
@@ -89,6 +117,10 @@ export abstract class ReactiveElement extends ReactiveElementBase {
   protected _dirty = false;
   protected _scheduler: Scheduler = defaultScheduler;
   protected _isMounted = false;
+  /** `static hydration = 'manual'` 时，是否已经被显式 hydrate()。 */
+  private _hydrationRequested = false;
+  /** dev + HMR 下用于兜底未声明 attribute 的变化（observedAttributes 在 define 时已固化）。 */
+  private _devAttributeObserver?: MutationObserver;
   // connectedCallback/disconnectedCallback 的状态并不等价于 isConnected（跨文档/移动节点场景）
   protected _isConnectedFlag = false;
   protected _hasUpdated = false;
@@ -132,27 +164,194 @@ export abstract class ReactiveElement extends ReactiveElementBase {
   }
 
   /**
+   * 把校验结果同步给宿主表单。
+   *
+   * 支持三种形态：
+   * - `true` / `false`：仅表示是否通过；
+   * - `{ valid: false, message }`：带自定义错误信息；
+   * - `null` / `undefined`：视为通过并清空错误。
+   */
+  protected _setFormValidity(result: unknown): void {
+    const internals = this._internals;
+
+    if (!internals || typeof internals.setValidity !== 'function') {
+      return;
+    }
+
+    const record =
+      result && typeof result === 'object'
+        ? (result as { valid?: unknown; message?: unknown })
+        : null;
+    const valid = record ? record.valid !== false : result !== false;
+
+    if (valid) {
+      internals.setValidity({});
+      return;
+    }
+
+    const message =
+      record && typeof record.message === 'string'
+        ? record.message
+        : 'Invalid value';
+
+    internals.setValidity({ customError: true }, message);
+  }
+
+  /**
    * 组件连接到 DOM 时：
    * - 首次连接：创建 renderRoot、应用 styles、执行首屏 render/mount
    * - 每次连接：绑定 signals/updaters、触发一次更新
    */
   connectedCallback(): void {
     this._isConnectedFlag = true;
+    this._syncDevAttributeObserver();
     emitLifecycleDebugEvent({
       type: 'connected',
       component: this,
       tagName: this.tagName.toLowerCase(),
     });
-    this._bindTrackedSignals();
-    this.__fcOnMount();
 
     if (!this._isMounted) {
-      this.renderRoot = this.createRenderRoot();
-      this.adoptStyles();
-      this._renderAndMount();
-      this._isMounted = true;
+      if (this.shouldDeferHydration()) {
+        // 部分水合：先把 SSR 内容接上（shadow root / 样式），但暂不接管节点，
+        // 等调度器调用 hydrate() 再执行首屏渲染。
+        this._bindTrackedSignals();
+        this.__fcOnMount();
+        this.renderRoot = this.createRenderRoot();
+        this.adoptStyles();
+        return;
+      }
+
+      this._bindTrackedSignals();
+      this.__fcOnMount();
+      this._mountSurface();
     }
 
+    this._autoTrackSignalsNotDrivenByRuntimeUpdaters();
+    this.requestUpdate();
+  }
+
+  /** 是否延后首次挂载（`manual` 组件，或 SSR island 宿主）。 */  protected shouldDeferHydration(): boolean {
+    const ctor = this.constructor as typeof ReactiveElement;
+    // `<Child client:visible />` 渲染出的宿主带 `data-lania-island`，
+    // 这类元素统一等 `hydrateIslands()` 调度，避免一升级就整块水合。
+    const isIsland = this.hasAttribute('data-lania-island');
+    return (ctor.hydration === 'manual' || isIsland) && !this._hydrationRequested;
+  }
+
+  /** 手动触发首次挂载；已挂载时为空操作。 */
+  hydrate(): void {
+    this._hydrationRequested = true;
+
+    if (!this._isConnectedFlag || this._isMounted) {
+      return;
+    }
+
+    this._mountSurface();
+    this.requestUpdate();
+  }
+
+  /** 当前是否已经完成首次挂载（SSR 的 `manual` 组件在 hydrate 前为 false）。 */
+  get isHydrated(): boolean {
+    return this._isMounted;
+  }
+
+  private _mountSurface(): void {
+    this.renderRoot = this.createRenderRoot();
+    this.adoptStyles();
+    this._renderAndMount();
+    this._isMounted = true;
+  }
+
+  /**
+   * dev + HMR 下的 attribute 兜底。
+   *
+   * `observedAttributes` 在 `customElements.define()` 时已被浏览器固化，
+   * HMR 给组件新增 attribute 时浏览器不会回调；这里用 MutationObserver 补上，
+   * 只处理“当前 observedAttributes 未覆盖”的属性，避免与原生回调重复。
+   */
+  private _syncDevAttributeObserver(): void {
+    if (typeof MutationObserver !== 'function' || !isDevEnvironment()) {
+      return;
+    }
+
+    if (!isComponentHmrEnabled()) {
+      return;
+    }
+
+    if (this._devAttributeObserver) {
+      return;
+    }
+
+    const observed = new Set(
+      ((this.constructor as typeof ReactiveElement).observedAttributes ?? []).map(
+        (name) => name.toLowerCase()
+      )
+    );
+
+    this._devAttributeObserver = new MutationObserver((records) => {
+      for (const record of records) {
+        const name = record.attributeName;
+        if (!name || observed.has(name.toLowerCase())) {
+          continue;
+        }
+
+        this.attributeChangedCallback(
+          name,
+          record.oldValue,
+          this.getAttribute(name)
+        );
+      }
+    });
+
+    this._devAttributeObserver.observe(this, {
+      attributes: true,
+      attributeOldValue: true,
+    });
+  }
+
+  /**
+   * 开发态专用：保留实例字段（signal / store / props）重新执行首屏挂载。
+   *
+   * HMR 只替换原型方法，构造器不会重跑，因此这里手动清理挂载期产物
+   * （slots / updaters / 渲染节点），再用新模板重新挂载一次。
+   * dev 产物把 setup 收进 `__laniaSetup()`，因此新增的 setup 状态也能在这里补建。
+   */
+  __laniaHmrRemount(): void {
+    if (!this._isConnectedFlag) {
+      return;
+    }
+
+    this._unbindTrackedSignals();
+    this._trackedSignals.clear();
+    this._slots = [];
+    this._updaters = [];
+    this._runtimeUpdaters = [];
+    this._slotTable = new SlotTable();
+    this._changedProps.clear();
+    this._autoTrackDone = false;
+    this._forceRuntimeUpdaterFlush = false;
+    this._updateRequested = false;
+
+    // 旧字段先留一份快照：setup 重跑会重建 signal，值需要按字段名回填。
+    const setup = (this as { __laniaSetup?: () => void }).__laniaSetup;
+
+    if (typeof setup === 'function') {
+      setup.call(this);
+    }
+
+    const root = this.renderRoot as Node & { replaceChildren?: () => void };
+    if (typeof root.replaceChildren === 'function') {
+      root.replaceChildren();
+    } else {
+      while (root.firstChild) {
+        root.removeChild(root.firstChild);
+      }
+    }
+
+    this._isMounted = false;
+    this._bindTrackedSignals();
+    this._mountSurface();
     this._autoTrackSignalsNotDrivenByRuntimeUpdaters();
     this.requestUpdate();
   }
@@ -164,6 +363,8 @@ export abstract class ReactiveElement extends ReactiveElementBase {
   disconnectedCallback(): void {
     this.__fcOnCleanup();
     this._isConnectedFlag = false;
+    this._devAttributeObserver?.disconnect();
+    this._devAttributeObserver = undefined;
     emitLifecycleDebugEvent({
       type: 'disconnected',
       component: this,
@@ -194,6 +395,15 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     detail?: T,
     options: Omit<CustomEventInit<T>, 'detail'> = {}
   ): boolean {
+    const declaredEmits = (this.constructor as typeof ReactiveElement).emits;
+    if (declaredEmits && !declaredEmits.includes(name)) {
+      warning(
+        `Undeclared emit "${name}" on <${
+          (this.constructor as { tagName?: string }).tagName ??
+          this.tagName.toLowerCase()
+        }>. Add it to defineComponent({ emits: [...] }).`
+      );
+    }
     return this.dispatchEvent(
       new CustomEvent<T>(name, {
         detail,
@@ -287,10 +497,18 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     const ctor = this.constructor as typeof ReactiveElement;
 
     if (ctor.renderMode === 'light') {
+      // light 模式下 SSR 的内联样式就在宿主里，登记后才不会在 hydration 时重复注入。
+      registerAppliedStyleTexts(this);
       return this;
     }
 
-    return this.shadowRoot ?? this.attachShadow({ mode: 'open' });
+    // SSR 输出了 `<template shadowrootmode>` 时优先接管它，
+    // 这样 hydration 复用的是服务端已经生成的 shadow DOM，而不是重建一份。
+    return (
+      attachDeclarativeShadowRoot(this) ??
+      this.shadowRoot ??
+      this.attachShadow({ mode: 'open' })
+    );
   }
 
   protected adoptStyles(): void {

@@ -37,10 +37,13 @@
 
 当前版本可以直接用，但也有几个边界要先说清楚：
 
-- `bindHandlers()` 现在优先吃内部 metadata，缺失时会回退到 `onXxx` 规则
-- `bindSlots()` 现在主要覆盖默认插槽、具名插槽和 fallback
+- `bindHandlers()` 现在优先吃内部 metadata，缺失时会回退到 `onXxx` 规则；
+  `.lania.tsx` 编译产物会生成 `static handlerKeys`，所以 handler 值为空时也能正确分流
+- `bindSlots()` 同时支持 runtime JSX scope 与编译后 Custom Element 两条路径：
+  编译产物会改写成 `bindSlots(this.props)`，从 `children` prop 读取插槽内容
+- `bindSlots().has(name)` 只判断具名槽本身是否存在，不再被默认槽兜底成 `true`
 - `createExpose()` 已经能跟现有 `ref` 体系配合，也会在主卸载路径里自动清空
-- scoped slot 这块还没有正式协议，所以这次没有一起打包进去
+- scoped slot 已有运行时透传基础（函数型 slot + 额外参数），但 `.lania.tsx` 编译侧的完整 scoped slot 协议仍在收敛中
 
 ## 3. 为什么要做这个
 
@@ -73,7 +76,7 @@
 ```ts
 bindProps(props)
 bindHandlers(props)
-bindSlots()
+bindSlots(props?)
 createExpose(props, exposed)
 ```
 
@@ -172,19 +175,20 @@ props.onToggle?.();
 
 `bindSlots()` 用来读父组件传进来的插槽内容。
 
-它直接复用当前 runtime scope 里的 `slotContent`，不额外搞第二套插槽模型。
+它优先复用当前 runtime scope 里的 `slotContent`；编译成 Custom Element 后没有
+runtime scope，则从传入的 `props` 上读取 `children`。
 
-建议签名：
+签名：
 
 ```ts
 export interface SlotBindings {
   has(name?: string): boolean;
   get(name?: string): unknown;
-  render(name: string, fallback?: unknown): unknown;
-  renderDefault(fallback?: unknown): unknown;
+  render(name: string, fallback?: unknown, ...args: unknown[]): unknown;
+  renderDefault(fallback?: unknown, ...args: unknown[]): unknown;
 }
 
-export function bindSlots(): SlotBindings;
+export function bindSlots(props?: { children?: unknown }): SlotBindings;
 ```
 
 现在的实现语义：
@@ -193,13 +197,17 @@ export function bindSlots(): SlotBindings;
 - `render()` 按当前 `Slot` 兼容层规则返回可渲染值
 - `renderDefault()` 是默认插槽快捷方法
 - named slot 还是按当前对象协议走
+- `has(name)` 只检查具名槽本身，不把默认槽当成具名槽存在
+- 编译产物里的 `bindSlots()` 会被改写成 `bindSlots(this.props)`
 
 当前已经能确认的插槽边界：
 
 - 已支持默认插槽。
-- 已支持具名插槽的运行时取值，具名槽按 `record[name] ?? record.default` 解析。
+- 已支持具名插槽的运行时取值，`render()` / `get()` 仍按
+  `record[name] ?? record.default` 解析。
 - 已支持 fallback。
 - 已支持 Shadow DOM 宿主退化为原生 `<slot>`。
+- 编译路径下 `children={object}` 的具名/默认插槽都能直接读取。
 - 目前还没有正式的作用域插槽协议。
 
 这里说“还没有正式的作用域插槽协议”，意思是：
@@ -407,15 +415,16 @@ this.emit('submit', '42');
 
 ### 8.2 `bindSlots()`
 
-运行时读取源还是当前 runtime scope：
+运行时读取源按入口分两种：
 
-- 通过 `getCurrentRuntimeScope()` 获取 `slotContent`
-- 复用 `Slot` 当前的 named slot 解析逻辑
-- 复用可渲染值归一化逻辑
+- runtime JSX 路径：通过 `getCurrentRuntimeScope()` 获取 `slotContent`
+- 编译后 Custom Element 路径：使用 `props.children`（编译器会注入 `bindSlots(this.props)`）
+
+两条路径最后都复用同一套 named slot 解析与可渲染值归一化逻辑。
 
 当前能力判断：
 
-- 默认插槽和具名插槽可以直接建立在现有 `slotContent` 协议上
+- 默认插槽和具名插槽可以直接建立在现有 `slotContent` / `children` 协议上
 - scoped slot 还不能只靠当前 `slotContent` 直接成立，因为缺少正式的传参协议
 
 如果后面要补 scoped slot，建议单独加一层 slot 调用协议，比如：
@@ -476,8 +485,8 @@ const h = bindHandlers(props);
 interface SlotBindings {
   has(name?: string): boolean;
   get(name?: string): unknown;
-  render(name: string, fallback?: unknown): unknown;
-  renderDefault(fallback?: unknown): unknown;
+  render(name: string, fallback?: unknown, ...args: unknown[]): unknown;
+  renderDefault(fallback?: unknown, ...args: unknown[]): unknown;
 }
 ```
 
@@ -524,7 +533,28 @@ const panelRef = createRef<{ open(): void; close(): void }>();
 - 对内允许复用编译链或 JSX 运行时已有的事件分类结果
 - 只有后面真需要更精确类型或更稳的跨入口一致性时，再考虑编译器增强
 
-## 12. 兼容策略
+## 12. 编译后的 Custom Element 路径
+
+`.lania.tsx` 编译成 Custom Element 后，组件不再有 runtime slot scope，
+`props` 也变成构造期快照。为了保持这组 API 的行为一致，编译链补了三处桥接：
+
+1. 注入的 `props` 字段改为 `createComponentPropsSnapshot(this, [...])`：
+   - key 集合覆盖所有声明过的 prop；
+   - 已声明的 prop 通过 getter 回读实例上的同名 prop signal，
+     `bindProps()` 读取时仍能正常收集依赖；
+   - 从原始入参继承 handler metadata。
+2. prop setter 同步写回 `this.props`，并改用 `signal.setValue()`：
+   - `bindProps()` / `bindHandlers()` 的 getter 视图能读到最新值；
+   - `onToggle` 这类函数值不会被误当成 signal 的 updater 回调执行。
+3. 类上生成 `static handlerKeys`，`createComponentElement()` 在构造前挂 metadata：
+   - `bindHandlers()` 即使当前 handler 为空也能拿到稳定的 key 集合。
+4. 编译器把零参 `bindSlots()` 改写成 `bindSlots(this.props)`：
+   - 插槽内容从 `children` prop 读取；
+   - 父组件 `children={object}` 的具名/默认槽都能命中。
+
+对应测试在 `tests/compiled-component-runtime.test.ts`，走真实编译 + CommonJS 求值 + jsdom。
+
+## 13. 兼容策略
 
 - 不移除 `props.xxx`。
 - 不移除 `props.onXxx`。
@@ -534,7 +564,7 @@ const panelRef = createRef<{ open(): void; close(): void }>();
 
 这组 API 是新增能力，不是替换性迁移。
 
-## 13. 后面还可以继续补什么
+## 14. 后面还可以继续补什么
 
 ### 已经完成
 
@@ -552,7 +582,7 @@ const panelRef = createRef<{ open(): void; close(): void }>();
 - 看要不要把 `createExpose()` 和函数组件 ref 的时序再收紧一点
 - 看要不要单独设计 scoped slot 的正式协议
 
-## 14. 明确不做
+## 15. 明确不做
 
 - 不把 `bindHandlers()` 命名成 `bindEmits()`
 - 不把 handler 视图与 `emit()` 语义合并
@@ -560,14 +590,14 @@ const panelRef = createRef<{ open(): void; close(): void }>();
 - 不把 `createExpose()` 设计成新的组件实例系统
 - 不为这组 API 引入新的 TSX 宏入口
 
-## 15. 一句话结论
+## 16. 一句话结论
 
 推荐组合就是：
 
 ```ts
 bindProps(props)
 bindHandlers(props)
-bindSlots()
+bindSlots(props)
 createExpose(props, exposed)
 ```
 

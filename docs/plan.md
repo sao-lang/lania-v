@@ -921,3 +921,91 @@
 - [x] 第四步：打通最小 TSX 编译结果与 `L1 Gate`
 - [x] 第五步：回到第 7 节到第 16 节，逐步扩样式、指令、函数组件、SSR
 - [x] 第六步：完善第 17 节到第 21 节的测试、文档、验收与里程碑
+
+## 23. 编译边界与运行时原语收敛
+
+### 23.1 编译边界
+
+- [x] props 解构重写为 `this.<prop>`，保留依赖订阅
+- [x] 支持同文件 type alias / interface / 交叉类型的 props 展开
+- [x] 不支持的解构形态（默认值 / rest / 嵌套）给出明确编译错误
+- [x] 无法静态展开 props 类型时，解构给出明确编译错误
+- [x] 组件标签 spread props 进入运行时 props 表达式
+- [x] 原生标签 spread 给出明确编译错误，不再静默丢弃
+- [x] 被编译产物引用的模块级声明保留到输出
+- [x] 组件静态配置（`Component.styles` 等）保留在 class 之后
+- [x] updater 首轮动态依赖兜底，覆盖 composable 返回的 signal
+- [x] `useFormValidity()` 生成表单校验 effect
+- [x] 编译报告插件输出 slot / updater / 依赖统计
+
+### 23.2 运行时原语
+
+- [x] `createSelector()`
+- [x] `startTransition()` / `useTransition()` / `transitionPending`
+- [x] `produce()`
+- [x] `createScope()` / `getOwner()` / `runWithOwner()`
+- [x] `createUniqueId()`
+- [x] `renderToString()` / `renderToStream()`
+- [x] `installDevtoolsOverlay()`
+- [x] 函数型 slot 的额外参数透传（scoped slot 运行时基础）
+
+### 23.3 绑定视图 API 编译路径
+
+- [x] 编译产物注入的 `props` 覆盖全部声明 prop，并通过 getter 回读实例 signal
+- [x] prop setter 同步 `this.props`，函数型 prop 走 `setValue()` 保留原值
+- [x] 生成 `static handlerKeys` 并在 `createComponentElement()` 构造前挂 metadata
+- [x] 零参 `bindSlots()` 改写为 `bindSlots(this.props)`，从 `children` 读取插槽
+- [x] `bindSlots().has(name)` 只判断具名槽本身
+- [x] 编译产物端到端测试覆盖 props 更新 / handler 调用 / 具名与默认插槽
+
+### 23.4 Typed props / emits
+
+- [x] `defineComponent(fn, { props })` 支持 `type` / `attribute` / `reflect` / `default`
+- [x] 支持 `converter.from` / `converter.to` 与 `validator`
+- [x] `attribute: false` 的 prop 不进入 `observedAttributes`
+- [x] prop 名默认按 kebab-case 映射 attribute
+- [x] `defineComponent(fn, { emits })` 校验 `emit()` 事件名
+- [x] 编译产物端到端测试覆盖反射、attribute 回读、Boolean 语义与 emits 告警
+
+### 23.5 Scoped slot / Await / Virtual
+
+- [x] `DynamicSlot` 把函数型 child binding 作为 `children` / `slotContent` 透传给组件目标
+- [x] 增强组件注册表新增 `Await` / `Virtual`
+- [x] `Await` 支持 fallback / delay / error 分支与 resolve / reject 回调
+- [x] `Virtual` 支持固定行高窗口化、overscan、`key` 与滚动回调
+- [x] 运行时 scoped slot 与 Await / Virtual 测试通过
+
+### 23.6 Declarative Shadow DOM / 部分水合 / HMR
+
+- [x] SSR 输出 `<template shadowrootmode>`，并内联静态样式
+- [x] `renderToStringWithDeclarativeShadow()` / `renderStreamToDeclarativeShadow()` 同步与流式入口
+- [x] 客户端接管未被平台消费的 DSD 模板，并登记已有 `<style>` 避免重复注入
+- [x] island 元信息（优先级 / 名称 / 序列化 props）与 `renderToStringAsIsland()`
+- [x] `hydrateIslands()` 支持 `eager` / `idle` / `visible` / `interaction` 四档优先级
+- [x] `static hydration = 'manual'` + `hydrate()` 实现“先保留 SSR 内容，后接管”
+- [x] 组件 HMR：原型热替换 + 同实例重新挂载，保留 signal / props 状态
+- [x] Vite 插件在 dev 注入 `import.meta.hot.accept()` 与 HMR 桥接
+- [x] 新增 DSD / 部分水合 / HMR 测试
+
+### 23.7 选项求值、SSR 分派、island 与 HMR 深化
+
+- [x] prop 选项改为运行时求值（`static __laniaOptions`），支持表达式/导入/展开
+- [x] `observedAttributes` / `reflect` 首轮反射改由运行时按选项推导
+- [x] props 解构支持默认值、rest 与嵌套；计算属性名仍报错
+- [x] 跨文件 props 类型（相对路径具名导入）静态展开
+- [x] `renderComponentToString()` / `renderComponentToStream()` 按 `renderMode` 分派
+- [x] light 模式 SSR 不再输出 DSD 模板，样式去重覆盖 light 渲染根
+- [x] 编译期 island 标记 `<Child client:visible />` + `ssrRenderIslandSlot()`
+- [x] island 宿主自动延后水合，`hydrateIslands()` 只回填声明的 prop
+- [x] dev 产物 `__laniaSetup()`：HMR 可补建新增 setup 状态
+- [x] dev + HMR 下用 MutationObserver 兜底未声明 attribute
+- [x] `hotReload` 选项可关闭 dev setup 产物
+
+### 23.8 验证
+
+- [x] 新增编译边界测试
+- [x] 新增运行时原语测试
+- [x] 新增编译产物端到端集成测试（解构 / composable / helper / styles / 绑定视图）
+- [x] 全量 `vitest run` 通过
+- [x] 全 workspace `typecheck` 通过
+- [x] 改动文件 ESLint / MarkdownLint 通过

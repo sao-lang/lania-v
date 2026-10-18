@@ -16,9 +16,7 @@
  * - 客户端收到异步 patch 后的局部回填。
  */
 import {
-  BOUNDARY_MARKER_PATTERN,
   SUSPENSE_PATCH_PATTERN,
-  TELEPORT_CONTAINER_PATTERN,
   collectCommentBoundedNodes,
   parseBoundaryMarker,
   renderBoundaryMarker,
@@ -45,6 +43,46 @@ import {
   type StaticTemplate,
 } from './types';
 import { isEnhancedBlockPayload } from '@lania-v/shared';
+
+export interface SSRComponentLike {
+  render?: (props?: Record<string, unknown>) => string;
+  renderStream?: (
+    props?: Record<string, unknown>
+  ) => AsyncGenerator<string, void, void>;
+}
+
+/**
+ * 调用编译产物上的 `static render()` 输出 HTML。
+ *
+ * 这是 SSR 的最小公开入口：编译期已经把模板与 slot marker 生成好，
+ * 服务端只需要提供 props 上下文。
+ */
+export const renderToString = (
+  component: SSRComponentLike,
+  props: Record<string, unknown> = {}
+): string => {
+  if (typeof component.render !== 'function') {
+    throw new TypeError(
+      'renderToString() expects a compiled component with a static render() method.'
+    );
+  }
+
+  return component.render(props);
+};
+
+/** 调用编译产物上的 `static renderStream()` 输出异步 HTML 片段。 */
+export const renderToStream = (
+  component: SSRComponentLike,
+  props: Record<string, unknown> = {}
+): AsyncGenerator<string, void, void> => {
+  if (typeof component.renderStream !== 'function') {
+    throw new TypeError(
+      'renderToStream() expects a compiled component with a static renderStream() method.'
+    );
+  }
+
+  return component.renderStream(props);
+};
 
 const escapeHtml = (value: string): string => {
   return value

@@ -341,11 +341,15 @@ export const buildRuntimePropsExpression = (
   ]
 }`
       : null;
-  // 四个来源的优先级就是数组顺序：
-  // 先用显式 `props` 打底，再叠加散落 attribute、事件和指令描述。
+  // 五个来源的优先级就是数组顺序：
+  // 先用显式 `props` 与 spread 打底，再叠加散落 attribute、事件和指令描述。
   // 这里故意使用浅展开，保持运行时对象合并语义直观可预测。
+  const spreadPropSources = (child.spreadAttributes ?? []).map(
+    (expression) => `(${expression})`
+  );
   const propSources = [
     basePropsExpression ? `(${basePropsExpression})` : null,
+    ...spreadPropSources,
     explicitPropsExpression,
     eventExpression,
     directiveExpression,

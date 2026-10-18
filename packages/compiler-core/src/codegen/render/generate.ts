@@ -704,6 +704,7 @@ ${indent(updater.expression, 1)}
   const methodLines = [
     'protected _renderAndMount(): void {',
     '  const mounted = mountStaticTemplate(this.renderRoot, ' + hoistName + ', { hydrate: true });',
+    '  reflectInitialProps(this);',
     finalSlotDeclarations ? indent(finalSlotDeclarations) : '',
     payloadRuntimeUpdaterDeclarations ? indent(payloadRuntimeUpdaterDeclarations) : '',
     runtimeUpdaterDeclarations ? indent(runtimeUpdaterDeclarations) : '',

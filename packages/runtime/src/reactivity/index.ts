@@ -4,9 +4,12 @@
  * - resource/store/scheduler：更偏“运行时设施”
  * - signal：用户最常用的 API（createSignal/createMemo/createEffect/watch...）
  */
+export * from './owner';
 export * from './resource';
 export * from './scheduler';
+export * from './selector';
 export * from './store';
+export * from './transition';
 export {
   createComputedAccessor,
   createDeferred,

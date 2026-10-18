@@ -11,10 +11,12 @@
  * 这个文件最重要的不是“怎么创建节点”，而是“什么情况下可以复用已有节点或已有控制器”。
  */
 import {
+  Await as AwaitComponent,
   isEnhancedDef,
   Slot as SlotComponent,
   Transition,
   TransitionGroup,
+  Virtual as VirtualComponent,
 } from '../../component/enhanced-components';
 import { withEventModifiers } from '../../component/events';
 import {
@@ -83,6 +85,12 @@ const resolveDynamicTarget = (target: unknown): unknown => {
   if (target === 'TransitionGroup') {
     return TransitionGroup;
   }
+  if (target === 'Await') {
+    return AwaitComponent;
+  }
+  if (target === 'Virtual') {
+    return VirtualComponent;
+  }
   return target;
 };
 
@@ -95,6 +103,25 @@ const isTransitionGroupTarget = (target: unknown): boolean => {
 };
 
 // 对增强组件而言，children 可能不是简单的 DOM 节点数组，而是需要保留函数/结构锚点。
+/**
+ * 编译后的 scoped slot 会以单个 text child binding 形式传入。
+ * 这里识别“求值结果是函数”的形态，并把它作为 children / slotContent 透传，
+ * 而不是把函数字符串化后挂成文本节点。
+ */
+const resolveScopedSlotChild = (
+  childBindings: readonly TemplateBindingPayload[]
+): unknown => {
+  if (childBindings.length !== 1) {
+    return undefined;
+  }
+  const binding = childBindings[0];
+  if (binding?.kind !== 'text' || typeof binding.evaluate !== 'function') {
+    return undefined;
+  }
+  const evaluated = binding.evaluate();
+  return typeof evaluated === 'function' ? evaluated : undefined;
+};
+
 const resolveEnhancedDynamicChildren = (
   childBindings: readonly TemplateBindingPayload[],
   childInstance: MountedBindingInstance | null,
@@ -445,17 +472,32 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
     }
 
     if (isComponentElementConstructor(target)) {
+      const scopedSlotChild = resolveScopedSlotChild(childBindings);
+      const resolvedProps =
+        scopedSlotChild === undefined
+          ? props
+          : { ...props, children: scopedSlotChild };
+      const resolvedChildBindings =
+        scopedSlotChild === undefined ? childBindings : [];
       const tagName = getComponentTagName(target);
       if (tagName) {
         try {
-          return this.mountElementRoot(createComponentElement(target, { props }), props, childBindings);
+          return this.mountElementRoot(
+            createComponentElement(target, { props: resolvedProps }),
+            resolvedProps,
+            resolvedChildBindings
+          );
         } catch {
           // 组件宿主创建可能因为标签名非法或定义时序问题失败，此时继续尝试实例化回退路径。
         }
       }
 
       try {
-        return this.mountElementRoot(new target(), props, childBindings);
+        return this.mountElementRoot(
+          new target(),
+          resolvedProps,
+          resolvedChildBindings
+        );
       } catch {
         return [];
       }
@@ -463,6 +505,15 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
 
     if (typeof target === 'function') {
       const isEnhanced = isEnhancedDef(target);
+      const scopedSlotChild = isEnhanced
+        ? undefined
+        : resolveScopedSlotChild(childBindings);
+      const effectiveProps =
+        scopedSlotChild === undefined
+          ? props
+          : { ...props, children: scopedSlotChild };
+      const effectiveChildBindings =
+        scopedSlotChild === undefined ? childBindings : [];
       const needsStructuralAnchors =
         isEnhanced &&
         ((target as { displayName?: string }).displayName === 'TransitionGroup');
@@ -471,36 +522,49 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
         this.currentChildInstance === null &&
         hydratedNodes.length > 0
           ? bootstrapHydratedTransitionGroupDomHostState({
-              props,
+              props: effectiveProps,
               hydratedNodes,
             })
           : undefined;
       const needsTransitionBranchNodes =
         isEnhanced &&
         ((target as { displayName?: string }).displayName === 'Transition');
-      const needsChildInstance = isEnhanced || childBindings.length > 0 || props.children === undefined;
+      const needsChildInstance =
+        scopedSlotChild === undefined &&
+        (isEnhanced ||
+          effectiveChildBindings.length > 0 ||
+          effectiveProps.children === undefined);
       const childInstance = needsChildInstance
         ? (needsStructuralAnchors
           ? this.currentChildInstance
-          : this.ensureChildInstance(childBindings))
+          : this.ensureChildInstance(effectiveChildBindings))
         : null;
       const resolveStructuralChildren = () =>
-        this.ensureChildInstance(childBindings, hydratedTransitionGroupChildNodes).nodes;
+        this.ensureChildInstance(
+          effectiveChildBindings,
+          hydratedTransitionGroupChildNodes
+        ).nodes;
       const resolvedChildren =
-        needsStructuralAnchors && needsChildInstance
-          ? resolveStructuralChildren
-          : childInstance
-          ? (needsStructuralAnchors
-            // TransitionGroup dom-host 模式需要保留原始结构锚点
-            // （注释节点、模板边界节点等），而不只是“当前看得见的节点”。
-            // 否则一旦 slot 锚点脱离，dom-host redirect 就无法重新建立。
-            ? childInstance.nodes
-            : needsTransitionBranchNodes
-              ? readTransitionChildNodes(childInstance)
-            : isEnhanced
-              ? resolveEnhancedDynamicChildren(childBindings, childInstance, props.children)
-              : readMountedNodes(childInstance))
-          : props.children;
+        scopedSlotChild !== undefined
+          ? scopedSlotChild
+          : needsStructuralAnchors && needsChildInstance
+            ? resolveStructuralChildren
+            : childInstance
+              ? (needsStructuralAnchors
+                // TransitionGroup dom-host 模式需要保留原始结构锚点
+                // （注释节点、模板边界节点等），而不只是“当前看得见的节点”。
+                // 否则一旦 slot 锚点脱离，dom-host redirect 就无法重新建立。
+                ? childInstance.nodes
+                : needsTransitionBranchNodes
+                  ? readTransitionChildNodes(childInstance)
+                  : isEnhanced
+                    ? resolveEnhancedDynamicChildren(
+                        effectiveChildBindings,
+                        childInstance,
+                        effectiveProps.children
+                      )
+                    : readMountedNodes(childInstance))
+              : effectiveProps.children;
       const invokeTarget = () =>
         withRuntimeScope(
           {
@@ -508,7 +572,7 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
           },
           () =>
             (target as (props: Record<string, unknown>) => unknown)({
-              ...props,
+              ...effectiveProps,
               children: resolvedChildren,
             })
         );
@@ -524,7 +588,7 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
       if (!isEnhanced && result.length === 1 && result[0] instanceof Element) {
         this.currentElementRoot = result[0];
         this.currentElementController = new DynamicElementBindingController(result[0]);
-        this.currentElementController.write(props);
+        this.currentElementController.write(effectiveProps);
       }
       return result;
     }

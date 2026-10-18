@@ -29,6 +29,8 @@ export const ENHANCED_COMPONENT_NAMES = [
   'LazyLoad',
   'ErrorBoundary',
   'Suspense',
+  'Await',
+  'Virtual',
 ] as const;
 
 export type EnhancedComponentName = (typeof ENHANCED_COMPONENT_NAMES)[number];
@@ -283,6 +285,28 @@ const registryEntries = [
     staticRenderMode: 'children-only',
     metadataPropNames: ['suspenseKey'],
     notes: 'BoundaryIR entry with pending/resolved/rejected state transitions.',
+  },
+  {
+    name: 'Await',
+    category: 'structure-lifecycle',
+    irKind: 'DynamicIR',
+    runtimeHostKind: 'structural',
+    supportsSsr: true,
+    supportsHydration: true,
+    staticRenderMode: 'preserve',
+    metadataPropNames: ['value', 'fallback', 'error', 'delay'],
+    notes: 'Promise-driven dynamic block; renders fallback until the value resolves.',
+  },
+  {
+    name: 'Virtual',
+    category: 'structure-lifecycle',
+    irKind: 'DynamicIR',
+    runtimeHostKind: 'structural',
+    supportsSsr: true,
+    supportsHydration: true,
+    staticRenderMode: 'preserve',
+    metadataPropNames: ['items', 'itemHeight', 'height', 'overscan', 'key'],
+    notes: 'Windowed dynamic block that renders only the visible item range.',
   },
 ] as const satisfies readonly EnhancedComponentRegistryEntry[];
 

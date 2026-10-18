@@ -85,6 +85,8 @@ export interface FragmentProps extends EnhancedComponentProps {}
 export interface SlotProps extends EnhancedComponentProps {
   name?: string;
   fallback?: EnhancedRenderable;
+  /** 传给函数型 slot 的参数；数组会按位置展开。 */
+  args?: unknown;
 }
 
 export interface DynamicProps extends EnhancedComponentProps {
@@ -197,4 +199,25 @@ export interface SuspenseProps extends EnhancedComponentProps {
   onReject?: (error: unknown) => void;
   payload?: BoundaryPayload;
   suspenseKey?: PropertyKey | null;
+}
+
+export interface AwaitProps<T = unknown> extends EnhancedComponentProps {
+  value: Promise<T> | (() => Promise<T> | T) | T;
+  fallback?: EnhancedRenderable | (() => EnhancedRenderable);
+  error?: EnhancedRenderable | ((error: unknown) => EnhancedRenderable);
+  delay?: number;
+  onResolve?: (value: T) => void;
+  onReject?: (error: unknown) => void;
+}
+
+export interface VirtualProps<T = unknown> extends EnhancedComponentProps {
+  items: readonly T[];
+  itemHeight: number;
+  height: number;
+  overscan?: number;
+  tag?: string;
+  key?: (item: T, index: number) => PropertyKey;
+  onScroll?: (scrollTop: number) => void;
+  /** children 必须是 `(item, index) => renderable`。 */
+  children?: unknown;
 }

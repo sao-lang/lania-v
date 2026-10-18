@@ -62,6 +62,25 @@ const evaluateExpression = (expression: string, contextVar = 'ctx'): string => {
   return `ssrEvaluate(${quote(expression)}, ${contextVar})`;
 };
 
+/**
+ * island 的组件表达式在模块作用域里可见（例如同文件声明的 `Child`）。
+ *
+ * 这类标识符必须直接引用；走 `ssrEvaluate`（`with (ctx)`）会拿不到模块绑定。
+ * `this.xxx` 形式仍然交给 SSR 上下文求值。
+ */
+const evaluateIslandComponent = (
+  expression: string,
+  contextVar = 'ctx'
+): string => {
+  const trimmed = expression.trim();
+
+  if (/^[A-Za-z_$][\w$]*$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return evaluateExpression(trimmed, contextVar);
+};
+
 // SSR 布尔属性遵循 HTML 语义：为 true 时只输出属性名，不附带字符串值。
 const renderStaticAttribute = (name: string, value: string | true): string => {
   if (value === true) {
@@ -154,6 +173,15 @@ const renderTemplateNode = (node: TemplateIRNode, contextVar: string): string =>
         node.templateHtml
       )} : ${quote(node.fallbackTemplateHtml ?? '')}, "if", { strategy: "static-template" })`;
     case 'DynamicIR':
+      if (node.island) {
+        // island：由子组件自己输出 SSR 内容，并带上水合优先级与可序列化 props。
+        return `ssrRenderIslandSlot(${node.slotIndex}, ${evaluateIslandComponent(
+          node.componentExpression,
+          contextVar
+        )}, ${evaluateExpression(node.propsExpression, contextVar)}, ${quote(
+          node.island.priority
+        )}, ${quote(node.templateHtml)})`;
+      }
       if (
         node.enhancedComponentName &&
         isTransitionPayloadComponentName(node.enhancedComponentName) &&
@@ -251,6 +279,15 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
         contextVar
       )})) ? ${quote(node.templateHtml)} : ${quote(node.fallbackTemplateHtml ?? '')}, "if", { strategy: "static-template" })`;
     case 'DynamicIR':
+      if (node.island) {
+        return `ssrRenderIslandSlot(${node.slotIndex}, await ssrResolveValue(${evaluateIslandComponent(
+          node.componentExpression,
+          contextVar
+        )}), await ssrResolveValue(${evaluateExpression(
+          node.propsExpression,
+          contextVar
+        )}), ${quote(node.island.priority)}, ${quote(node.templateHtml)})`;
+      }
       if (
         node.enhancedComponentName &&
         isTransitionPayloadComponentName(node.enhancedComponentName) &&

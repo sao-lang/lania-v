@@ -38,7 +38,6 @@ const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelPr
   const h = bindHandlers(props);
   const slots = bindSlots();
   const inputRef = createRef<HTMLInputElement>();
-
   createExpose(props, {
     focusInput() {
       inputRef.current?.focus();

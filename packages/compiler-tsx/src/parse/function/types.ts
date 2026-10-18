@@ -22,8 +22,10 @@ export interface ParsedTsxFunctionComponent {
   sourceFile: ts.SourceFile;
   // 编译器 Program 保留下来，后续绑定分析和类型辅助都可能继续访问。
   program: CompilerProgram;
-  // 识别出的组件声明节点，是后续模板抽取与代码生成的核心入口。
+  // 编译入口组件（`export default` 指定的那个，缺省取第一个）。
   component: ComponentDeclaration;
+  // 文件里声明的全部组件，按源码顺序排列。
+  components: ComponentDeclaration[];
 }
 
 /** 表达式重写时使用的名称绑定上下文。 */
@@ -32,6 +34,15 @@ export interface FunctionBindingContext {
   propAlias: string | null;
   // 直接从 props 解构出来的字段名集合。
   propNames: Set<string>;
+  // `const { title: heading } = props` 这类本地别名到 prop 名的映射。
+  propAliases: Map<string, string>;
+  /**
+   * 本地别名到**可打印读取表达式**的映射。
+   *
+   * 直接解构是 `this.title`，带默认值是 `(this.title ?? 'x')`，
+   * 嵌套是 `this.user?.name`，rest 是剩余 prop 的 getter 视图。
+   */
+  propReplacements?: Map<string, string>;
   // signal 读函数名集合，用于区分普通函数调用和响应式读取。
   signalNames: Set<string>;
   // signal setter 到 signal 名的映射，便于把 `setCount()` 反推回 `count`。

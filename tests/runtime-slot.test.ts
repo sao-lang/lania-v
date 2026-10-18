@@ -134,6 +134,43 @@ describe('TextSlot', () => {
     expect(getSlotPoolStats().availableNodeBuffers).toBe(1);
   });
 
+  it('passes compiled function children to dynamic components as scoped slots', () => {
+    const host = document.createElement('div');
+    const anchor = document.createComment('dynamic');
+    host.appendChild(anchor);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<!--__LANIA_SLOT_0__-->'),
+      100
+    );
+
+    const Child = (props: { children?: unknown }) => {
+      const node = document.createElement('div');
+      const children = props.children;
+      if (typeof children === 'function') {
+        node.append(children('item'));
+      }
+      return node;
+    };
+
+    slot.write({
+      __lania_dynamic: 'block',
+      component: Child,
+      props: {},
+      childBindings: [
+        {
+          kind: 'text',
+          slotIndex: 0,
+          path: [0],
+          evaluate: () => (item: string) =>
+            document.createTextNode(`scoped:${item}`),
+        },
+      ],
+    } as never);
+
+    expect(host.textContent).toBe('scoped:item');
+  });
+
   it('writes stringified values into the text node', () => {
     const node = document.createTextNode('');
     const slot = new TextSlot(node, 0);

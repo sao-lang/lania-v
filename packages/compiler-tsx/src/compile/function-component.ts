@@ -32,16 +32,24 @@ import type { TsxTemplateSyntaxMode } from '../parse/template-mode';
 export interface TsxFunctionTextBindingPlan extends RenderTextBindingPlan {}
 
 export interface CompiledTsxFunctionComponent {
+  /** 编译入口组件的类名（`export default` 指向的组件）。 */
   className: string;
+  /** 文件里所有组件类名，按源码顺序。 */
+  classNames: string[];
   program: CompilerProgram;
   componentAst: ComponentDeclaration;
+  /** 入口组件的 IR。 */
   ir: ComponentIR;
-  // staticHtml/textBindings 与 renderCode 一起构成运行时与调试都要读取的核心产物。
   staticHtml: string;
   textBindings: TsxFunctionTextBindingPlan[];
   renderCode: RenderCodegenResult;
   ssrCode: ClassComponentCodegenResult['ssrCode'];
   classCode: ClassComponentCodegenResult;
+  /** 每个组件各自的类代码产物。 */
+  componentClasses: Array<{
+    className: string;
+    classCode: ClassComponentCodegenResult;
+  }>;
 }
 
 /** 解析函数组件 TSX，并生成渲染计划与类代码。 */
@@ -55,26 +63,37 @@ export const compileFunctionComponentTsx = (
     // 先把 TSX 源码压成统一 Program，再交给 compiler-core 继续做 lowering/codegen。
     const parsed = parseFunctionComponentTsx(fileName, source, mode);
     const pipeline = runComponentCompilerPipeline(parsed.program, options);
-    // TSX 入口一次只编译一个组件，因此直接取首个产物。
-    const artifact = pipeline.components[0];
 
-    if (!artifact) {
+    if (pipeline.components.length === 0) {
       throw new Error('Compiler pipeline did not produce a component artifact.');
     }
 
-    // 函数组件最终仍会落成统一的类组件代码模型，便于复用运行时与 SSR 产物结构。
-    const classCode = generateClassComponentCode(artifact.component);
+    // 一个文件可以声明多个组件，每个组件都会落成独立的类产物。
+    // 开发态把 setup 输出成可重跑的方法，HMR 换实现时才能重建 setup 状态。
+    const componentClasses = pipeline.components.map((artifact) => ({
+      className: artifact.component.name,
+      classCode: generateClassComponentCode(artifact.component, {
+        hotReload: options.hotReload === true,
+      }),
+    }));
+    const entryIndex = parsed.components.findIndex(
+      (component) => component.name === parsed.component.name
+    );
+    const entryArtifact = pipeline.components[entryIndex] ?? pipeline.components[0]!;
+    const entryClass = componentClasses[entryIndex] ?? componentClasses[0]!;
 
     return {
       className: parsed.component.name,
+      classNames: componentClasses.map((entry) => entry.className),
       program: parsed.program,
       componentAst: parsed.component,
-      ir: artifact.component,
-      staticHtml: artifact.component.renderPlan.staticHtml,
-      textBindings: artifact.component.renderPlan.textBindings,
-      renderCode: artifact.renderCode,
-      classCode,
-      ssrCode: classCode.ssrCode,
+      ir: entryArtifact.component,
+      staticHtml: entryArtifact.component.renderPlan.staticHtml,
+      textBindings: entryArtifact.component.renderPlan.textBindings,
+      renderCode: entryArtifact.renderCode,
+      classCode: entryClass.classCode,
+      componentClasses,
+      ssrCode: entryClass.classCode.ssrCode,
     };
   } catch (error) {
     // 入口层只保留统一错误模型，避免集成层处理多种裸异常。

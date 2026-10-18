@@ -46,6 +46,28 @@ export const supportsRequestIdleCallback = (): boolean => {
   return typeof globalThis.requestIdleCallback === 'function';
 };
 
+// `startTransition` 只需要影响同步写入阶段的 signal 调度优先级。
+// 用模块级覆盖而不是改每个 Signal，能让现有编译产物完全无感知。
+let signalPriorityOverride: SchedulerPriority | null = null;
+
+export const getSignalPriority = (): SchedulerPriority => {
+  return signalPriorityOverride ?? NORMAL;
+};
+
+export const withSignalPriority = <T>(
+  priority: SchedulerPriority,
+  run: () => T
+): T => {
+  const previous = signalPriorityOverride;
+  signalPriorityOverride = priority;
+
+  try {
+    return run();
+  } finally {
+    signalPriorityOverride = previous;
+  }
+};
+
 const PRIORITY_ORDER: SchedulerPriority[] = [
   IMMEDIATE,
   HIGH,

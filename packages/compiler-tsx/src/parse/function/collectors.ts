@@ -35,6 +35,7 @@ import {
   getFunctionLikeBodyText,
   getFunctionLikeParamsText,
   getSingleArrowExpression,
+  printer,
 } from './helpers';
 
 /**
@@ -45,6 +46,186 @@ import {
  */
 const createDeclarationOrder = (statementIndex: number, declarationIndex = 0): number =>
   statementIndex * 100 + declarationIndex;
+
+/**
+ * 收集 `const { title, count: total } = props` 这类 props 解构别名。
+ *
+ * 解构本身不会被提升成组件字段，而是让后续绑定重写把本地名字直接映射到
+ * `this.<prop>`。这样既保留源码写法，也不会引入一次性快照导致失去响应性。
+ *
+ * 支持三种常见形态：
+ * - 别名：`count: total`；
+ * - 默认值：`title = 'x'`（就近优先于 prop 选项的 `default`）；
+ * - 嵌套：`user: { name }`（只在 `user` 整体替换时更新）；
+ * - rest：`...rest`（生成剩余 prop 的 getter 视图，保持响应性）。
+ */
+export interface PropDestructuringResult {
+  /** 本地名 -> 顶层 prop 名；用于校验与兼容旧逻辑。 */
+  aliases: Map<string, string>;
+  /** 本地名 -> 可直接打印的读取表达式。 */
+  replacements: Map<string, string>;
+}
+
+export const collectFunctionPropDestructuring = (
+  functionDeclaration: FunctionComponentLike,
+  propsAlias: string | null,
+  declaredPropNames: readonly string[] = [],
+  sourceFile?: ts.SourceFile
+): PropDestructuringResult => {
+  const aliases = new Map<string, string>();
+  const replacements = new Map<string, string>();
+
+  if (!propsAlias || !functionDeclaration.body || !ts.isBlock(functionDeclaration.body)) {
+    return { aliases, replacements };
+  }
+
+  const printExpression = (node: ts.Node): string =>
+    sourceFile ? printer.printNode(ts.EmitHint.Unspecified, node, sourceFile) : node.getText();
+
+  const readPropertyKey = (name: ts.PropertyName): string => {
+    if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+      return name.text;
+    }
+    throw new Error('Computed property names are not supported when destructuring props.');
+  };
+
+  const collectPattern = (
+    pattern: ts.ObjectBindingPattern,
+    path: readonly string[],
+    topProp: string
+  ): void => {
+    pattern.elements.forEach((element) => {
+      if (ts.isOmittedExpression(element)) {
+        return;
+      }
+
+      if (element.dotDotDotToken) {
+        throw new Error(
+          'Rest elements must be at the top level when destructuring props.'
+        );
+      }
+
+      const key = element.propertyName
+        ? readPropertyKey(element.propertyName)
+        : ts.isIdentifier(element.name)
+          ? element.name.text
+          : null;
+
+      if (key === null) {
+        throw new Error(
+          'Nested destructuring must use identifier property names when destructuring props.'
+        );
+      }
+
+      const nextPath = [...path, key];
+
+      if (ts.isIdentifier(element.name)) {
+        // `this.user?.name`：顶层是 prop getter，后续层按可选链下钻。
+        const access = nextPath.reduce(
+          (accumulator, segment, index) =>
+            index === 0 ? `this.${segment}` : `${accumulator}?.${segment}`,
+          ''
+        );
+        const expression = element.initializer
+          ? `(${access} ?? ${printExpression(element.initializer)})`
+          : access;
+
+        aliases.set(element.name.text, topProp);
+        replacements.set(element.name.text, expression);
+        return;
+      }
+
+      if (ts.isObjectBindingPattern(element.name)) {
+        collectPattern(element.name, nextPath, topProp);
+        return;
+      }
+
+      throw new Error(
+        'Nested destructuring only supports identifiers or object patterns when destructuring props.'
+      );
+    });
+  };
+
+  functionDeclaration.body.statements.forEach((statement) => {
+    if (!ts.isVariableStatement(statement)) {
+      return;
+    }
+
+    statement.declarationList.declarations.forEach((declaration) => {
+      if (!ts.isObjectBindingPattern(declaration.name)) {
+        return;
+      }
+
+      if (
+        !declaration.initializer ||
+        !ts.isIdentifier(declaration.initializer) ||
+        declaration.initializer.text !== propsAlias
+      ) {
+        return;
+      }
+
+      const consumed = new Set<string>();
+
+      declaration.name.elements.forEach((element) => {
+        if (ts.isOmittedExpression(element)) {
+          return;
+        }
+
+        if (element.dotDotDotToken) {
+          if (!ts.isIdentifier(element.name)) {
+            throw new Error('Rest elements must be identifiers when destructuring props.');
+          }
+
+          const remaining = declaredPropNames.filter((name) => !consumed.has(name));
+          // getter 的 `this` 指向对象本身，因此把实例作为参数传进去。
+          replacements.set(
+            element.name.text,
+            `((__laniaSelf: any) => ({ ${remaining
+              .map((name) => `get ${name}() { return __laniaSelf.${name}; }`)
+              .join(', ')} }))(this)`
+          );
+          return;
+        }
+
+        const topProp = element.propertyName
+          ? readPropertyKey(element.propertyName)
+          : ts.isIdentifier(element.name)
+            ? element.name.text
+            : null;
+
+        if (topProp === null) {
+          throw new Error(
+            'Computed property names are not supported when destructuring props.'
+          );
+        }
+
+        consumed.add(topProp);
+
+        if (ts.isIdentifier(element.name)) {
+          const access = `this.${topProp}`;
+          const expression = element.initializer
+            ? `(${access} ?? ${printExpression(element.initializer)})`
+            : access;
+
+          aliases.set(element.name.text, topProp);
+          replacements.set(element.name.text, expression);
+          return;
+        }
+
+        if (ts.isObjectBindingPattern(element.name)) {
+          collectPattern(element.name, [topProp], topProp);
+          return;
+        }
+
+        throw new Error(
+          'Nested destructuring only supports identifiers or object patterns when destructuring props.'
+        );
+      });
+    });
+  });
+
+  return { aliases, replacements };
+};
 
 /** 收集 `createSignal` 形式的响应式声明。 */
 export const collectFunctionSignals = (
@@ -361,6 +542,48 @@ export const collectFunctionFormValue = (
   });
 
   return formValue;
+};
+
+/** 收集 `useFormValidity(() => ...)` 中声明的表单校验表达式。 */
+export const collectFunctionFormValidity = (
+  functionDeclaration: FunctionComponentLike,
+  sourceFile: ts.SourceFile
+): string | null => {
+  if (!functionDeclaration.body || !ts.isBlock(functionDeclaration.body)) {
+    return null;
+  }
+
+  let validity: string | null = null;
+
+  functionDeclaration.body.statements.forEach((statement) => {
+    const call =
+      ts.isExpressionStatement(statement)
+        ? statement.expression
+        : ts.isVariableStatement(statement) && statement.declarationList.declarations.length === 1
+          ? statement.declarationList.declarations[0]?.initializer
+          : null;
+
+    if (
+      !call ||
+      !ts.isCallExpression(call) ||
+      getCallExpressionName(call.expression) !== 'useFormValidity'
+    ) {
+      return;
+    }
+
+    const getter = call.arguments[0];
+    const expression = getSingleArrowExpression(getter, sourceFile);
+
+    if (!expression) {
+      throw new Error(
+        '`useFormValidity` expects a single-expression getter, e.g. `useFormValidity(() => valid())`.'
+      );
+    }
+
+    validity = expression;
+  });
+
+  return validity;
 };
 
 // setup 绑定是最后一道兜底采集：凡是不属于专门通道的顶层声明，都在这里保留下来。

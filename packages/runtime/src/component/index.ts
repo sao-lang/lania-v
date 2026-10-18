@@ -8,6 +8,7 @@
  */
 export * from './enhanced-components';
 export * from './events';
+export * from './host/prop-options';
 export * from './host/reactive-element';
 export * from './styles';
 export * from './transition/runtime';
@@ -31,6 +32,7 @@ export {
   bindSlots,
   createExpose,
   createComponentElement,
+  createComponentPropsSnapshot,
   createRoot,
   defineComponent,
   getComponentCreationProps,
@@ -44,5 +46,6 @@ export {
   onUnmounted,
   onUpdated,
   useContext,
+  useFormValidity,
   useFormValue,
 } from './host/function-component';

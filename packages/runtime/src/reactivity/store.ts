@@ -207,11 +207,21 @@ const createStoreProxy = <T>(
         ? Reflect.ownKeys(value as object)
         : [];
     },
-    getOwnPropertyDescriptor(_target, property) {
+    getOwnPropertyDescriptor(target, property) {
       trackExactPath(runtime, path);
       const value = readPath(runtime.source.peek(), path);
+      const targetDescriptor = Reflect.getOwnPropertyDescriptor(target, property);
 
       if ((isObjectLike(value) || Array.isArray(value)) && property in (value as object)) {
+        // 数组的 `length` 等属性在代理 target 上本来就是不可配置的，
+        // 必须保持同样的描述符形状，否则会触发 Proxy 不变量错误。
+        if (targetDescriptor && !targetDescriptor.configurable) {
+          return {
+            ...targetDescriptor,
+            value: (value as Record<PropertyKey, unknown>)[property],
+          };
+        }
+
         return {
           configurable: true,
           enumerable: true,
@@ -220,7 +230,7 @@ const createStoreProxy = <T>(
         };
       }
 
-      return undefined;
+      return targetDescriptor;
     },
   }) as T;
 
@@ -258,6 +268,48 @@ export const createStore = <T extends object>(
   }) as StoreSetter<T>;
 
   return [store, setStore];
+};
+
+const cloneForProduce = <T>(value: T): T => {
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(value);
+    } catch {
+      // 包含函数/类实例等不可克隆值时退回浅拷贝。
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return [...value] as T;
+  }
+
+  if (isObjectLike(value)) {
+    return { ...value } as T;
+  }
+
+  return value;
+};
+
+/**
+ * 以可变写法更新 store。
+ *
+ * ```ts
+ * const [state, setState] = createStore({ list: [] as number[] });
+ * produce(setState, (draft) => { draft.list.push(1); });
+ * ```
+ *
+ * 只有在数据可被 `structuredClone` 时才是真正的深拷贝；含函数/类实例时退回浅拷贝，
+ * 此时请优先使用 `setState('path.to.value', next)` 的路径写法。
+ */
+export const produce = <T extends object>(
+  setStore: StoreSetter<T>,
+  recipe: (draft: T) => void
+): T => {
+  return setStore((previous) => {
+    const draft = cloneForProduce(previous);
+    recipe(draft);
+    return draft;
+  });
 };
 
 export const getStorePathSignal = (

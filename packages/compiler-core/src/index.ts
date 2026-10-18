@@ -18,6 +18,7 @@ export * from './transform';
 export * from './pipeline';
 export * from './plan';
 export * from './pipeline/plugins';
+export * from './report';
 
 /** 创建 compiler-core 的基础标识对象。 */
 export const createCompilerCore = () => ({

@@ -38,6 +38,13 @@ export interface ComponentDeclaration {
    * 代码生成阶段据此输出 `static formAssociated = true;`。
    */
   formAssociated?: boolean;
+  /**
+   * `defineComponent(fn, options)` 第二个参数的**原文**。
+   *
+   * 代码生成阶段把它原样搬进产物（`static __laniaOptions = ...`），
+   * 由运行时在类求值时解析，因此选项里可以写任意表达式、引用 import。
+   */
+  optionsSource?: string;
 }
 
 /** 生命周期回调的源码片段。 */
@@ -72,7 +79,7 @@ export interface SignalDeclaration {
   name: string;
   signalKind: 'state' | 'property' | 'unknown';
   initializer: string | null;
-  propertyType?: 'String' | 'Number' | 'Boolean' | 'Object';
+  propertyType?: 'String' | 'Number' | 'Boolean' | 'Object' | 'Array';
   /** 组件体内声明的源码顺序，含义同 `SetupBindingDeclaration.order`。 */
   order?: number;
 }
@@ -104,6 +111,19 @@ export interface ElementNode {
   attributes: AttributeNode[];
   events: EventNode[];
   directives: DirectiveNode[];
+  /**
+   * `client:<priority>` 声明的 island 水合优先级。
+   *
+   * 只允许出现在组件标签上；该 attribute 不会作为 prop 传给子组件。
+   */
+  island?: { priority: string };
+  /**
+   * `{...rest}` 形式的组件 props 展开表达式。
+   *
+   * 目前只在组件标签上生效；原生标签上的 spread 会在模板解析阶段报错，
+   * 避免出现“编译成功但属性被静默丢弃”的行为。
+   */
+  spreadAttributes?: string[];
   children: TemplateChildNode[];
   selfClosing: boolean;
 }

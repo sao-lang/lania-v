@@ -49,7 +49,18 @@ describe('enhanced registry and contract drafts', () => {
       'LazyLoad',
       'ErrorBoundary',
       'Suspense',
+      'Await',
+      'Virtual',
     ]);
+
+    expect(getEnhancedComponentRegistryEntry('Await')).toMatchObject({
+      category: 'structure-lifecycle',
+      irKind: 'DynamicIR',
+    });
+    expect(getEnhancedComponentRegistryEntry('Virtual')).toMatchObject({
+      category: 'structure-lifecycle',
+      irKind: 'DynamicIR',
+    });
 
     expect(getEnhancedComponentRegistryEntry('KeepAlive')).toMatchObject({
       category: 'structure-lifecycle',

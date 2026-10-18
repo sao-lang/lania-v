@@ -12,6 +12,7 @@ import ts from 'typescript';
 import {
   parseTypeScriptSource,
   type ComponentDeclaration,
+  type EffectDeclaration,
 } from '@lania-v/compiler-core';
 import {
   assertNoLegacyTsxDirectiveSyntax,
@@ -23,56 +24,89 @@ import { rewriteBlockWithBindings, rewriteExpressionWithBindings, rewriteFunctio
 import {
   collectFunctionComputed,
   collectFunctionEffects,
+  collectFunctionFormValidity,
   collectFunctionFormValue,
   collectFunctionLifecycleCallbacks,
   collectFunctionLifecycleHooks,
+  collectFunctionPropDestructuring,
   collectFunctionSetupBindings,
   collectFunctionSignals,
 } from './collectors';
 import {
   collectContextEmitAliases,
   collectFunctionProps,
-  findFunctionComponent,
+  findFunctionComponents,
   getCallExpressionName,
   parseFunctionReturnTemplate,
   validateFunctionLifecycleHookUsage,
+  type ResolvedFunctionComponent,
 } from './helpers';
+import { collectFunctionComponentOptions } from './options';
 import type { ParsedTsxFunctionComponent, FunctionBindingContext } from './types';
 
-/** 解析函数组件源码，并生成 compiler-core 所需的组件声明。 */
-export const parseFunctionComponentTsx = (
-  fileName: string,
-  source: string,
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
-): ParsedTsxFunctionComponent => {
-  if (mode === 'jsx-standard') {
-    assertNoLegacyTsxDirectiveSyntax(fileName, source);
-  }
+/**
+ * 把一个组件声明解析成 compiler-core 的 `ComponentDeclaration`。
+ *
+ * 采集、重写与模板抽取都只依赖“当前组件 + 同一个 SourceFile”，
+ * 因此单个文件里的多个组件可以各自独立走一遍这段流程。
+ */
+const createComponentDeclaration = (
+  sourceFile: ts.SourceFile,
+  functionComponent: ResolvedFunctionComponent,
+  mode: TsxTemplateSyntaxMode
+): ComponentDeclaration => {
+  const functionDeclaration = functionComponent.declaration;
 
-  // 先预处理扩展绑定语法，再交给 TypeScript 构建 AST。
-  const sourceFile = parseTypeScriptSource(
-    fileName,
-    mode === 'directive-extended' ? preprocessTsxBindingSyntax(fileName, source) : source
-  );
-  const functionComponent = findFunctionComponent(sourceFile);
-  const functionDeclaration = functionComponent?.declaration;
-
-  if (!functionDeclaration?.name) {
+  if (!functionDeclaration.name) {
     throw new Error('Function component declaration was not found.');
   }
 
   validateFunctionLifecycleHookUsage(functionDeclaration, sourceFile);
 
   // 先采集原始声明，再统一用同一套 binding context 重写，避免多次重复扫描 AST。
-  const functionProps = collectFunctionProps(functionDeclaration);
+  const functionProps = collectFunctionProps(functionDeclaration, sourceFile);
+  const componentOptions = collectFunctionComponentOptions(
+    functionComponent?.options,
+    functionProps.props,
+    sourceFile
+  );
   const rawSignals = collectFunctionSignals(functionDeclaration, sourceFile);
   const rawComputed = collectFunctionComputed(functionDeclaration, sourceFile);
   const rawSetupBindings = collectFunctionSetupBindings(functionDeclaration, sourceFile);
+  const destructuredProps = collectFunctionPropDestructuring(
+    functionDeclaration,
+    functionProps.propAlias,
+    functionProps.props.map((prop) => prop.name),
+    sourceFile
+  );
+  const propAliases = destructuredProps.aliases;
+  const declaredPropNames = new Set(functionProps.props.map((prop) => prop.name));
+
+  if (propAliases.size > 0 && declaredPropNames.size === 0) {
+    // 解构必须映射到真实的 prop 字段；无法展开类型时继续映射会得到 `this.xxx = undefined`。
+    throw new Error(
+      'Cannot statically resolve the props type for destructuring. Use an inline object type or declare the props type/interface in the same .lania.tsx file.'
+    );
+  }
+
+  // 类型能静态展开时，顺手拦住拼错的 prop 名。
+  if (declaredPropNames.size > 0) {
+    for (const [localName, propName] of propAliases) {
+      if (!declaredPropNames.has(propName)) {
+        throw new Error(
+          `Unknown prop "${propName}" in destructuring \`const { ${localName} } = ${functionProps.propAlias}\`.`
+        );
+      }
+    }
+  }
+
   const emitAliases = collectContextEmitAliases(functionDeclaration);
   // 这里汇总所有可重写的名称，供表达式和模板重写阶段复用。
   const bindings: FunctionBindingContext = {
     propAlias: functionProps.propAlias,
     propNames: new Set(functionProps.props.map((prop) => prop.name)),
+    propAliases,
+    propReplacements: destructuredProps.replacements,
     signalNames: new Set(rawSignals.map((signal) => signal.name)),
     signalSetterToName: new Map(),
     computedNames: new Set(rawComputed.map((computed) => computed.name)),
@@ -172,7 +206,9 @@ export const parseFunctionComponentTsx = (
           kind: 'field' as const,
           params: '',
           body: null,
-          initializer: 'getComponentCreationProps() ?? {}',
+          initializer: `createComponentPropsSnapshot(this, ${JSON.stringify(
+            functionProps.props.map((prop) => prop.name)
+          )})`,
           order: -1,
         },
         ...rewrittenSetupBindings,
@@ -185,29 +221,46 @@ export const parseFunctionComponentTsx = (
     formValueExpression === null
       ? null
       : rewriteExpressionWithBindings(formValueExpression, bindings);
+  const formValidityExpression = collectFunctionFormValidity(
+    functionDeclaration,
+    sourceFile
+  );
+  const rewrittenFormValidity =
+    formValidityExpression === null
+      ? null
+      : rewriteExpressionWithBindings(formValidityExpression, bindings);
+
+  const formEffects: EffectDeclaration[] = [];
+
+  if (rewrittenFormValue !== null) {
+    formEffects.push({
+      // `useFormValue` 复用 effect 通道：依赖收集、调度与清理都与 createEffect 一致。
+      type: 'EffectDeclaration',
+      name: '__formValue',
+      body: `this._setFormValue(${rewrittenFormValue});`,
+    });
+  }
+
+  if (rewrittenFormValidity !== null) {
+    formEffects.push({
+      type: 'EffectDeclaration',
+      name: '__formValidity',
+      body: `this._setFormValidity(${rewrittenFormValidity});`,
+    });
+  }
 
   const component: ComponentDeclaration = {
     type: 'ComponentDeclaration',
-    name: functionComponent?.name ?? 'AnonymousComponent',
+    name: functionComponent.name ?? 'AnonymousComponent',
     componentKind: 'function',
     signals,
     computed,
-    effects:
-      rewrittenFormValue === null
-        ? effects
-        : [
-            ...effects,
-            {
-              // `useFormValue` 复用 effect 通道：依赖收集、调度与清理都与 createEffect 一致。
-              type: 'EffectDeclaration',
-              name: '__formValue',
-              body: `this._setFormValue(${rewrittenFormValue});`,
-            },
-          ],
+    effects: [...effects, ...formEffects],
     lifecycleHooks: collectFunctionLifecycleHooks(functionDeclaration),
     lifecycleCallbacks,
     setupBindings,
-    formAssociated: rewrittenFormValue !== null,
+    formAssociated: rewrittenFormValue !== null || rewrittenFormValidity !== null,
+    optionsSource: componentOptions.source ?? undefined,
     template: rewriteFunctionTemplateNode(
       // 模板内表达式必须使用与 setup/effect 相同的访问模型，否则后续 IR 会前后不一致。
       parseFunctionReturnTemplate(sourceFile, functionDeclaration, mode),
@@ -215,14 +268,53 @@ export const parseFunctionComponentTsx = (
     ),
   };
 
+  return component;
+};
+
+/**
+ * 解析函数组件源码，并生成 compiler-core 所需的组件声明。
+ *
+ * 同一个文件允许声明多个组件：全部组件都会进入 `Program.body`，
+ * 其中 `export default` 指定的那个作为编译入口（`component`）。
+ */
+export const parseFunctionComponentTsx = (
+  fileName: string,
+  source: string,
+  mode: TsxTemplateSyntaxMode = 'jsx-standard'
+): ParsedTsxFunctionComponent => {
+  if (mode === 'jsx-standard') {
+    assertNoLegacyTsxDirectiveSyntax(fileName, source);
+  }
+
+  // 先预处理扩展绑定语法，再交给 TypeScript 构建 AST。
+  const sourceFile = parseTypeScriptSource(
+    fileName,
+    mode === 'directive-extended' ? preprocessTsxBindingSyntax(fileName, source) : source
+  );
+  const functionComponents = findFunctionComponents(sourceFile);
+  const entryIndex = Math.max(
+    0,
+    functionComponents.findIndex((component) => component.isDefaultExport)
+  );
+  const entry = functionComponents[entryIndex];
+
+  if (!entry) {
+    throw new Error('Function component declaration was not found.');
+  }
+
+  const declarations = functionComponents.map((component) =>
+    createComponentDeclaration(sourceFile, component, mode)
+  );
+
   return {
     sourceFile,
-    component,
+    component: declarations[entryIndex]!,
+    components: declarations,
     program: {
       type: 'Program',
       fileName,
       sourceKind: 'tsx-function-component',
-      body: [component],
+      body: declarations,
     },
   };
 };

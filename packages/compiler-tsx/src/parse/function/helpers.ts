@@ -20,6 +20,7 @@ import {
 } from '@lania-v/compiler-core';
 import { parseReturnedJsxTemplate } from '../template';
 import type { TsxTemplateSyntaxMode } from '../template-mode';
+import { resolveImportedTypeDeclaration } from './imported-types';
 
 export type FunctionComponentLike =
   | ts.FunctionDeclaration
@@ -29,6 +30,9 @@ export type FunctionComponentLike =
 export interface ResolvedFunctionComponent {
   name: string;
   declaration: FunctionComponentLike;
+  options?: ts.ObjectLiteralExpression;
+  /** 是否由 `export default` 指定；有默认导出时它就是编译入口。 */
+  isDefaultExport?: boolean;
 }
 
 /** 打印重写后的 AST，尽量保留原始注释。 */
@@ -145,6 +149,19 @@ const getDefineComponentCallback = (expression: ts.Expression): FunctionComponen
   return null;
 };
 
+const getDefineComponentOptions = (
+  expression: ts.Expression
+): ts.ObjectLiteralExpression | undefined => {
+  if (
+    !ts.isCallExpression(expression) ||
+    getCallExpressionName(expression.expression) !== 'defineComponent'
+  ) {
+    return undefined;
+  }
+  const options = expression.arguments[1];
+  return options && ts.isObjectLiteralExpression(options) ? options : undefined;
+};
+
 // 只有首字母大写的函数才被视为组件入口，避免把普通工具函数误识别成组件。
 const resolveFunctionComponentName = (
   declaration: FunctionComponentLike,
@@ -162,10 +179,19 @@ const resolveFunctionComponentName = (
 };
 
 // 入口解析按“函数声明 -> 变量 defineComponent -> export default defineComponent”顺序探测。
-/** 约定首个首字母大写的函数声明或 defineComponent 包装回调为函数组件入口。 */
-export const findFunctionComponent = (
+/**
+ * 收集文件里所有组件声明。
+ *
+ * 多组件文件是合法写法（子组件与默认导出组件同文件），因此这里返回全部候选，
+ * 再由 `findFunctionComponent()` 选出编译入口：默认导出优先，否则取第一个。
+ */
+export const findFunctionComponents = (
   sourceFile: ts.SourceFile
-): ResolvedFunctionComponent | undefined => {
+): ResolvedFunctionComponent[] => {
+  const components: ResolvedFunctionComponent[] = [];
+  // `export default Foo` 指向的标识符，等扫描结束后再回填到对应声明上。
+  let defaultExportName: string | null = null;
+
   for (const statement of sourceFile.statements) {
     // 先找最直接的函数声明入口，保证常规写法有最稳定的识别优先级。
     if (
@@ -173,10 +199,12 @@ export const findFunctionComponent = (
       statement.name !== undefined &&
       isUppercaseComponentName(statement.name.text)
     ) {
-      return {
+      components.push({
         name: statement.name.text,
         declaration: statement,
-      };
+        isDefaultExport: hasDefaultModifier(statement),
+      });
+      continue;
     }
 
     if (ts.isVariableStatement(statement)) {
@@ -192,15 +220,22 @@ export const findFunctionComponent = (
 
         if (callback && componentName) {
           // 变量声明模式下仍返回真实回调体，后续阶段无需关心外层 defineComponent 包装。
-          return {
+          components.push({
             name: componentName,
             declaration: callback,
-          };
+            options: getDefineComponentOptions(declaration.initializer),
+          });
         }
       }
+      continue;
     }
 
     if (ts.isExportAssignment(statement)) {
+      if (ts.isIdentifier(statement.expression)) {
+        defaultExportName = statement.expression.text;
+        continue;
+      }
+
       // `export default defineComponent(...)` 没有额外变量名时，只能依赖回调自身命名。
       const callback = getDefineComponentCallback(statement.expression);
       const componentName = callback
@@ -208,15 +243,44 @@ export const findFunctionComponent = (
         : null;
 
       if (callback && componentName) {
-        return {
+        components.push({
           name: componentName,
           declaration: callback,
-        };
+          options: getDefineComponentOptions(statement.expression),
+          isDefaultExport: true,
+        });
       }
     }
   }
 
-  return undefined;
+  if (defaultExportName) {
+    const target = components.find(
+      (candidate) => candidate.name === defaultExportName
+    );
+
+    if (target) {
+      target.isDefaultExport = true;
+    }
+  }
+
+  return components;
+};
+
+const hasDefaultModifier = (statement: ts.Statement): boolean => {
+  return Boolean(
+    ts.canHaveModifiers(statement) &&
+      ts
+        .getModifiers(statement)
+        ?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
+  );
+};
+
+/** 选定编译入口：`export default` 的组件优先，否则取文件里的第一个组件。 */
+export const findFunctionComponent = (
+  sourceFile: ts.SourceFile
+): ResolvedFunctionComponent | undefined => {
+  const components = findFunctionComponents(sourceFile);
+  return components.find((component) => component.isDefaultExport) ?? components[0];
 };
 
 /** 从单表达式箭头函数或单 return 体中提取表达式文本。 */
@@ -298,9 +362,154 @@ const propertyTypeFromTypeNode = (
   }
 };
 
-/** 从首参中提取 props 声明，并保留 props 变量别名。 */
+const collectPropsFromMembers = (
+  members: ts.NodeArray<ts.TypeElement>
+): SignalDeclaration[] => {
+  return members.flatMap((member) => {
+    if (!member.name || !ts.isIdentifier(member.name)) {
+      return [];
+    }
+
+    if (ts.isPropertySignature(member)) {
+      return [
+        {
+          type: 'SignalDeclaration' as const,
+          name: member.name.text,
+          signalKind: 'property' as const,
+          initializer: null,
+          propertyType: propertyTypeFromTypeNode(member.type),
+        },
+      ];
+    }
+
+    if (ts.isMethodSignature(member)) {
+      // 回调型 props 也按 Object 处理，保证它们能被写成实例字段并保持更新。
+      return [
+        {
+          type: 'SignalDeclaration' as const,
+          name: member.name.text,
+          signalKind: 'property' as const,
+          initializer: null,
+          propertyType: 'Object' as const,
+        },
+      ];
+    }
+
+    return [];
+  });
+};
+
+const collectPropsFromInterface = (
+  iface: ts.InterfaceDeclaration,
+  sourceFile: ts.SourceFile,
+  seen: Set<string>
+): SignalDeclaration[] => {
+  const inherited = (iface.heritageClauses ?? []).flatMap((clause) => {
+    if (clause.token !== ts.SyntaxKind.ExtendsKeyword) {
+      return [];
+    }
+
+    return clause.types.flatMap((type) => {
+      if (!ts.isExpressionWithTypeArguments(type) || !ts.isIdentifier(type.expression)) {
+        return [];
+      }
+
+      return resolvePropsTypeName(type.expression.text, sourceFile, seen);
+    });
+  });
+
+  return [...inherited, ...collectPropsFromMembers(iface.members)];
+};
+
+const resolvePropsTypeName = (
+  name: string,
+  sourceFile: ts.SourceFile,
+  seen: Set<string>
+): SignalDeclaration[] => {
+  // 同一名字在不同文件里含义不同，seen 需要带上文件维度。
+  const key = `${sourceFile.fileName}::${name}`;
+
+  if (seen.has(key)) {
+    return [];
+  }
+
+  seen.add(key);
+
+  const alias = sourceFile.statements.find(
+    (statement): statement is ts.TypeAliasDeclaration =>
+      ts.isTypeAliasDeclaration(statement) && statement.name.text === name
+  );
+
+  if (alias) {
+    return collectPropsFromTypeNode(alias.type, sourceFile, seen);
+  }
+
+  const iface = sourceFile.statements.find(
+    (statement): statement is ts.InterfaceDeclaration =>
+      ts.isInterfaceDeclaration(statement) && statement.name.text === name
+  );
+
+  if (iface) {
+    return collectPropsFromInterface(iface, sourceFile, seen);
+  }
+
+  // 同文件找不到时，按相对路径读取被导入的类型声明再展开。
+  const imported = resolveImportedTypeDeclaration(name, sourceFile);
+
+  if (!imported) {
+    return [];
+  }
+
+  if (ts.isTypeAliasDeclaration(imported.declaration)) {
+    return collectPropsFromTypeNode(
+      imported.declaration.type,
+      imported.sourceFile,
+      seen
+    );
+  }
+
+  return collectPropsFromInterface(imported.declaration, imported.sourceFile, seen);
+};
+
+const collectPropsFromTypeNode = (
+  typeNode: ts.TypeNode | undefined,
+  sourceFile: ts.SourceFile,
+  seen: Set<string>
+): SignalDeclaration[] => {
+  if (!typeNode) {
+    return [];
+  }
+
+  if (ts.isTypeLiteralNode(typeNode)) {
+    return collectPropsFromMembers(typeNode.members);
+  }
+
+  if (ts.isParenthesizedTypeNode(typeNode)) {
+    return collectPropsFromTypeNode(typeNode.type, sourceFile, seen);
+  }
+
+  if (ts.isIntersectionTypeNode(typeNode)) {
+    return typeNode.types.flatMap((entry) =>
+      collectPropsFromTypeNode(entry, sourceFile, seen)
+    );
+  }
+
+  if (ts.isTypeReferenceNode(typeNode) && ts.isIdentifier(typeNode.typeName)) {
+    return resolvePropsTypeName(typeNode.typeName.text, sourceFile, seen);
+  }
+
+  return [];
+};
+
+/**
+ * 从首参中提取 props 声明，并保留 props 变量别名。
+ *
+ * 支持同文件内的 `type Props = {...}`、`interface Props {...}` 以及它们的
+ * 交叉/继承形态；跨文件导入的类型暂时无法在单文件编译器中静态展开。
+ */
 export const collectFunctionProps = (
-  functionDeclaration: FunctionComponentLike
+  functionDeclaration: FunctionComponentLike,
+  sourceFile: ts.SourceFile
 ): {
   props: SignalDeclaration[];
   propAlias: string | null;
@@ -314,37 +523,22 @@ export const collectFunctionProps = (
     };
   }
 
-  if (!parameter.type || !ts.isTypeLiteralNode(parameter.type)) {
-    // 无法静态展开 props 结构时，仍保留别名，让后续引用重写至少能识别 `props.xxx` 访问。
-    return {
-      props: [],
-      propAlias: parameter.name.text,
-    };
-  }
+  const collected = collectPropsFromTypeNode(
+    parameter.type,
+    sourceFile,
+    new Set()
+  );
+  // 交叉类型或继承可能重复声明同一个 prop，这里按名字去重并保留最先出现的类型。
+  const deduped = new Map<string, SignalDeclaration>();
 
-  // 仅从首参类型字面量中提取静态 props 声明；更复杂的泛型/别名暂时保持宽松处理。
-  const props = parameter.type.members.flatMap((member) => {
-    if (
-      !ts.isPropertySignature(member) ||
-      !member.name ||
-      !ts.isIdentifier(member.name)
-    ) {
-      return [];
+  collected.forEach((prop) => {
+    if (!deduped.has(prop.name)) {
+      deduped.set(prop.name, prop);
     }
-
-    return [
-      {
-        type: 'SignalDeclaration' as const,
-        name: member.name.text,
-        signalKind: 'property' as const,
-        initializer: null,
-        propertyType: propertyTypeFromTypeNode(member.type),
-      },
-    ];
   });
 
   return {
-    props,
+    props: [...deduped.values()],
     propAlias: parameter.name.text,
   };
 };

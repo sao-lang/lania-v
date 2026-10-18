@@ -38,4 +38,30 @@ describe('Vite compiler debug trace', () => {
 
     expect(result?.code).not.toContain('[lania-v] compile:');
   });
+
+  it('injects the component HMR bridge only for dev transforms', async () => {
+    const devPlugin = laniaFcVitePlugin();
+    devPlugin.configResolved?.({ command: 'serve' } as never);
+    const devResult = await devPlugin.transform?.call(
+      devPlugin,
+      source,
+      'LoginPage.lania.tsx'
+    );
+
+    // dev 下模块自我接受，并通过桥接把同名标签的重注册转成原型热替换。
+    expect(devResult?.code).toContain('installComponentHmr');
+    expect(devResult?.code).toContain('import.meta.hot.accept()');
+
+    const buildPlugin = laniaFcVitePlugin();
+    buildPlugin.configResolved?.({ command: 'build' } as never);
+    const buildResult = await buildPlugin.transform?.call(
+      buildPlugin,
+      source,
+      'LoginPage.lania.tsx'
+    );
+
+    // 生产产物不能出现 import.meta.hot 相关语句。
+    expect(buildResult?.code).not.toContain('installComponentHmr');
+    expect(buildResult?.code).not.toContain('import.meta.hot');
+  });
 });

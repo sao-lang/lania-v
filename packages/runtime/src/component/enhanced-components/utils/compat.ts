@@ -121,10 +121,24 @@ const resolveScopedSlotContent = (content: unknown, name?: string): unknown => {
   return undefined;
 };
 
+const invokeScopedSlot = (
+  slot: (...values: unknown[]) => unknown,
+  args: unknown
+): EnhancedRenderable => {
+  const result = Array.isArray(args) ? slot(...args) : slot(args);
+  return renderCompatChildren(result);
+};
+
 export const renderCompatSlot = (props: SlotProps): EnhancedRenderable => {
   const fallbackContent = (props.children ?? props.fallback) as EnhancedRenderable;
   const scope = getCurrentRuntimeScope();
   const host = scope?.host;
+  const slottedContent = resolveScopedSlotContent(scope?.slotContent, props.name);
+
+  // 函数型 slot 需要把 args 传回父组件，无法走原生 <slot> 投影。
+  if (typeof slottedContent === 'function') {
+    return invokeScopedSlot(slottedContent as (...values: unknown[]) => unknown, props.args);
+  }
 
   // Shadow DOM 宿主优先输出原生 slot 元素，让浏览器自己完成分发。
   if (host instanceof HTMLElement && host.shadowRoot) {
@@ -136,7 +150,6 @@ export const renderCompatSlot = (props: SlotProps): EnhancedRenderable => {
     return slot;
   }
 
-  const slottedContent = resolveScopedSlotContent(scope?.slotContent, props.name);
   if (slottedContent !== undefined && slottedContent !== null) {
     return renderCompatChildren(slottedContent);
   }

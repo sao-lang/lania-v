@@ -33,6 +33,13 @@ export interface LaniaFcVitePluginOptions {
   tsxTemplateSyntaxMode?: TsxTemplateSyntaxMode;
   /** Emit serializable compiler-stage snapshots into transformed modules during `vite dev`. */
   debug?: boolean;
+  /**
+   * 开发态组件 HMR 产物。
+   *
+   * 默认在 `vite dev` 下开启；关闭后 setup 会保持字段初始化器形态，
+   * HMR 仍能热替换模板与逻辑，但新增 setup 状态需要刷新页面。
+   */
+  hotReload?: boolean;
 }
 
 export type LaniaVitePluginOptions = LaniaFcVitePluginOptions;
@@ -78,12 +85,13 @@ const compileFcModule = (
   fileName: string,
   code: string,
   options: LaniaFcVitePluginOptions,
-  includeDebugTrace: boolean
+  includeDebugTrace: boolean,
+  hotReload: boolean
 ) => {
   const compiled = compileFunctionComponentTsxModule(
     fileName,
     code,
-    { plugins: options.compilerPlugins },
+    { plugins: options.compilerPlugins, hotReload },
     options.tsxTemplateSyntaxMode
   );
   let moduleCode = compiled.compiled.moduleCode;
@@ -116,6 +124,20 @@ const compileFcModule = (
 
   return transpileModuleCode(fileName, moduleCode, ts.JsxEmit.ReactJSX);
 };
+
+/**
+ * dev 模块尾部注入的 HMR 协议：
+ * - 安装组件热替换桥（重注册同名标签时走原型替换而不是告警丢弃）；
+ * - 让模块自我接受，避免整页 reload，从而保留组件实例状态。
+ */
+const HMR_IMPORT =
+  "import { installComponentHmr as __laniaInstallComponentHmr } from '@lania-v/runtime';";
+const HMR_FOOTER = [
+  'if (import.meta.hot) {',
+  '  __laniaInstallComponentHmr();',
+  '  import.meta.hot.accept();',
+  '}',
+].join('\n');
 
 const toViteCompileError = (fileName: string, error: LaniaTsxCompileError) => {
   return {
@@ -194,8 +216,25 @@ export const laniaFcVitePlugin = (
     name: 'lania-fc-vite-plugin',
     include: options.tsxInclude ?? /\.lania\.tsx$/,
     exclude: options.tsxExclude,
-    compile: (fileName, code) =>
-      compileFcModule(fileName, code, options, options.debug === true && isDevServer),
+    compile: (fileName, code) => {
+      const result = compileFcModule(
+        fileName,
+        code,
+        options,
+        options.debug === true && isDevServer,
+        isDevServer && options.hotReload !== false
+      );
+
+      if (!isDevServer) {
+        return result;
+      }
+
+      // 追加行不会移动已有代码，sourcemap 仍然对齐到原始行号。
+      return {
+        ...result,
+        code: `${result.code}\n${HMR_IMPORT}\n${HMR_FOOTER}\n`,
+      };
+    },
     onConfigResolved(config) {
       isDevServer = config.command === 'serve';
     },

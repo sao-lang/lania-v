@@ -27,6 +27,13 @@ export interface CompilerPlugin {
 /** 插件配置项。 */
 export interface CompilerPluginOptions {
   plugins?: CompilerPlugin[];
+  /**
+   * 开发态产物开关。
+   *
+   * 打开后类里的 setup 会输出成可重跑的 `__laniaSetup()` 方法，
+   * 这样 HMR 换实现时可以重建 setup 状态（signal / computed / 本地绑定）。
+   */
+  hotReload?: boolean;
 }
 
 /** 运行程序级别的预处理钩子。 */

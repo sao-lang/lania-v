@@ -1,4 +1,10 @@
-import { NORMAL, defaultScheduler, type Job, type Scheduler } from './scheduler';
+import {
+  defaultScheduler,
+  getSignalPriority,
+  type Job,
+  type Scheduler,
+} from './scheduler';
+import { onOwnerCleanup } from './owner';
 import { emitSignalDebugEvent, isDevEnvironment } from '../core/debug';
 
 /**
@@ -267,7 +273,7 @@ export const createSignal = <T>(
 
     // set 只“通知”，具体执行时机交给 scheduler（避免深层嵌套 set 造成同步抖动）
     for (const updater of updaters) {
-      scheduler.scheduleSignal(updater, NORMAL);
+      scheduler.scheduleSignal(updater, getSignalPriority());
     }
 
     return currentValue;
@@ -325,6 +331,10 @@ export const createMemo = <T>(
   };
 
   recompute();
+  onOwnerCleanup(() => {
+    detachJobFromSignals(deps, recompute);
+    deps.clear();
+  });
   return readonly(state);
 };
 
@@ -355,12 +365,15 @@ export const createEffect = (
 
   runEffect();
 
-  return () => {
+  const stop = () => {
     cleanup?.();
     cleanup = undefined;
     detachJobFromSignals(deps, triggerEffect);
     deps.clear();
   };
+
+  onOwnerCleanup(stop);
+  return stop;
 };
 
 export function watch<T>(

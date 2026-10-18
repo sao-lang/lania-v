@@ -148,6 +148,51 @@
 - 异步 chunk 回填协议
 - 客户端 `applySSRChunk()` 协同恢复
 
+### `Await`
+
+等待一个 Promise 并渲染结果，自带 fallback / error 分支。
+
+```tsx
+<Await
+  value={() => this.userPromise()}
+  fallback={<p>Loading</p>}
+  delay={120}
+  error={(error) => <p>{String(error)}</p>}
+  onResolve={(user) => this.log(user)}
+>
+  {(user) => <p>{user.name}</p>}
+</Await>
+```
+
+- `value`：Promise、返回 Promise 的函数，或同步值（同步值直接渲染，不进入 fallback）。
+- `fallback`：支持节点或 `() => node`；配合 `delay` 可在等待超过 `delay` 毫秒后才显示。
+- `error`：支持节点或 `(error) => node`，缺省时渲染错误的字符串形式。
+- `children`：支持节点或 `(resolved) => node`。
+- 宿主是 `display: contents` 的 `span`，不参与布局。
+- 已 settle 后的迟到回调不会再影响结果；未挂载的宿主同样会更新，方便先构造后插入。
+
+### `Virtual`
+
+固定行高的窗口化列表，只渲染可视区 + `overscan` 的行。
+
+```tsx
+<Virtual
+  items={this.rows()}
+  itemHeight={24}
+  height={240}
+  overscan={3}
+  key={(row) => row.id}
+  onScroll={(top) => this.setScrollTop(top)}
+>
+  {(row, index) => <div>{index}: {row.title}</div>}
+</Virtual>
+```
+
+- `children`：必须是 `(item, index) => renderable`。
+- 滚动容器的总高度由 `items.length * itemHeight` 撑开，行绝对定位在对应偏移。
+- `key` 结果会写到行的 `data-key` 上，便于调试与测试。
+- 只支持固定行高；变高行需要等后续版本。
+
 ## 当前边界
 
 - 增强组件第一版运行时主路径已可用。

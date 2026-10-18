@@ -108,10 +108,11 @@ export const lowerComponentDeclarationToIR = (
     props: component.signals
       .filter((signal) => signal.signalKind === 'property')
       // property signal 进入 props 列表，供类定义和属性声明代码生成使用。
+      // 具体选项（default / attribute / reflect / converter / validator）不再固化进 IR，
+      // 而是由运行时从 `static __laniaOptions` 求值，避免编译器只能吃字面量。
       .map((signal) => ({
         name: signal.name,
         initializer: signal.initializer,
-        propertyType: signal.propertyType,
       })),
     signals: component.signals
       .filter((signal) => signal.signalKind !== 'property')
@@ -154,6 +155,7 @@ export const lowerComponentDeclarationToIR = (
       order: binding.order,
     })),
     formAssociated: component.formAssociated ?? false,
+    optionsSource: component.optionsSource,
     template: {
       type: 'TemplateIR',
       roots: template.nodes,

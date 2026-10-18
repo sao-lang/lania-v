@@ -4,6 +4,7 @@
 
 export {
   ENHANCED_COMPONENT_KIND,
+  type AwaitProps,
   type CaseProps,
   type DynamicProps,
   type EachComponentDefinition,
@@ -29,12 +30,14 @@ export {
   type TransitionLifecycleHook,
   type TransitionLifecycleHooks,
   type TransitionProps,
+  type VirtualProps,
   type WhenMode,
   type WhenProps,
 } from './types';
 export { KeepAlive } from './keepalive';
 export { Case, Default, Dynamic, Each, Else, Fragment, Slot, Switch, Teleport, Then, When } from './basic';
 export { ErrorBoundary, LazyLoad, Suspense } from './async';
+export { Await, Virtual } from './await-virtual';
 export { Transition, TransitionGroup } from './transition';
 export { isEnhancedDef } from './utils/predicates';
 
@@ -62,6 +65,8 @@ declare global {
       LazyLoad: import('./types').LazyLoadProps;
       ErrorBoundary: import('./types').ErrorBoundaryProps;
       Suspense: import('./types').SuspenseProps;
+      Await: import('./types').AwaitProps<any>;
+      Virtual: import('./types').VirtualProps<any>;
     }
   }
 }

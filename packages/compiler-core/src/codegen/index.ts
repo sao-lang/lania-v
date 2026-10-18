@@ -88,29 +88,87 @@ interface OrderedClassMember {
   code: string;
 }
 
+interface ClassMemberEmitOptions {
+  /** dev 产物：字段初始化移入可重跑的 `__laniaSetup()`。 */
+  hotReload?: boolean;
+}
+
+const createFieldDeclaration = (
+  name: string,
+  visibility: 'private' | 'protected',
+  initializer: string,
+  options: ClassMemberEmitOptions
+): { declaration: string; setup: string } => {
+  if (options.hotReload) {
+    return {
+      declaration: `${visibility} ${name}: any;`,
+      setup: `this.${name} = ${initializer};`,
+    };
+  }
+
+  return {
+    declaration: `${visibility} ${name} = ${initializer};`,
+    setup: '',
+  };
+};
+
 // signal 与 setup field 最终都落成实例字段，初始化顺序必须还原组件体内的声明顺序：
 // `const seed = read(); const count = createSignal(seed);` 一旦按类别分区输出，
 // 就会在 seed 赋值前读取它，直接抛 TypeError。
-const createFieldMembers = (component: ComponentIR): string[] => {
-  const members: OrderedClassMember[] = [
-    ...component.signals.map((signal) => ({
-      order: signal.order ?? 0,
-      code: `protected ${signal.name} = ${stringifyInitializer(signal.initializer)};`,
-    })),
+const createFieldMembers = (
+  component: ComponentIR,
+  options: ClassMemberEmitOptions = {}
+): { declarations: string[]; setup: string[] } => {
+  const members: Array<OrderedClassMember & { setup: string }> = [
+    ...component.signals.map((signal) => {
+      const emitted = createFieldDeclaration(
+        signal.name,
+        'protected',
+        stringifyInitializer(signal.initializer),
+        options
+      );
+
+      return {
+        order: signal.order ?? 0,
+        code: emitted.declaration,
+        setup: emitted.setup,
+      };
+    }),
     ...component.setupBindings
       .filter((binding) => binding.kind === 'field')
-      .map((binding) => ({
-        order: binding.order ?? 0,
-        code: `protected ${binding.name} = ${stringifyInitializer(binding.initializer)};`,
-      })),
+      .map((binding) => {
+        const emitted = createFieldDeclaration(
+          binding.name,
+          'protected',
+          stringifyInitializer(binding.initializer),
+          options
+        );
+
+        return {
+          order: binding.order ?? 0,
+          code: emitted.declaration,
+          setup: emitted.setup,
+        };
+      }),
   ];
 
   // sort 本身稳定：没有 order 信息时（例如类组件）维持原有的 signals -> setup 顺序。
-  return members.sort((left, right) => left.order - right.order).map((member) => member.code);
+  members.sort((left, right) => left.order - right.order);
+
+  return {
+    declarations: members.map((member) => member.code),
+    setup: members.map((member) => member.setup).filter((line) => line.length > 0),
+  };
 };
 
-const createComputedFields = (component: ComponentIR): string[] => {
-  return component.computed.map((computed) => {
+const createComputedFields = (
+  component: ComponentIR,
+  options: ClassMemberEmitOptions = {}
+): { declarations: string[]; setup: string[] } => {
+  const declarations: string[] = [];
+  const setup: string[] = [];
+
+  component.computed.forEach((computed) => {
     // computed 与 signal 共用同一实例语义：字段上是一个可调用句柄。
     // 读取写 `this.x()`，裸引用则拿到该句柄本身。
     // 这里用惰性求值而非 memo：模板 updater 依赖由编译期静态注入，
@@ -118,9 +176,21 @@ const createComputedFields = (component: ComponentIR): string[] => {
     const expression = computed.expression?.trim().length
       ? computed.expression
       : 'undefined';
+    const emitted = createFieldDeclaration(
+      computed.name,
+      'protected',
+      `createComputedAccessor(() => ${expression})`,
+      options
+    );
 
-    return `protected ${computed.name} = createComputedAccessor(() => ${expression});`;
+    declarations.push(emitted.declaration);
+
+    if (emitted.setup.length > 0) {
+      setup.push(emitted.setup);
+    }
   });
+
+  return { declarations, setup };
 };
 
 // 字段型 setup 绑定已经并入 createFieldMembers，这里只处理方法与独立语句。
@@ -174,28 +244,41 @@ const createSetupDisconnectedLines = (component: ComponentIR): string[] => {
   });
 };
 
-const createPropParserExpression = (prop: ComponentIR['props'][number]): string => {
-  // attributeChangedCallback 收到的始终是字符串/null，这里统一回到声明类型。
-  switch (prop.propertyType) {
-    case 'Number':
-      return "newValue === null ? undefined : Number(newValue)";
-    case 'Boolean':
-      return "newValue !== null && newValue !== 'false'";
-    case 'Object':
-      return 'newValue === null ? undefined : JSON.parse(newValue)';
-    case 'String':
-    default:
-      return 'newValue ?? undefined';
-  }
-};
+const createPropOptionExpression = (
+  component: ComponentIR,
+  propName: string
+): string =>
+  `(this.constructor as typeof ${component.name}).propOptions?.[${JSON.stringify(
+    propName
+  )}]`;
 
-const createPropFields = (component: ComponentIR): string[] => {
-  return component.props.flatMap((prop) => {
+const createPropFields = (
+  component: ComponentIR,
+  options: ClassMemberEmitOptions = {}
+): { declarations: string[]; setup: string[] } => {
+  const declarations: string[] = [];
+  const setup: string[] = [];
+
+  component.props.forEach((prop) => {
     const backingField = `__prop_${prop.name}`;
+    const optionExpression = createPropOptionExpression(component, prop.name);
+    const emitted = createFieldDeclaration(
+      backingField,
+      'private',
+      `createSignal(resolvePropInitialValue(this, ${JSON.stringify(
+        prop.name
+      )}, ${stringifyInitializer(prop.initializer)}))`,
+      options
+    );
 
-    return [
+    declarations.push(emitted.declaration);
+
+    if (emitted.setup.length > 0) {
+      setup.push(emitted.setup);
+    }
+
+    declarations.push(
       // prop 在运行时用 signal 包一层，便于与普通 state 共享依赖跟踪逻辑。
-      `private ${backingField} = createSignal(${stringifyInitializer(prop.initializer)});`,
       `get ${prop.name}(): unknown {`,
       indent(`return this.${backingField}();`),
       `}`,
@@ -204,24 +287,68 @@ const createPropFields = (component: ComponentIR): string[] => {
         [
           // 统一通过 signal 更新，保证 prop 变更也能进入既有调度与依赖链路。
           `const previous = this.${backingField}.peek();`,
-          `this.${backingField}.set(value);`,
+          // 事件回调等 prop 本身可能就是函数，不能走会被当成 updater 的 `set`。
+          `this.${backingField}.setValue(value);`,
+          // `bindProps()` / `bindHandlers()` 持有的是 props 快照，需要同步写入才能读到最新值。
+          `if (this.props) this.props[${JSON.stringify(prop.name)}] = value;`,
+          `const __option = ${optionExpression};`,
+          `validatePropValue(${JSON.stringify(component.name)}, ${JSON.stringify(
+            prop.name
+          )}, value, __option);`,
+          `reflectPropAttribute(this, ${JSON.stringify(prop.name)}, value, __option);`,
           `this.requestUpdate(${JSON.stringify(prop.name)}, previous, value);`,
         ].join('\n')
       ),
-      `}`,
-    ];
+      `}`
+    );
   });
+
+  return { declarations, setup };
 };
 
-const createObservedAttributesField = (component: ComponentIR): string | null => {
-  if (component.props.length === 0) {
+/**
+ * `defineComponent(fn, options)` 生成的静态字段。
+ *
+ * 选项原文在运行时求值：`propOptions` / `emits` / `observedAttributes` 全部由
+ * 选项对象推导，因此选项里可以写任意表达式，也不需要在编译期把它拆成字面量。
+ */
+const createComponentOptionsFields = (component: ComponentIR): string | null => {
+  const propNames = component.props.map((prop) => prop.name);
+  const fields: string[] = [];
+
+  if (component.optionsSource) {
+    // 选项原文求值：propOptions / emits 都从这里来，选项里可以写任意表达式。
+    fields.push(`static __laniaOptions = ${component.optionsSource};`);
+    fields.push(
+      `static propOptions = resolvePropOptions(this.__laniaOptions?.props);`
+    );
+    fields.push(`static emits = this.__laniaOptions?.emits;`);
+  }
+
+  if (propNames.length > 0) {
+    // prop 名单来自类型，是编译期已知的；attribute 命名规则与 `attribute: false`
+    // 则交给运行时按 propOptions 决定，因此表达式形式的配置同样生效。
+    fields.push(`static __laniaPropNames = ${JSON.stringify(propNames)};`);
+    fields.push(
+      `static observedAttributes = resolveObservedAttributes(this.propOptions, this.__laniaPropNames);`
+    );
+  }
+
+  return fields.length > 0 ? fields.join('\n') : null;
+};
+
+const createHandlerKeysField = (component: ComponentIR): string | null => {
+  const handlerKeys = component.props
+    .map((prop) => prop.name)
+    .filter((name) => /^on[A-Z]/.test(name));
+
+  if (handlerKeys.length === 0) {
     return null;
   }
 
-  // 仅属性型 signal 需要映射到 Custom Element 的 observedAttributes。
-  return `static observedAttributes = ${JSON.stringify(
-    component.props.map((prop) => prop.name)
-  )};`;
+  // 编译期已知的事件型 prop 名单，运行时可据此把 key 归入 handlers 视图，
+  // 即使当前 handler 值为空也不会误判成普通 prop。
+  return `static handlerKeys = ${JSON.stringify(handlerKeys)};`;
 };
 
 const createUpdaterMethodBody = (
@@ -319,14 +446,9 @@ const createClassLifecycleMethodBody = (
       return ['super.adoptedCallback();', ...bodies];
     case 'attributeChangedCallback':
       return [
-        ...component.props.map((prop) => {
-          return [
-            `if (name === ${JSON.stringify(prop.name)}) {`,
-            // 统一把 attribute 字符串值转换回声明的 prop 类型。
-            indent(`this.${prop.name} = ${createPropParserExpression(prop)};`),
-            `}`,
-          ].join('\n');
-        }),
+        // attribute 名到 prop 的映射、类型转换与 converter 全部由运行时按
+        // `static propOptions` / `static __laniaPropNames` 解析。
+        'applyPropAttributes(this, name, newValue);',
         'super.attributeChangedCallback(name, oldValue, newValue);',
         ...bodies,
       ];
@@ -476,7 +598,8 @@ const createFunctionLifecycleMethods = (component: ComponentIR): string[] => {
 };
 
 export const generateClassComponentCode = (
-  component: ComponentIR
+  component: ComponentIR,
+  options: ClassMemberEmitOptions = {}
 ): ClassComponentCodegenResult => {
   // render plan 上的信息在这里被一次性摊平，分别喂给 CSR 与 SSR 生成器。
   const renderCode = generateRenderCode({
@@ -501,18 +624,40 @@ export const generateClassComponentCode = (
     ...createClassLifecycleMethods(component),
     ...createFunctionLifecycleMethods(component),
   ];
-  const observedAttributesField = createObservedAttributesField(component);
+  const handlerKeysField = createHandlerKeysField(component);
+  const propFields = createPropFields(component, options);
+  const fieldMembers = createFieldMembers(component, options);
+  const computedFields = createComputedFields(component, options);
+  const setupLines = [
+    ...propFields.setup,
+    ...fieldMembers.setup,
+    ...computedFields.setup,
+  ];
+  // dev 产物把 setup 收进可重跑的方法，HMR 换实现时可以按字段名重建状态。
+  const setupMethod =
+    options.hotReload && setupLines.length > 0
+      ? [
+          'protected __laniaSetup(): void {',
+          indent(setupLines.join('\n')),
+          '}',
+          'constructor() {',
+          indent(['super();', 'this.__laniaSetup();'].join('\n')),
+          '}',
+        ].join('\n')
+      : '';
   // 类体按“声明成员 -> SSR -> CSR -> 生命周期 -> updater”顺序拼接，便于阅读。
   // 这个顺序也让静态字段、prop 桥接、渲染方法和调试用 updater 在生成结果中分区更稳定。
   const bodySections = [
-    observedAttributesField ?? '',
+    createComponentOptionsFields(component) ?? '',
+    handlerKeysField ?? '',
     createTagNameField(component),
     createDisplayNameField(component),
     createFormAssociatedField(component),
-    ...createPropFields(component),
-    ...createFieldMembers(component),
-    ...createComputedFields(component),
+    ...propFields.declarations,
+    ...fieldMembers.declarations,
+    ...computedFields.declarations,
     ...createSetupBindingMembers(component),
+    setupMethod,
     ssrCode.method,
     ssrCode.streamMethod,
     renderCode.method,

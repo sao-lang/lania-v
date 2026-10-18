@@ -248,6 +248,40 @@ export const css = (
   return createConstructedStyleSheet(cssText) ?? createCSSResult(cssText);
 };
 
+/**
+ * 把静态样式摊平成可直接序列化进 SSR 的 CSS 文本。
+ *
+ * 服务端没有构造式样式表，因此这里只做文本提取，样式表顺序保持声明顺序。
+ */
+export const resolveStaticStyleText = (
+  styles: StaticStyles | undefined
+): string => {
+  return toStyleArray(styles)
+    .map((style) => getStyleText(style))
+    .filter((cssText) => cssText.length > 0)
+    .join('\n');
+};
+
+/**
+ * 把 root 里已经存在的 `<style>` 文本登记为“已注入”。
+ *
+ * Declarative Shadow DOM 的 SSR 输出已经把样式写进 shadow root，
+ * 客户端 hydration 时不需要再注入一遍。
+ */
+export const registerAppliedStyleTexts = (
+  root: ShadowRoot | HTMLElement
+): void => {
+  const appliedTexts = getAppliedTexts(root);
+  const styleElements = root.querySelectorAll('style');
+
+  styleElements.forEach((styleElement) => {
+    const cssText = styleElement.textContent ?? '';
+    if (cssText.length > 0) {
+      appliedTexts.add(cssText);
+    }
+  });
+};
+
 export const adoptStyles = (
   root: ShadowRoot | HTMLElement,
   styles: StaticStyles | undefined

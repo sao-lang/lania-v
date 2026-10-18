@@ -278,6 +278,14 @@ const isIntrinsicElementTag = (tagName: string): boolean => {
 };
 
 const PROP_LIKE_BINDINGS = new Set(['value', 'checked', 'selected']);
+
+/** `client:<priority>` 允许的 island 水合优先级。 */
+const ISLAND_HYDRATION_PRIORITIES = new Set([
+  'eager',
+  'idle',
+  'visible',
+  'interaction',
+]);
 const KEYBOARD_EVENT_NAMES = new Set(['keydown', 'keyup', 'keypress']);
 const EVENT_LISTENER_MODIFIERS = new Set(['once', 'capture', 'passive']);
 const EVENT_SYSTEM_MODIFIERS = new Set(['ctrl', 'shift', 'alt', 'meta']);
@@ -750,13 +758,51 @@ const parseJsxAttributes = (
   sourceFile: ts.SourceFile,
   mode: TsxTemplateSyntaxMode,
   tagName: string
-): Pick<ElementNode, 'attributes' | 'events' | 'directives'> => {
+): Pick<
+  ElementNode,
+  'attributes' | 'events' | 'directives' | 'spreadAttributes' | 'island'
+> => {
   const attributeNodes: AttributeNode[] = [];
   const eventNodes: EventNode[] = [];
   const directiveNodes: DirectiveNode[] = [];
+  const spreadAttributes: string[] = [];
   const intrinsicTag = isIntrinsicElementTag(tagName);
+  let island: ElementNode['island'];
+
+  // spread 与普通 attribute 的顺序信息在这里不保留；运行时会先展开 spread，
+  // 再由显式 props / 事件 / 指令覆盖，保证显式绑定优先。
+  attributes.properties.forEach((property) => {
+    if (ts.isJsxSpreadAttribute(property)) {
+      spreadAttributes.push(property.expression.getText(sourceFile));
+    }
+  });
 
   normalizeJsxAttributeProperties(attributes, mode).forEach((property) => {
+    // `client:<priority>` 是 island 声明，不参与 props，也不允许用在原生标签上。
+    if (property.nameText.startsWith('client:')) {
+      if (intrinsicTag) {
+        throw createTemplateParseError(
+          tagName,
+          property.nameText,
+          '`client:*` island directives are only supported on component tags.'
+        );
+      }
+
+      const priority = property.nameText.slice('client:'.length);
+
+      if (!ISLAND_HYDRATION_PRIORITIES.has(priority)) {
+        throw createTemplateParseError(
+          tagName,
+          property.nameText,
+          `Unknown island priority "${priority}". Use one of: ${[
+            ...ISLAND_HYDRATION_PRIORITIES,
+          ].join(', ')}.`
+        );
+      }
+
+      island = { priority };
+      return;
+    }
     // 先把绑定名分析成统一语义，再决定它应落到属性、事件还是指令数组。
     const analysis = analyzeTsxBindingName(property.nameText, {
       mode,
@@ -949,10 +995,22 @@ const parseJsxAttributes = (
     }
   });
 
+  if (intrinsicTag && spreadAttributes.length > 0) {
+    // 原生标签的 spread 需要运行时逐 key 建 slot；当前主线只支持组件 props 展开，
+    // 先显式报错，避免属性被静默丢弃。
+    throw createTemplateParseError(
+      tagName,
+      'spread',
+      'Spread attributes are only supported on component tags. Pass explicit attributes on intrinsic elements.'
+    );
+  }
+
   return {
     attributes: attributeNodes,
     events: eventNodes,
     directives: directiveNodes,
+    spreadAttributes,
+    island,
   };
 };
 
@@ -997,6 +1055,8 @@ const parseJsxChild = (
         attributes: parsedAttributes.attributes,
         events: parsedAttributes.events,
         directives: parsedAttributes.directives,
+        spreadAttributes: parsedAttributes.spreadAttributes,
+        island: parsedAttributes.island,
         children: [],
         selfClosing: true,
       },
@@ -1029,6 +1089,8 @@ const parseJsxChild = (
       attributes: parsedAttributes.attributes,
       events: parsedAttributes.events,
       directives: parsedAttributes.directives,
+      spreadAttributes: parsedAttributes.spreadAttributes,
+      island: parsedAttributes.island,
       children,
       selfClosing: false,
     },

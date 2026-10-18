@@ -8,3 +8,7 @@ export {
   linkTrackedSignals,
   trackSignals,
 } from '../reactivity/signal';
+export {
+  installDevtoolsOverlay,
+  type DevtoolsOverlayOptions,
+} from '../core/devtools';

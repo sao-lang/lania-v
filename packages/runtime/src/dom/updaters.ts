@@ -1,4 +1,4 @@
-import type { Signal } from '../reactivity/signal';
+import { trackSignals, type Signal } from '../reactivity/signal';
 import {
   type JobPriority,
   defaultScheduler,
@@ -40,6 +40,7 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
   dirty = false;
   private attached = false;
   private hasCommitted = false;
+  private depsDiscovered = false;
   private previousValue: unknown = undefined;
   private readonly job = () => {
     this.markDirty();
@@ -74,7 +75,22 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
   run(): void {
     // 统一执行“先算值、再提交”，子类只需覆写 compute/commit 的局部差异。
     this.emitRunDebugEvent();
-    const nextValue = this.compute();
+
+    let nextValue: T;
+
+    if (!this.depsDiscovered) {
+      // 编译期依赖是主路径；这里补一层首轮兜底，覆盖 composable 返回的 signal、
+      // 动态路径等静态分析无法完整枚举的读取。只做一次，避免常态更新承担追踪成本。
+      const tracked = trackSignals(() => this.compute());
+      nextValue = tracked.value;
+      this.depsDiscovered = true;
+
+      if (tracked.deps.size > 0) {
+        this.mergeDiscoveredDeps(tracked.deps);
+      }
+    } else {
+      nextValue = this.compute();
+    }
 
     if (this.hasCommitted && Object.is(this.previousValue, nextValue)) {
       // slot 层本身也会做等值判断，但走到那里已经付出了求值与字符串转换成本。
@@ -87,9 +103,53 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
     this.commit(nextValue);
   }
 
+  /**
+   * 仅用于挂载阶段：没有任何静态依赖时，先跑一次 compute 发现依赖。
+   *
+   * 编译产物会在首屏直接写入 slot 初始值，因此这类 updater 可能不会在挂载时
+   * 主动 run；若不在这里补发现，composable 返回的 signal 将永远没有订阅者。
+   */
+  private discoverDeps(): void {
+    if (this.depsDiscovered) {
+      return;
+    }
+
+    this.depsDiscovered = true;
+    const tracked = trackSignals(() => this.compute());
+
+    for (const signal of tracked.deps) {
+      this.deps.add(signal);
+    }
+  }
+
+  private mergeDiscoveredDeps(discovered: Iterable<Signal<any>>): void {
+    const added: Signal<any>[] = [];
+
+    for (const signal of discovered) {
+      if (!this.deps.has(signal)) {
+        this.deps.add(signal);
+        added.push(signal);
+      }
+    }
+
+    if (!this.attached) {
+      this.attach();
+      return;
+    }
+
+    // 已经挂载时只补订阅新增依赖，避免重复把 job 加入已有 signal。
+    for (const signal of added) {
+      signal.updaters.add(this.job);
+    }
+  }
+
   attach(): void {
     if (this.attached) {
       return;
+    }
+
+    if (this.deps.size === 0 && this.slots.length > 0) {
+      this.discoverDeps();
     }
 
     this.attached = true;
@@ -133,6 +193,7 @@ export abstract class BaseUpdater<T = unknown> implements Updater {
         updaterId: this.debugId,
         slotType: slot.type,
         slotIndex: slot.index,
+        node: slot.node,
       });
     }
 

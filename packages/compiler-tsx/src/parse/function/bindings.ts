@@ -118,6 +118,31 @@ const collectDirectScopeNames = (node: ts.Node): Set<string> => {
   return names;
 };
 
+const hasPropAlias = (
+  bindings: FunctionBindingContext,
+  localName: string
+): boolean =>
+  bindings.propAliases.has(localName) ||
+  Boolean(bindings.propReplacements?.has(localName));
+
+// 解构读取回落到实例 prop getter，避免落成一次性快照。
+const readPropReplacement = (
+  bindings: FunctionBindingContext,
+  localName: string
+): ts.Expression => {
+  const replacement = bindings.propReplacements?.get(localName);
+
+  if (replacement !== undefined) {
+    // 复杂形态（默认值 / 嵌套 / rest）已形成为表达式文本，直接作为源码片段打印。
+    return ts.factory.createIdentifier(replacement);
+  }
+
+  return ts.factory.createPropertyAccessExpression(
+    ts.factory.createThis(),
+    bindings.propAliases.get(localName)!
+  );
+};
+
 // 绑定重写遵循“先判断作用域遮蔽，再按特殊语义分支重写，最后兜底改成实例字段”的顺序。
 const createBindingTransformer = (
   bindings: FunctionBindingContext
@@ -153,6 +178,17 @@ const createBindingTransformer = (
       ) {
         if (isShadowedByLocalScope(node.expression.text)) {
           return ts.visitEachChild(node, visit, context);
+        }
+
+        // 编译产物没有 runtime slot scope，插槽内容以 `children` prop 传入，
+        // 因此 `bindSlots()` 需要显式接收构造期快照。
+        if (node.expression.text === 'bindSlots' && bindings.propAlias) {
+          return ts.factory.updateCallExpression(
+            node,
+            node.expression,
+            node.typeArguments,
+            [ts.factory.createPropertyAccessExpression(ts.factory.createThis(), 'props')]
+          );
         }
 
         if (bindings.computedNames.has(node.expression.text)) {
@@ -315,6 +351,28 @@ const createBindingTransformer = (
         return ts.factory.createPropertyAccessExpression(
           ts.factory.createThis(),
           node.name.text
+        );
+      }
+
+      if (
+        ts.isIdentifier(node) &&
+        hasPropAlias(bindings, node.text) &&
+        !isShadowedByLocalScope(node.text) &&
+        !isDeclarationIdentifier(node) &&
+        !isPropertyNameIdentifier(node)
+      ) {
+        return readPropReplacement(bindings, node.text);
+      }
+
+      // `{ title }` 简写需要展开成 `{ title: this.title }`，否则 key 位置不会被改写。
+      if (
+        ts.isShorthandPropertyAssignment(node) &&
+        hasPropAlias(bindings, node.name.text) &&
+        !isShadowedByLocalScope(node.name.text)
+      ) {
+        return ts.factory.createPropertyAssignment(
+          node.name,
+          readPropReplacement(bindings, node.name.text)
         );
       }
 
@@ -490,6 +548,9 @@ export const rewriteFunctionTemplateNode = (
             ...directive,
             expression: rewriteExpressionWithBindings(directive.expression, bindings),
           })),
+          spreadAttributes: child.spreadAttributes?.map((expression) =>
+            rewriteExpressionWithBindings(expression, bindings)
+          ),
           children: rewriteChildren(child.children),
         };
       }

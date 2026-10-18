@@ -39,10 +39,14 @@ export {
 export type { Slot as DomSlot, SlotFrequency, SlotType } from './dom/slots';
 export * from './dom/style-value';
 export * from './dom/updaters';
+export * from './reactivity/owner';
 export * from './reactivity/resource';
 export * from './reactivity/scheduler';
+export * from './reactivity/selector';
 export * from './reactivity/store';
+export * from './reactivity/transition';
 export * from './render';
+export * from './dev/hmr';
 export type {
   JsxElement,
   JsxProps,

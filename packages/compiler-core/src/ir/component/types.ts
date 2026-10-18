@@ -55,6 +55,8 @@ export interface ComponentIR {
   template: TemplateIR;
   /** 是否参与原生表单提交（由 `useFormValue` 推导）。 */
   formAssociated?: boolean;
+  /** `defineComponent(fn, options)` 第二个参数的原文，供运行时求值。 */
+  optionsSource?: string;
   renderPlan: ComponentRenderPlanIR;
   optimizationPass: OptimizationPassIR;
   dependencyAnalysis: DependencyAnalysisIR;
@@ -66,7 +68,6 @@ export interface ComponentIR {
 export interface PropIR {
   name: string;
   initializer: string | null;
-  propertyType?: 'String' | 'Number' | 'Boolean' | 'Object';
 }
 
 export interface SignalIR {
@@ -214,6 +215,8 @@ export interface DynamicIR {
   hoistName: string;
   enhancedComponentName?: TransitionPayloadComponentName;
   ssrWrapperTagExpression?: string;
+  /** `client:<priority>` 声明的 island 水合优先级。 */
+  island?: { priority: string };
   children?: TemplateIRNode[];
 }
 

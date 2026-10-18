@@ -11,7 +11,13 @@
  */
 import { consumeContext, type Context } from '../../core/context';
 import { isDevEnvironment } from '../../core/debug';
+import {
+  applyComponentHmrUpdate,
+  isComponentHmrEnabled,
+  type HmrComponentConstructor,
+} from '../../dev/hmr';
 import type { StaticStyles } from '../styles';
+import type { PropOptionsMap } from './prop-options';
 import type { ReadonlySignal } from '../../reactivity/signal';
 import type { ChangedProps } from './reactive-element';
 import { appendRenderable, collectRenderableNodes } from '../enhanced-components/utils/renderable';
@@ -33,6 +39,12 @@ export interface ComponentElementConstructor<TElement extends HTMLElement = HTML
   tagName?: string;
   displayName?: string;
   styles?: StaticStyles;
+  /** 编译期声明的 `onXxx` prop 名，供 bindHandlers 在值尚未传入时也能正确分流。 */
+  handlerKeys?: readonly string[];
+  /** 编译期声明的 prop 选项（attribute / reflect / converter / validator）。 */
+  propOptions?: import('./prop-options').PropOptionsMap;
+  /** 编译期声明的事件名单，用于 emit 校验。 */
+  emits?: readonly string[];
 }
 
 export interface EnsureCustomElementOptions {
@@ -126,8 +138,8 @@ export type BoundHandlers<T extends object> = Readonly<Pick<T, HandlerKeyOf<T>>>
 export interface SlotBindings {
   has(name?: string): boolean;
   get(name?: string): unknown;
-  render(name: string, fallback?: unknown): unknown;
-  renderDefault(fallback?: unknown): unknown;
+  render(name: string, fallback?: unknown, ...args: unknown[]): unknown;
+  renderDefault(fallback?: unknown, ...args: unknown[]): unknown;
 }
 
 type FunctionComponentBindingMetadata = {
@@ -228,13 +240,17 @@ const getFunctionComponentBindingState = (props: object): FunctionComponentBindi
   return state;
 };
 
-const resolveNamedSlotContent = (content: unknown, name?: string): unknown => {
+const resolveNamedSlotContent = (
+  content: unknown,
+  name?: string,
+  fallbackToDefault = true
+): unknown => {
   if (content && typeof content === 'object' && !Array.isArray(content)) {
     const record = content as Record<string, unknown>;
     if (!name) {
       return record.default;
     }
-    return record[name] ?? record.default;
+    return record[name] ?? (fallbackToDefault ? record.default : undefined);
   }
 
   if (!name) {
@@ -244,12 +260,33 @@ const resolveNamedSlotContent = (content: unknown, name?: string): unknown => {
   return undefined;
 };
 
+const invokeSlotContent = (
+  content: unknown,
+  args: readonly unknown[]
+): unknown => {
+  return typeof content === 'function'
+    ? (content as (...values: unknown[]) => unknown)(...args)
+    : content;
+};
+
 const renderResolvedSlotContent = (
   scope: RuntimeScope | undefined,
   name: string | undefined,
-  fallback?: unknown
+  fallback?: unknown,
+  args: readonly unknown[] = [],
+  contentOverride?: unknown
 ): unknown => {
-  const resolvedContent = resolveNamedSlotContent(scope?.slotContent, name);
+  // 编译后的 Custom Element 没有 slotContent scope，children 会以 props 传入；
+  // 有 override 时优先使用它，否则继续走 runtime scope。
+  const resolvedContent =
+    contentOverride !== undefined
+      ? resolveNamedSlotContent(contentOverride, name)
+      : resolveNamedSlotContent(scope?.slotContent, name);
+
+  // 函数型 slot 无法通过原生 <slot> 投影，直接调用并把结果交给文本 slot 接管。
+  if (typeof resolvedContent === 'function') {
+    return invokeSlotContent(resolvedContent, args);
+  }
 
   // Shadow DOM 宿主下保留原生 `<slot>`，这样外部投影和当前运行时读取
   // 可以共存；非 Shadow DOM 场景再直接展开为可渲染内容。
@@ -263,12 +300,10 @@ const renderResolvedSlotContent = (
   }
 
   if (resolvedContent !== undefined && resolvedContent !== null) {
-    return typeof resolvedContent === 'function'
-      ? (resolvedContent as () => unknown)()
-      : resolvedContent;
+    return invokeSlotContent(resolvedContent, args);
   }
 
-  return typeof fallback === 'function' ? (fallback as () => unknown)() : fallback;
+  return invokeSlotContent(fallback, args);
 };
 
 const registerFunctionComponentCleanup = (cleanup: FunctionComponentCleanup): void => {
@@ -366,20 +401,40 @@ export const bindHandlers = <T extends object>(props: T): BoundHandlers<T> => {
   return state.handlersView as BoundHandlers<T>;
 };
 
-export const bindSlots = (): SlotBindings => {
+export const bindSlots = (props?: { children?: unknown }): SlotBindings => {
+  const readSlotContent = (): unknown => {
+    const scopeContent = getCurrentRuntimeScope()?.slotContent;
+    return scopeContent !== undefined && scopeContent !== null
+      ? scopeContent
+      : props?.children;
+  };
+
   return {
     has(name) {
-      const content = resolveNamedSlotContent(getCurrentRuntimeScope()?.slotContent, name);
+      // `has('footer')` 只表示具名槽本身是否存在，不能被默认槽兜底误导。
+      const content = resolveNamedSlotContent(readSlotContent(), name, false);
       return content !== undefined && content !== null;
     },
     get(name) {
-      return resolveNamedSlotContent(getCurrentRuntimeScope()?.slotContent, name);
+      return resolveNamedSlotContent(readSlotContent(), name);
     },
-    render(name, fallback) {
-      return renderResolvedSlotContent(getCurrentRuntimeScope(), name, fallback);
+    render(name, fallback, ...args) {
+      return renderResolvedSlotContent(
+        getCurrentRuntimeScope(),
+        name,
+        fallback,
+        args,
+        readSlotContent()
+      );
     },
-    renderDefault(fallback) {
-      return renderResolvedSlotContent(getCurrentRuntimeScope(), undefined, fallback);
+    renderDefault(fallback, ...args) {
+      return renderResolvedSlotContent(
+        getCurrentRuntimeScope(),
+        undefined,
+        fallback,
+        args,
+        readSlotContent()
+      );
     },
   };
 };
@@ -402,8 +457,20 @@ export const createExpose = <T extends object>(
   return exposed;
 };
 
+/**
+ * `defineComponent(fn, options)` 的选项。
+ *
+ * 这些选项只被 `.lania.tsx` 编译器读取（生成 `static propOptions` / `static emits`），
+ * 运行时收到后不会再做二次解释。
+ */
+export interface DefineComponentOptions {
+  props?: PropOptionsMap;
+  emits?: readonly string[];
+}
+
 export const defineComponent = <T extends FunctionComponent<any, any>>(
-  component: T
+  component: T,
+  _options?: DefineComponentOptions
 ): T & ComponentElementConstructor => {
   const defined = component as T & ComponentElementConstructor;
   if (isComponentElementConstructor(defined)) {
@@ -472,6 +539,16 @@ const registerComponentElement = <T extends ComponentElementConstructor>(
   if (typeof customElements !== 'undefined' && typeof customElements.define === 'function') {
     const existing = customElements.get(tagName) as T | undefined;
     if (existing) {
+      // 开发态 HMR：同名标签的新构造器不会重新 define，而是热替换原型并重挂载现有实例。
+      if (existing !== ctor && isDevEnvironment() && isComponentHmrEnabled()) {
+        applyComponentHmrUpdate(tagName, ctor as HmrComponentConstructor);
+        const hmrStyles = options.styles ?? existing.styles;
+        if (hmrStyles !== undefined) {
+          existing.styles = hmrStyles;
+        }
+        return existing;
+      }
+
       // 已注册时浏览器会以先注册的构造器为准，后到的实现会被静默丢弃。
       // 这里显式告警，并把 styles 写回真正生效的构造器，避免版本错配难以排查。
       if (existing !== ctor && isDevEnvironment() && !reportedTagConflicts.has(tagName)) {
@@ -516,6 +593,51 @@ export const getComponentCreationProps = (): Record<string, unknown> | null => {
     : null;
 };
 
+/**
+ * 构造期生成组件实例的 props 快照。
+ *
+ * 视图的 key 集合在创建时就固定下来了，因此这里必须补齐所有编译期声明的 prop。
+ * 已声明的 prop 用 getter 回读实例上的同名 prop signal，`bindProps()` 读取时
+ * 才能正常收集依赖；未声明的动态 key 仍按普通快照值处理。
+ */
+export const createComponentPropsSnapshot = (
+  instance: object,
+  propNames: readonly string[]
+): Record<string, unknown> => {
+  const incoming = getComponentCreationProps() ?? {};
+  const snapshot: Record<string, unknown> = {};
+
+  for (const name of propNames) {
+    let current = incoming[name];
+    Object.defineProperty(snapshot, name, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        return name in instance
+          ? (instance as Record<string, unknown>)[name]
+          : current;
+      },
+      set(value: unknown) {
+        current = value;
+      },
+    });
+  }
+
+  for (const [key, value] of Object.entries(incoming)) {
+    if (!(key in snapshot)) {
+      snapshot[key] = value;
+    }
+  }
+
+  // handler 分流结果挂在原始入参上，快照对象需要继承同一份 metadata。
+  const metadata = getFunctionComponentBindingMetadata(incoming);
+  if (metadata) {
+    attachFunctionComponentBindingMetadata(snapshot, metadata);
+  }
+
+  return snapshot;
+};
+
 const createElementWithProps = <T>(
   props: Record<string, unknown>,
   create: () => T
@@ -541,6 +663,14 @@ export const createComponentElement = <T extends ComponentElementConstructor>(
   }
 
   const props = options.props ?? {};
+  // 编译期能直接给出 handler 名单，先挂 metadata，保证 handler 尚未传入时
+  // bindHandlers() 也能把对应 key 分到事件视图。
+  if (registered.handlerKeys && registered.handlerKeys.length > 0) {
+    attachFunctionComponentBindingMetadata(props, {
+      handlerKeys: registered.handlerKeys,
+    });
+  }
+
   // `document.createElement` 会同步执行构造器与字段初始化，因此 props 必须在这之前入栈。
   const element = createElementWithProps(props, () => {
     return document.createElement(tagName) as InstanceType<T>;
@@ -603,6 +733,17 @@ export const onUpdated = (_callback: FunctionLifecycleCallback<[ChangedProps]>):
  */
 export const useFormValue = (_getter: () => unknown): void => {
   throwCompileOnlyApiError('useFormValue');
+};
+
+/**
+ * 声明组件参与原生表单校验。
+ *
+ * 编译器会把 `useFormValidity(() => expr)` 改写成一个 effect updater，
+ * 在依赖变化时调用 `_setFormValidity(expr)`；返回 `true` 表示通过，
+ * 返回 `{ valid: false, message }` 或 `false` 时会调用 `setValidity`。
+ */
+export const useFormValidity = (_getter: () => unknown): void => {
+  throwCompileOnlyApiError('useFormValidity');
 };
 
 export const withRuntimeScope = <T>(scope: RuntimeScope, run: () => T): T => {

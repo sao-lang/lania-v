@@ -57,12 +57,23 @@ const TSX_RUNTIME_BINDINGS = [
   'onUpdated',
   'useContext',
   'withContextHost',
+  'useFormValidity',
   'createRef',
   'createContext',
   'provideContextHere',
   'provideContext',
   'consumeContext',
   'getComponentCreationProps',
+  'createComponentPropsSnapshot',
+  'parsePropAttributeValue',
+  'reflectPropAttribute',
+  'validatePropValue',
+  'resolvePropOptions',
+  'resolveObservedAttributes',
+  'resolvePropInitialValue',
+  'reflectInitialProps',
+  'applyPropAttributes',
+  'ssrRenderIslandSlot',
   'registerDirective',
   'When',
   'Each',
@@ -228,9 +239,12 @@ const mergeBindingNames = (
 const createLaniaTsxModuleCode = (
   className: string,
   classCode: string,
+  classNames: readonly string[],
   runtimeBindings: readonly string[] = TSX_RUNTIME_BINDINGS,
   advancedBindings: readonly string[] = TSX_ADVANCED_RUNTIME_BINDINGS
 ): string => {
+  const exportedNames = classNames.length > 0 ? classNames : [className];
+
   return [
     createRuntimeBindingBlock('__lania', '@lania-v/runtime', runtimeBindings),
     createRuntimeBindingBlock(
@@ -242,8 +256,175 @@ const createLaniaTsxModuleCode = (
     classCode,
     '',
     `export default ${className};`,
-    `export { ${className} };`,
+    `export { ${exportedNames.join(', ')} };`,
   ].join('\n');
+};
+
+const collectBindingNames = (name: ts.BindingName, names: string[]): void => {
+  if (ts.isIdentifier(name)) {
+    names.push(name.text);
+    return;
+  }
+
+  name.elements.forEach((element) => {
+    if (ts.isOmittedExpression(element)) {
+      return;
+    }
+
+    collectBindingNames(element.name, names);
+  });
+};
+
+const collectDeclaredNames = (statement: ts.Statement): string[] => {
+  const names: string[] = [];
+
+  if (ts.isVariableStatement(statement)) {
+    statement.declarationList.declarations.forEach((declaration) => {
+      collectBindingNames(declaration.name, names);
+    });
+    return names;
+  }
+
+  if (
+    (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+    statement.name
+  ) {
+    names.push(statement.name.text);
+  }
+
+  return names;
+};
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const referencesName = (text: string, name: string): boolean =>
+  new RegExp(`\\b${escapeRegExp(name)}\\b`).test(text);
+
+/**
+ * 保留被编译产物引用到的模块级声明。
+ *
+ * 组件函数体已经被搬到类里，源码中的模块级常量/辅助函数不会自动进入输出。
+ * 这里只在生成类代码确实引用到它们时才保留，既避免把整份源码搬进产物，
+ * 也不会再出现“引用还在、声明被删”的运行时 ReferenceError。
+ *
+ * 同时保留 `Component.styles = ...` 这类针对组件类本身的静态配置语句，
+ * 让样式、renderMode 等声明可以留在 `.lania.tsx` 内。
+ */
+const extractPreservedModuleStatements = (
+  fileName: string,
+  source: string,
+  classNames: readonly string[],
+  classCode: string
+): { before: string; after: string } => {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.ESNext,
+    true,
+    ts.ScriptKind.TSX
+  );
+  const isComponentClass = (name: string): boolean => classNames.includes(name);
+  const candidates: Array<{
+    text: string;
+    names: string[];
+    forceInclude: boolean;
+  }> = [];
+
+  sourceFile.statements.forEach((statement) => {
+    if (
+      ts.isImportDeclaration(statement) ||
+      ts.isImportEqualsDeclaration(statement) ||
+      ts.isExportAssignment(statement)
+    ) {
+      return;
+    }
+
+    const names = collectDeclaredNames(statement);
+
+    // 组件声明本身由编译产物替换，不能再原样保留。
+    if (names.some(isComponentClass)) {
+      return;
+    }
+
+    const text = statement.getText(sourceFile);
+    const isComponentStaticAssignment =
+      ts.isExpressionStatement(statement) &&
+      ts.isBinaryExpression(statement.expression) &&
+      statement.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isPropertyAccessExpression(statement.expression.left) &&
+      ts.isIdentifier(statement.expression.left.expression) &&
+      isComponentClass(statement.expression.left.expression.text);
+
+    if (names.length === 0 && !isComponentStaticAssignment) {
+      // 纯副作用语句不参与“被引用才保留”的推导。
+      return;
+    }
+
+    candidates.push({ text, names, forceInclude: isComponentStaticAssignment });
+  });
+
+  const referenced = new Set<string>();
+  const include = new Set<number>();
+
+  candidates.forEach((candidate, index) => {
+    if (candidate.forceInclude) {
+      include.add(index);
+    }
+
+    candidate.names.forEach((name) => {
+      if (referencesName(classCode, name)) {
+        referenced.add(name);
+        include.add(index);
+      }
+    });
+  });
+
+  // 辅助声明之间可能互相引用，迭代到不再新增为止。
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    candidates.forEach((candidate, index) => {
+      if (!include.has(index)) {
+        return;
+      }
+
+      candidate.names.forEach((name) => referenced.add(name));
+
+      candidates.forEach((other, otherIndex) => {
+        if (include.has(otherIndex)) {
+          return;
+        }
+
+        if (other.names.some((name) => referencesName(candidate.text, name))) {
+          include.add(otherIndex);
+          changed = true;
+        }
+      });
+    });
+  }
+
+  const before: string[] = [];
+  const after: string[] = [];
+
+  candidates.forEach((candidate, index) => {
+    if (!include.has(index)) {
+      return;
+    }
+
+    // 引用组件类本身的声明必须排到 class 定义之后，避免类声明 TDZ。
+    const mustFollowClass =
+      candidate.forceInclude ||
+      candidate.names.some(isComponentClass) ||
+      classNames.some((className) => referencesName(candidate.text, className));
+    (mustFollowClass ? after : before).push(candidate.text);
+  });
+
+  return {
+    before: before.join('\n'),
+    after: after.join('\n'),
+  };
 };
 
 const extractNonRuntimeImports = (fileName: string, source: string): string => {
@@ -281,14 +462,28 @@ export const emitFunctionComponentTsxModule = (
   // 这样集成层既能继续解析用户依赖，也不会漏掉编译器自动注入的 runtime 能力。
   const preambleCode = extractNonRuntimeImports(fileName, source);
   const userRuntimeBindings = collectUserRuntimeBindings(fileName, source);
+  const classCode = normalizeModelObjectUpdaters(
+    compiled.componentClasses
+      .map((entry) => entry.classCode.code)
+      .join('\n\n')
+  );
+  const preservedCode = extractPreservedModuleStatements(
+    fileName,
+    source,
+    compiled.classNames,
+    classCode
+  );
   const moduleCode = [
     preambleCode,
+    preservedCode.before,
     createLaniaTsxModuleCode(
       compiled.className,
-      normalizeModelObjectUpdaters(compiled.classCode.code),
+      classCode,
+      compiled.classNames,
       mergeBindingNames(TSX_RUNTIME_BINDINGS, userRuntimeBindings.root),
       mergeBindingNames(TSX_ADVANCED_RUNTIME_BINDINGS, userRuntimeBindings.advanced)
     ),
+    preservedCode.after,
   ]
     .filter((chunk) => chunk.trim().length > 0)
     .join('\n\n');

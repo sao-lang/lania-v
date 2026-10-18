@@ -7,6 +7,7 @@
  * - 通过 `loading` / `error` 暴露请求状态
  * - 使用递增 `requestId` 丢弃过期响应，避免竞态覆盖最新结果
  */
+import { onOwnerCleanup } from './owner';
 import { defaultScheduler, type Scheduler } from './scheduler';
 import {
   createSignal,
@@ -85,6 +86,9 @@ export const createResource = <T>(
   };
 
   attachJobToSignals(keys, scheduleRefetch);
+  onOwnerCleanup(() => {
+    detachJobFromSignals(keys, scheduleRefetch);
+  });
   // 创建资源时立即拉一次首屏数据，行为与常见 resource 原语保持一致。
   void run();
 
