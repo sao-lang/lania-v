@@ -1,6 +1,28 @@
-import { createRoot } from '@lania-v/runtime';
+import { createRoot, registerRuntimeDebugHooks } from '@lania-v/runtime';
 import LoginPage from './LoginPage.lania.tsx';
 import { loginStyles } from './login-styles';
+
+if (import.meta.env.DEV) {
+  const stopRuntimeTrace = registerRuntimeDebugHooks({
+    onSignalEvent(event) {
+      console.log('[lania-v] Signal.set', { signalId: event.signalId });
+    },
+    onSchedulerEvent(event) {
+      console.log(`[lania-v] Scheduler.${event.type}`, {
+        priority: event.priority,
+        queueSize: event.queueSize,
+      });
+    },
+    onDevtoolsEvent(event) {
+      if (event.type === 'updater-run') {
+        console.log('[lania-v] Updater.run', event.payload);
+      } else if (event.type === 'slot-write') {
+        console.log('[lania-v] Slot.write', event.payload);
+      }
+    },
+  });
+  import.meta.hot?.dispose(stopRuntimeTrace);
+}
 
 // 样式挂在组件构造器上，由 ReactiveElement 注入到组件自己的 shadow root。
 LoginPage.styles = loginStyles;

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [laniaFcVitePlugin()],
+  plugins: [laniaFcVitePlugin({ debug: true })],
   esbuild: {
     jsx: 'automatic',
     jsxImportSource: '@lania-v/runtime',
