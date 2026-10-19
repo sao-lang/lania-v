@@ -130,6 +130,7 @@ Updater 只写入自己负责的 Slot。Slot 内部再做一次等值判断，�
 
 ## 下一步
 
+- [特性总览](/guide/features)：完整能力清单与文档索引。
 - [快速开始](/guide/getting-started)：把最小项目跑起来。
 - [编译模型](/guide/compilation-model)：理解 TSX 如何变成 renderPlan。
 - [响应式基础](/guide/reactivity)：掌握 Signal、Memo、Effect、Scheduler。

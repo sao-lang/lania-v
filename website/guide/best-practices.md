@@ -300,6 +300,8 @@ style={{ width: width() }}          // 会输出 width: 300;，无效
 
 ## 下一步
 
+- [构建与部署](/guide/build-and-deploy)：把项目送上生产。
+- [常见问题与排错](/guide/troubleshooting)：遇到问题时的排查顺序。
 - [示例：Todo 列表](/examples/todo)
 - [示例：登录表单](/examples/login)
 - [整体架构](/advanced/architecture)

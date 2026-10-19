@@ -6,6 +6,7 @@ const guideSidebar = [
     items: [
       { text: '为什么是 lania-v', link: '/guide/introduction' },
       { text: '快速开始', link: '/guide/getting-started' },
+      { text: '特性总览', link: '/guide/features' },
       { text: '编译模型', link: '/guide/compilation-model' },
     ],
   },
@@ -14,6 +15,7 @@ const guideSidebar = [
     items: [
       { text: '响应式基础', link: '/guide/reactivity' },
       { text: '模板与绑定', link: '/guide/templates' },
+      { text: '语法参考', link: '/guide/syntax' },
       { text: '组件', link: '/guide/components' },
       { text: '插槽', link: '/guide/slots' },
       { text: '上下文', link: '/guide/context' },
@@ -26,9 +28,12 @@ const guideSidebar = [
   {
     text: '工程化',
     items: [
+      { text: '工程配置', link: '/guide/configuration' },
+      { text: '构建与部署', link: '/guide/build-and-deploy' },
       { text: 'SSR 与部分水合', link: '/guide/ssr' },
       { text: '开发与调试', link: '/guide/dev-and-debug' },
       { text: '最佳实践', link: '/guide/best-practices' },
+      { text: '常见问题与排错', link: '/guide/troubleshooting' },
     ],
   },
 ];
