@@ -11,6 +11,10 @@ coverage/
 playwright-report/
 test-results/
 
+# VitePress
+website/.vitepress/cache/
+website/.vitepress/.temp/
+
 # TypeScript
 *.tsbuildinfo
 

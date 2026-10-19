@@ -131,6 +131,19 @@ __lania.clear()                               // 清空计数与历史，便于�
 
 `Updater.run.dependencyIds` 对应 `__lania.snapshot().signals` 里的 `signalId`；`slots` 与 `ir.slotAllocation.slots` 的 `index` 一一对应，可据此把一次更新追溯到具体的 IR 绑定。
 
+## 文档
+
+完整的框架文档站点位于 `website/`，使用 VitePress 构建：
+
+```bash
+npm --prefix website install  # 首次安装文档依赖
+npm run docs:dev              # 本地开发
+npm run docs:build            # 构建静态站点
+npm run docs:preview          # 预览构建结果
+```
+
+文档站包含：框架特性、编译模型、响应式、模板绑定、组件、增强组件、SSR、API 参考与示例。
+
 ## 文档索引
 
 - [文档导航](docs/README.md)
