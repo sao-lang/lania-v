@@ -176,11 +176,11 @@ const Label = defineComponent(() => {
 });
 ```
 
-### `provideContext()` / `provideContextHere()` / `consumeContext()`
+### `provideContext()`
 
-- `provideContext(host, context, value)`：真实运行时 API。
-- `provideContextHere(context, value)`：仅供编译期改写使用，直接调用会抛错。
-- `consumeContext(host, context)`：在宿主树上消费上下文。
+- `provideContext(host, context, value)`：运行时 API，显式指定宿主。
+- `provideContext(context, value)`：编译组件内的两参语法糖，会被改写成 `provideContext(this, ...)`；未编译时直接调用会抛错。
+- 没有 provider 时，`useContext()` 返回 `context.defaultValue`；在组件外可传第二个参数显式指定宿主。
 
 ### `createRef()`
 
@@ -296,9 +296,9 @@ isSelected.dispose(); // 组件卸载时释放内部 effect
 ### `startTransition()` / `useTransition()`
 
 ```ts
-const pending = transitionPending();
+const { pending, start } = useTransition();
 
-startTransition(() => {
+start(() => {
   query.set(nextQuery);
 });
 // pending() 在整批低优先级更新 flush 后自动回落

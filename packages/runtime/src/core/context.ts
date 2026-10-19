@@ -2,8 +2,8 @@
  * 基于事件冒泡的 Context 实现（不依赖框架运行时全局）。
  *
  * - `provideContext` 在某个 host 上监听 context-request 事件并拦截/resolve；
- * - `provideContextHere` 是函数组件编译期语法糖，会被改写成 `provideContext(this, ...)`；
- * - `consumeContext` 通过派发事件向上冒泡寻找最近的 provider；
+ *   组件体内的两参形式是编译期语法糖，会被改写成 `provideContext(this, ...)`；
+ * - `consumeContext` 通过派发事件向上冒泡寻找最近的 provider（内部原语）；
  * - 适用于 Custom Element 与函数组件混用的场景（只要能 dispatchEvent）。
  */
 
@@ -52,12 +52,42 @@ export const createContext = <T>(
   };
 };
 
-export const provideContext = <T>(
+const isContext = <T>(value: unknown): value is Context<T> => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    typeof (value as Context<T>).id === 'symbol'
+  );
+};
+
+export function provideContext<T>(
   host: EventTarget,
   context: Context<T>,
   value: ContextValueProvider<T>
-): (() => void) => {
-  const provided = toReadonlySignal(value);
+): () => void;
+/**
+ * 编译期语法糖：在组件体内调用两参形式，编译器会改写成
+ * `provideContext(this, context, value)`。未编译时直接调用会抛错。
+ */
+export function provideContext<T>(
+  context: Context<T>,
+  value: ContextValueProvider<T>
+): never;
+export function provideContext<T>(
+  hostOrContext: EventTarget | Context<T>,
+  contextOrValue: Context<T> | ContextValueProvider<T>,
+  maybeValue?: ContextValueProvider<T>
+): (() => void) | never {
+  if (isContext<T>(hostOrContext)) {
+    throw new Error(
+      'provideContext(context, value) is compile-time only. Use provideContext(host, context, value) outside a compiled component.'
+    );
+  }
+
+  const host = hostOrContext as EventTarget;
+  const context = contextOrValue as Context<T>;
+  const provided = toReadonlySignal(maybeValue as ContextValueProvider<T>);
   const handler = (event: Event) => {
     const customEvent = event as CustomEvent<ContextRequestDetail<T>>;
 
@@ -75,16 +105,7 @@ export const provideContext = <T>(
   return () => {
     host.removeEventListener(CONTEXT_REQUEST_EVENT, handler as EventListener);
   };
-};
-
-export const provideContextHere = <T>(
-  _context: Context<T>,
-  _value: ContextValueProvider<T>
-): never => {
-  throw new Error(
-    'provideContextHere() is compile-time only. It must be rewritten to provideContext(this, context, value).'
-  );
-};
+}
 
 export const consumeContext = <T>(
   host: { dispatchEvent(event: Event): boolean },
@@ -106,13 +127,4 @@ export const consumeContext = <T>(
 
   host.dispatchEvent(event);
   return resolvedValue;
-};
-
-// Convenience for code that just needs an immediate snapshot.
-export const consumeContextValue = <T>(
-  host: { dispatchEvent(event: Event): boolean },
-  context: Context<T>
-): T => {
-  // 这是面向“只要当前快照值”的便捷函数；若要继续订阅变化，应使用 consumeContext。
-  return consumeContext(host, context)();
 };

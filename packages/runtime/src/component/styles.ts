@@ -220,14 +220,6 @@ export const consumeStyleVariables = (
   return consumeContext(host, StyleVariablesContext)();
 };
 
-// Backward-compatible aliases for older "theme" terminology.
-export type ThemeVariables = CSSVariables;
-export const ThemeContext = StyleVariablesContext;
-export const createThemeVariables = createCSSVariables;
-export const applyThemeVariables = applyCSSVariables;
-export const provideTheme = provideStyleVariables;
-export const consumeTheme = consumeStyleVariables;
-
 export const toStyleArray = (styles: StaticStyles | undefined): StyleValue[] => {
   if (!styles) {
     return [];

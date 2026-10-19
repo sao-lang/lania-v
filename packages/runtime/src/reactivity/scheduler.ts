@@ -478,10 +478,6 @@ export const batch = <T>(fn: () => T): T => {
   return defaultScheduler.batch(fn);
 };
 
-export const createTransition = <T>(work: () => T): Promise<T> => {
-  return defaultScheduler.createTransition(work);
-};
-
 export const createDoubleBufferState = <T>(initialValue: T): DoubleBufferState<T> => {
   return defaultScheduler.createDoubleBufferState(initialValue);
 };

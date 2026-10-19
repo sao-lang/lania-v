@@ -189,7 +189,7 @@ const ThemeContext = createContext<'light' | 'dark'>('light');
 
 ### provider 要挂在真实宿主上
 
-在编译组件中使用 `provideContextHere()`。它会改写成 `provideContext(this, ...)`，把上下文挂到当前自定义元素上。
+在编译组件中使用两参 `provideContext(Context, value)`。它会改写成 `provideContext(this, ...)`，把上下文挂到当前自定义元素上。
 
 ## 表单
 
@@ -283,7 +283,7 @@ style={{ width: width() }}          // 会输出 width: 300;，无效
 - 列表 key 是否稳定；
 - 昂贵的派生值是否用 `createMemo()`；
 - 大列表是否使用 `Virtual`；
-- 长任务是否用 `startTransition()` / `createTransition()`。
+- 长任务是否用 `startTransition()` / `defaultScheduler.createTransition()`。
 
 ### 不要把 Signal 读取放进不必要的循环
 

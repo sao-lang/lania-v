@@ -11,7 +11,7 @@
 
 ```tsx
 onMount(() => { /* ... */ });
-provideContextHere(ThemeContext, theme);
+provideContext(ThemeContext, theme);
 useFormValue(() => account());
 ```
 
@@ -96,26 +96,28 @@ onUpdated((changedProps) => {
 
 ## 上下文标记
 
-### `provideContextHere()`
+### `provideContext()`
+
+组件体内的两参形式是编译期语法糖：
 
 ```ts
-provideContextHere<T>(
+provideContext<T>(
   context: Context<T>,
   value: ContextValueProvider<T>
-): never
+): () => void
 ```
 
 编译改写：
 
 ```ts
-provideContextHere(ThemeContext, theme);
+provideContext(ThemeContext, theme);
 // →
 provideContext(this, ThemeContext, theme);
 ```
 
 - `this` 是当前组件宿主；
 - 必须在编译组件内使用；
-- 运行时直接调用会抛错。
+- 运行时直接调用两参形式会抛错，请改用 `provideContext(host, context, value)`。
 
 ## 表单标记
 

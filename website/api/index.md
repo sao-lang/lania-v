@@ -72,7 +72,7 @@ const double = createMemo(() => count() * 2);
 
 ```tsx
 onMount(() => { /* ... */ });
-provideContextHere(ThemeContext, theme);
+provideContext(ThemeContext, theme);
 useFormValue(() => account());
 ```
 

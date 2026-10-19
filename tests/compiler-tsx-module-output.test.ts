@@ -133,6 +133,28 @@ export default defineComponent(function LifecycleBindingsHost() {
     );
   });
 
+  it('rewrites two-arg provideContext to the current component host', () => {
+    const moduleCode = compile(`
+import {
+  createContext,
+  createSignal,
+  defineComponent,
+  provideContext,
+} from '@lania-v/runtime';
+
+const ThemeContext = createContext<'light' | 'dark'>('light');
+
+export default defineComponent(function ProviderHost() {
+  const theme = createSignal<'light' | 'dark'>('dark');
+  provideContext(ThemeContext, theme);
+  return <div />;
+});
+`);
+
+    expect(moduleCode).toContain('provideContext(this, ThemeContext, this.theme)');
+    expect(moduleCode).not.toContain('provideContext(ThemeContext,');
+  });
+
   it('keeps computed call syntax and nested computed chains', () => {
     const moduleCode = compile(`
 import { createMemo, createSignal, defineComponent, onMount } from '@lania-v/runtime';

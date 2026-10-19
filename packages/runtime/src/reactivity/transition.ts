@@ -40,16 +40,12 @@ export interface TransitionControls {
   start: typeof startTransition;
 }
 
-export const transitionPending: ReadonlySignal<boolean> = readonly(pendingFlag);
+// 全局 pending 标志只通过 useTransition().pending 暴露，避免额外的顶层 API。
+const transitionPending: ReadonlySignal<boolean> = readonly(pendingFlag);
 
 export const useTransition = (): TransitionControls => {
   return {
     pending: transitionPending,
     start: startTransition,
   };
-};
-
-export const __resetTransitionPendingForTests = (): void => {
-  pendingCount = 0;
-  pendingFlag.set(false);
 };

@@ -22,7 +22,7 @@ import {
   renderToString,
   startTransition,
   tick,
-  transitionPending,
+  useTransition,
 } from '@lania-v/runtime';
 import { jsx } from '../packages/runtime/src/entry/jsx-runtime';
 import { installDevtoolsOverlay } from '../packages/runtime/src/core/devtools';
@@ -87,17 +87,18 @@ describe('runtime primitives', () => {
   });
 
   it('startTransition exposes pending until the low-priority update flushes', async () => {
-    expect(transitionPending()).toBe(false);
+    const { pending } = useTransition();
+    expect(pending()).toBe(false);
     const value = createSignal(0);
 
     startTransition(() => value.set(1));
-    expect(transitionPending()).toBe(true);
+    expect(pending()).toBe(true);
 
     await tick();
     await flush();
 
     expect(value()).toBe(1);
-    expect(transitionPending()).toBe(false);
+    expect(pending()).toBe(false);
   });
 
   it('produce applies mutable updates to a store', () => {

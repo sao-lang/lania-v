@@ -595,7 +595,7 @@ signal.set()
 ```text
 祖先 provideContext()
   -> 宿主树保存上下文
-  -> 后代 useContext() / consumeContext() 读取
+  -> 后代 useContext() 读取
 ```
 
 这部分通信不依赖全局单例，而是依赖宿主和运行时 scope。

@@ -493,7 +493,6 @@ import {
   scheduleIdle,
   batch,
   tick,
-  createTransition,
   createDoubleBufferState,
 } from '@lania-v/runtime';
 ```
@@ -534,21 +533,21 @@ await tick();
 `tick()` 不等待 `setTimeout`、动画、网络请求或 transition 的 unit-of-work。
 :::
 
-### `createTransition()`
+### `defaultScheduler.createTransition()`
 
 ```ts
-await createTransition(() => {
+await defaultScheduler.createTransition(() => {
   renderLargeList();
 });
 ```
 
-把一段同步工作放进分片队列：
+把一段同步工作放进低优先级队列：
 
 - 使用 `MessageChannel` 调度；
-- 每片默认 5ms；
-- `UnitOfWork.run()` 返回 `false` 表示未完成，下次继续。
+- 执行时包在 `batch()` 中，期间的 Signal 写入合并成一次 flush；
+- 适合把重活延后，避免阻塞当前交互。
 
-适合把长任务拆开，避免阻塞 UI。
+需要真正的时间分片时，使用 `defaultScheduler.scheduleUnitOfWork()`，并让 `run()` 在未完成时返回 `false`。
 
 ### `createDoubleBufferState()`
 
@@ -601,7 +600,7 @@ startTransition(() => {
 
 - 同步执行 `run()`；
 - 批内 Signal 写入使用 `low` 优先级；
-- 通过 `transitionPending` 暴露 pending 状态；
+- 通过 `useTransition().pending` 暴露 pending 状态；
 - 不影响依赖模型，也不引入新的渲染阶段。
 
 ### `useTransition()`
@@ -616,13 +615,7 @@ start(() => {
 pending(); // boolean
 ```
 
-### `transitionPending`
-
-```ts
-transitionPending: ReadonlySignal<boolean>
-```
-
-全局 pending 标志。多个 transition 同时存在时使用计数管理，最后一个结束后回落。
+`pending` 是全局标志：多个 transition 同时存在时使用计数管理，最后一个结束后回落。
 
 ## Store
 
@@ -1003,16 +996,27 @@ const ThemeContext = createContext<'light' | 'dark'>('light');
 ### `provideContext()`
 
 ```ts
+// 运行时：显式指定宿主
 provideContext<T>(
   host: EventTarget,
+  context: Context<T>,
+  value: T | ReadonlySignal<T> | (() => T)
+): () => void
+
+// 编译组件内：编译器补 this
+provideContext<T>(
   context: Context<T>,
   value: T | ReadonlySignal<T> | (() => T)
 ): () => void
 ```
 
 ```ts
+// 运行时 / 自定义元素
 const dispose = provideContext(element, ThemeContext, themeSignal);
 dispose();
+
+// 编译组件内（会被改写成 provideContext(this, ThemeContext, theme)）
+provideContext(ThemeContext, theme);
 ```
 
 行为：
@@ -1030,30 +1034,6 @@ dispose();
 | `() => T` | 初始化时求值一次，包装为 Signal |
 | 普通值 | 包装为 Signal |
 
-### `consumeContext()`
-
-```ts
-consumeContext<T>(
-  host: { dispatchEvent(event: Event): boolean },
-  context: Context<T>
-): ReadonlySignal<T>
-```
-
-```ts
-const theme = consumeContext(element, ThemeContext);
-theme(); // 当前值
-```
-
-没有 provider 时返回 `context.defaultValue`。
-
-### `consumeContextValue()`
-
-```ts
-consumeContextValue<T>(host, context): T
-```
-
-只取当前快照，不保留订阅。
-
 ### `useContext()`
 
 ```ts
@@ -1070,22 +1050,14 @@ const theme = useContext(ThemeContext);
 return <p>{theme()}</p>;
 ```
 
-### `provideContextHere()`
+在组件外或需要显式指定宿主时传第二个参数：
 
 ```ts
-provideContextHere<T>(
-  context: Context<T>,
-  value: ContextValueProvider<T>
-): never // compile-only
+const theme = useContext(ThemeContext, element);
+theme(); // 当前值
 ```
 
-编译改写：
-
-```ts
-provideContextHere(ThemeContext, theme);
-// →
-provideContext(this, ThemeContext, theme);
-```
+没有 provider 时返回 `context.defaultValue`。
 
 ## 工具
 

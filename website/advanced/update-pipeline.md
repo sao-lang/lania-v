@@ -271,7 +271,7 @@ await tick();
 ## 11. transition 分片
 
 ```ts
-await createTransition(() => {
+await defaultScheduler.createTransition(() => {
   heavyWork();
 });
 ```

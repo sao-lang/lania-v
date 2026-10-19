@@ -11,7 +11,6 @@ export * from './events';
 export * from './host/prop-options';
 export * from './host/reactive-element';
 export * from './styles';
-export * from './transition/runtime';
 export type {
   BoundHandlers,
   BoundProps,

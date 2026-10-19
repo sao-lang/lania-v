@@ -255,12 +255,12 @@ const createBindingTransformer = (
         );
       }
 
-      // 声明式 provider 写法 `provideContextHere(Context, value)` 会被改写成
-      // `provideContext(this, Context, value)`，确保上下文直接挂到当前组件宿主。
+      // 组件体内的两参 `provideContext(Context, value)` 是编译期语法糖，
+      // 会被改写成 `provideContext(this, Context, value)`，确保上下文直接挂到当前组件宿主。
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
-        node.expression.text === 'provideContextHere' &&
+        node.expression.text === 'provideContext' &&
         node.arguments.length === 2 &&
         !isShadowedByLocalScope(node.expression.text)
       ) {

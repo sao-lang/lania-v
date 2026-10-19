@@ -5,7 +5,7 @@ import {
   LOW,
   Scheduler,
   createDoubleBufferState,
-  createTransition,
+  defaultScheduler,
   schedule,
   scheduleIdle,
   tick,
@@ -128,7 +128,7 @@ describe('Scheduler', () => {
   it('supports low-priority transitions', async () => {
     const calls: string[] = [];
 
-    await createTransition(() => {
+    await defaultScheduler.createTransition(() => {
       calls.push('transition');
       return 'done';
     });

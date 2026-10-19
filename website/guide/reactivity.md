@@ -206,33 +206,31 @@ scheduleIdle(() => {
 });
 ```
 
-### `createTransition()`
+### `defaultScheduler.createTransition()`
 
-把一段工作放进分片队列，避免长任务阻塞 UI：
+把一段工作放进低优先级队列，避免阻塞当前交互：
 
 ```ts
-await createTransition(() => {
+await defaultScheduler.createTransition(() => {
   renderLargeList();
 });
 ```
 
-调度器使用 `MessageChannel` 分片，每片默认 5ms。
+调度器使用 `MessageChannel` 调度，并在执行时包一层 `batch()`。需要真正的时间分片时，使用 `defaultScheduler.scheduleUnitOfWork()`。
 
 ## 低优先级更新：`startTransition()`
 
 ```ts
-import { startTransition, useTransition, transitionPending } from '@lania-v/runtime';
+import { startTransition, useTransition } from '@lania-v/runtime';
 
 startTransition(() => {
   filter.set(nextFilter);
   rows.set(nextRows);
 });
 
-// 任意位置读取 pending 状态
-const isPending = transitionPending();
-
-// 或组合使用
+// 组件内读取 pending 状态
 const { pending, start } = useTransition();
+pending(); // boolean
 ```
 
 `startTransition()` 会把同步写入阶段产生的 Signal 更新调度到 `low` 优先级。批内更新稳定 flush 后，`pending` 自动回落。

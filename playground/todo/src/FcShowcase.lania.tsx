@@ -6,9 +6,9 @@ import {
   createResource,
   createSignal,
   createStore,
-  createTransition,
   readonly,
   untrack,
+  useTransition,
   watch,
 } from '@lania-v/runtime/reactivity';
 import {
@@ -34,7 +34,7 @@ import {
   onUpdated,
   useContext,
 } from '@lania-v/runtime/component';
-import { createContext, provideContextHere } from '@lania-v/runtime/core';
+import { createContext, provideContext } from '@lania-v/runtime/core';
 import {
   isTracking,
   linkTrackedSignals,
@@ -156,7 +156,7 @@ function FcShowcase() {
   const batchEffectRuns = createSignal(0);
   const transitionUrgent = createSignal(0);
   const transitionDeferred = createSignal(0);
-  const transitionPending = createSignal(false);
+  const { pending: transitionPendingState, start: startSchedulerTransition } = useTransition();
   const transitionStateLog = createSignal<string[]>([]);
   const lifecycleMountCount = createSignal(0);
   const lifecycleUnmountCount = createSignal(0);
@@ -234,26 +234,22 @@ function FcShowcase() {
       batchEffectRuns.set(0);
     });
   };
-  const runSchedulerTransition = async () => {
-    transitionPending.set(true);
+  const runSchedulerTransition = () => {
     transitionUrgent.set((v) => v + 1);
     transitionStateLog.set((prev) =>
       [`urgent -> ${transitionUrgent.peek()}`, ...prev].slice(0, 6)
     );
-    const value = await createTransition(() => {
+    startSchedulerTransition(() => {
       transitionDeferred.set((v) => v + 1);
-      return transitionDeferred.peek();
+      transitionStateLog.set((prev) =>
+        [`transition -> ${transitionDeferred.peek()}`, ...prev].slice(0, 6)
+      );
     });
-    transitionStateLog.set((prev) =>
-      [`transition -> ${value}`, ...prev].slice(0, 6)
-    );
-    transitionPending.set(false);
   };
   const resetTransitionDemo = () => {
     batch(() => {
       transitionUrgent.set(0);
       transitionDeferred.set(0);
-      transitionPending.set(false);
       transitionStateLog.set([]);
     });
   };
@@ -283,7 +279,7 @@ function FcShowcase() {
   });
   const contextValue = createSignal('ctx: A');
   // Declarative provider: compiler rewrites to `provideContext(this, DemoContext, contextValue)`.
-  provideContextHere(DemoContext, contextValue);
+  provideContext(DemoContext, contextValue);
   const contextSnapshot = createMemo(() => {
     return useContext(DemoContext)();
   });
@@ -838,13 +834,13 @@ function FcShowcase() {
             </div>
 
             <div className="item">
-              <p className="summary">createTransition（scheduler）</p>
+              <p className="summary">useTransition + startTransition（scheduler）</p>
               <p>
                 urgent: <span>{transitionUrgent()}</span> | deferred:{' '}
                 <span>{transitionDeferred()}</span>
               </p>
               <p>
-                pending: <span>{transitionPending() ? 'yes' : 'no'}</span>
+                pending: <span>{transitionPendingState() ? 'yes' : 'no'}</span>
               </p>
               <div className="row">
                 <button className="btn" onClick={runSchedulerTransition}>

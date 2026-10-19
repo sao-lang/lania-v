@@ -14,7 +14,7 @@ import {
   createRef,
   createSignal,
   provideContext,
-  consumeContext,
+  useContext,
   setRef,
   type Signal,
 } from '@lania-v/runtime';
@@ -200,9 +200,9 @@ describe('communication runtime', () => {
     document.body.appendChild(provider);
 
     const cleanup = provideContext(provider, themeContext, 'dark');
-    expect(consumeContext(child, themeContext)()).toBe('dark');
+    expect(useContext(themeContext, child)()).toBe('dark');
     cleanup();
-    expect(consumeContext(child, themeContext)()).toBe('light');
+    expect(useContext(themeContext, child)()).toBe('light');
 
     const domRefSlot = new RefSlot<HTMLDivElement>(child, 0);
     domRefSlot.write(domRef);

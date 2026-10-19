@@ -488,7 +488,7 @@ import {
   createContext,
   createSignal,
   defineComponent,
-  provideContextHere,
+  provideContext,
   useContext,
 } from '@lania-v/runtime';
 
@@ -498,7 +498,7 @@ const Provider = defineComponent(function Provider(props: { children?: unknown }
   const theme = createSignal<'light' | 'dark'>('dark');
 
   // 编译期改写成 provideContext(this, ThemeContext, theme)
-  provideContextHere(ThemeContext, theme);
+  provideContext(ThemeContext, theme);
 
   return <div>{props.children as any}</div>;
 });
@@ -510,12 +510,14 @@ const Consumer = defineComponent(function Consumer() {
 });
 ```
 
-更常见的写法是用 `provideContextHere()`，它会在编译期被改写成 `provideContext(this, ...)`：
+在组件外或手写 Custom Element 时，用三参形式显式传入宿主：
 
-```tsx
-import { provideContextHere } from '@lania-v/runtime';
+```ts
+import { provideContext, useContext } from '@lania-v/runtime';
 
-provideContextHere(ThemeContext, theme);
+const dispose = provideContext(element, ThemeContext, themeSignal);
+const theme = useContext(ThemeContext, element);
+dispose();
 ```
 
 API：
@@ -523,21 +525,18 @@ API：
 ```ts
 createContext<T>(defaultValue: T, description?: string): Context<T>;
 
+// 运行时：显式宿主
 provideContext<T>(
   host: EventTarget,
   context: Context<T>,
   value: T | ReadonlySignal<T> | (() => T)
 ): () => void;
 
-consumeContext<T>(
-  host: { dispatchEvent(event: Event): boolean },
-  context: Context<T>
-): ReadonlySignal<T>;
-
-consumeContextValue<T>(
-  host: { dispatchEvent(event: Event): boolean },
-  context: Context<T>
-): T;
+// 编译组件内：编译器补 this
+provideContext<T>(
+  context: Context<T>,
+  value: T | ReadonlySignal<T> | (() => T)
+): () => void;
 
 useContext<T>(
   context: Context<T>,
@@ -550,7 +549,7 @@ useContext<T>(
 - `provideContext()` 返回取消提供的函数；
 - 最近的 provider 会 `stopPropagation()`；
 - 传入普通函数 `() => T` 时只会在初始化时求值一次；需要响应式联动请传 Signal；
-- `useContext()` 在组件作用域内自动使用当前宿主，否则退回默认值。
+- `useContext()` 在组件作用域内自动使用当前宿主；在组件外传第二个参数指定宿主，否则退回默认值。
 
 ## 样式
 
@@ -595,21 +594,25 @@ Counter.renderMode = 'light';
 
 ```ts
 import {
-  createThemeVariables,
-  applyThemeVariables,
-  provideTheme,
-  consumeTheme,
+  createCSSVariables,
+  applyCSSVariables,
+  provideStyleVariables,
+  consumeStyleVariables,
 } from '@lania-v/runtime';
 
-const theme = createThemeVariables({
+const theme = createCSSVariables({
   primaryColor: '#7c3aed',
   radius: '12px',
 });
 
-applyThemeVariables(element, theme);
+applyCSSVariables(element, theme);
+
+// 或通过 Context 跨层传递
+const dispose = provideStyleVariables(element, theme);
+const variables = consumeStyleVariables(child);
 ```
 
-`StyleVariablesContext` / `ThemeContext` 是同义入口，可用于跨层传递变量。
+`StyleVariablesContext` 可用于跨层传递变量。
 
 ## 表单关联
 
