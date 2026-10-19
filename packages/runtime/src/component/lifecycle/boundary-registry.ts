@@ -31,6 +31,15 @@ export interface LazyLoadState {
   observer: IntersectionObserver | null;
   sentinel: HTMLSpanElement;
   observedTarget: Element | null;
+  /**
+   * 观察器创建后仍然存活，但 LazyLoad 实例可能已经重新挂载。
+   * 这里保存“最近一次观察配置”，让共享 observer 始终回调当前实例的 replay / onVisibleChange。
+   */
+  activeOptions: {
+    rootMargin?: string;
+    once?: boolean;
+    onVisibleChange?: (visible: boolean) => void;
+  } | null;
 }
 
 export interface ErrorBoundaryState {
@@ -216,6 +225,7 @@ export const getLazyLoadState = (key: string): LazyLoadState => {
     observer: null,
     sentinel,
     observedTarget: null,
+    activeOptions: null,
   };
   lazyLoadStates.set(key, created);
   return created;
@@ -241,11 +251,14 @@ export const observeLazyTarget = (
     state.observer = new IntersectionObserver(
       (entries) => {
         const isVisible = entries.some((entry) => entry.isIntersecting);
+        // observer 会跨实例复用，回调必须读取当前实例登记的配置，
+        // 否则重新挂载后的 LazyLoad 永远收不到 replay，界面会卡在 fallback。
+        const active = state.activeOptions;
 
-        if (options.once) {
+        if (active?.once) {
           if (isVisible && !state.visible) {
             state.visible = true;
-            options.onVisibleChange?.(true);
+            active.onVisibleChange?.(true);
             state.observer?.disconnect();
             state.observer = null;
           }
@@ -254,7 +267,7 @@ export const observeLazyTarget = (
 
         if (state.visible !== isVisible) {
           state.visible = isVisible;
-          options.onVisibleChange?.(isVisible);
+          active?.onVisibleChange?.(isVisible);
         }
       },
       {
@@ -263,6 +276,7 @@ export const observeLazyTarget = (
     );
   }
 
+  state.activeOptions = options;
   state.sentinel.dataset.laniaLazy = key;
   if (state.observedTarget && state.observedTarget !== target) {
     // 观察目标切换时先取消旧目标，避免同一 state 同时被多个元素竞争回调。

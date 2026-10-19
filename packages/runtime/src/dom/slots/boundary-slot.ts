@@ -212,6 +212,7 @@ export class BoundarySlot implements Slot<unknown> {
   private lastValue: BoundaryBlockPayload | null = null;
   private activeBranch: 'child' | 'fallback' | null = null;
   private hydratedBoundary: HydratedBoundaryState | null = null;
+  private destroyed = false;
   private readonly host = createBoundarySlotRangeHost();
   private readonly boundaryHost = createBoundaryHost({
     requestUpdate: () => {
@@ -281,6 +282,9 @@ export class BoundarySlot implements Slot<unknown> {
   }
 
   destroy(): void {
+    // 离场 hook 可能在卸载之后才 settle 并通过 host.requestUpdate 触发重放，
+    // 这里标记销毁状态，避免把已经清理的节点重新插回文档。
+    this.destroyed = true;
     this.childInstance?.destroy();
     this.childInstance = null;
     this.fallbackInstance?.destroy();
@@ -457,6 +461,9 @@ export class BoundarySlot implements Slot<unknown> {
   }
 
   private replayCurrentBoundary(): void {
+    if (this.destroyed) {
+      return;
+    }
     // 子边界请求重放时，复用 range host 重新执行当前 boundary 的写入逻辑。
     replayBoundarySlotHost(this.host, this.lastValue, () => {
       this.write(this.lastValue);
@@ -495,6 +502,7 @@ export class BoundarySlot implements Slot<unknown> {
         host,
         getElements,
         renderEntries: () => this.readTransitionGroupEntries(bindings),
+        explicitKeys: payload.transition.keys,
       });
       const nextElements = normalizeDynamicResult(result).filter(
         (node) => !(node instanceof Comment)
@@ -538,7 +546,10 @@ export class BoundarySlot implements Slot<unknown> {
       this.renderNodes(readMountedNodes(instance));
     }
 
-    const activeNodes = structuralSlot.currentNodes ?? [];
+    // 结构型子 slot 的 `currentNodes` 是会被内部 `syncCurrentNodesFromDom()` 原地清空/复用的缓冲区，
+    // 过渡运行时需要把它当作“提交快照”保存，所以这里必须先复制一份，否则离场快照会在下一次
+    // 子 slot 更新时被清掉，leave hook 拿不到任何元素。
+    const activeNodes = [...(structuralSlot.currentNodes ?? [])];
     const visible = activeNodes.some((node) => node.nodeType !== Node.COMMENT_NODE);
     const currentElements = readRangeContentNodes(this.host, this.ensureCurrentNodes()).filter(
       (node) => !(node instanceof Comment)
@@ -556,8 +567,33 @@ export class BoundarySlot implements Slot<unknown> {
     const parent = anchorNode.parentNode;
     if (parent) {
       reconcileNodesBeforeAnchor(parent, anchorNode, currentElements, nextElements);
+      this.syncTransitionRangeNodes();
     }
     this.activeBranch = visible ? 'child' : 'fallback';
+  }
+
+  /**
+   * `reconcileNodesBeforeAnchor` 只改 DOM，不会回写 boundary 的节点缓冲区。
+   * 缓冲区一旦漂移，下一次提交就会拿旧内容做 diff（漏删 / 重复插入），
+   * 所以每次 reconcile 后按 range 锚点重新同步一次。
+   */
+  private syncTransitionRangeNodes(): void {
+    const nodes = this.ensureCurrentNodes();
+    const start = this.host.rangeStart;
+    const end = this.host.rangeEnd;
+    const parent = start.parentNode;
+    if (!parent || end.parentNode !== parent) {
+      return;
+    }
+
+    const content: Node[] = [];
+    let cursor: ChildNode | null = start.nextSibling;
+    while (cursor && cursor !== end) {
+      content.push(cursor);
+      cursor = cursor.nextSibling;
+    }
+
+    nodes.splice(0, nodes.length, start, ...content, end);
   }
 
   private readTransitionGroupEntries(

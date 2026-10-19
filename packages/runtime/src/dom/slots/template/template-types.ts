@@ -134,8 +134,11 @@ export const readMountedNodes = (instance: MountedBindingInstance): Node[] => {
     const slot = instance.slots[0] as {
       currentNodes?: Node[] | null;
       mountedNodes?: Node[] | null;
+      collectMountedNodes?: () => Node[];
     };
-    const structuralNodes = slot.currentNodes ?? slot.mountedNodes;
+    const structuralNodes = slot.collectMountedNodes
+      ? slot.collectMountedNodes()
+      : (slot.currentNodes ?? slot.mountedNodes);
     if (structuralNodes) {
       const liveStructuralNodes = structuralNodes.filter((node) => node.parentNode !== null);
       if (

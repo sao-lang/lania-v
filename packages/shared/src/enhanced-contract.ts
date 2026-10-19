@@ -155,6 +155,8 @@ export interface TransitionPayload
     readonly phases: readonly ('appear' | 'enter' | 'move' | 'leave')[];
     readonly keyProp: 'transitionKey' | 'groupKey';
     readonly key?: PropertyKey | null;
+    /** TransitionGroup 的列表 key（编译期把 `keys={...}` 表达式带进来）。 */
+    readonly keys?: readonly PropertyKey[];
     readonly tag?: string;
     readonly hooks?: {
       readonly enter?: unknown;

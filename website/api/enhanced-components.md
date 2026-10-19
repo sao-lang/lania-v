@@ -271,14 +271,17 @@ interface DynamicProps {
 
 ## `Slot`
 
-### 用途
-
-读取父组件传入的默认槽 / 具名槽。
+`Slot` 读取父组件传入的默认槽 / 具名槽：
 
 ```tsx
 <Slot name="header" fallback={<h2>默认标题</h2>} />
 <Slot args={item} fallback={<span>empty</span>} />
 ```
+
+::: warning 适用范围
+`Slot` 读取当前 runtime scope 的 `slotContent`，面向运行时 JSX 路径（`jsx(Child, { children })`）。
+`.lania.tsx` 编译组件内没有这份 scope，请使用 `bindSlots()`；见 [插槽](/guide/slots#编译组件与运行时-jsx)。
+:::
 
 ### Props
 
@@ -295,7 +298,7 @@ interface SlotProps {
 ### Scoped slot
 
 ```tsx
-// 父组件
+// 父组件（运行时 JSX）
 <Child>{(item: Item) => <Row item={item} />}</Child>;
 
 // 子组件
@@ -485,14 +488,18 @@ interface TransitionProps {
 
 - `void`：立即完成；
 - `Promise`：等待 resolve；
-- `Animation`：等待 `animation.finished`；
+- `Animation`：等待 `animation.finished`（动画被暂停时按 `endTime` 兜底，避免节点滞留）；
 - hook 中启动的新 CSS 动画：运行时会等待这些动画结束。
 
 ### 注意
 
 - `name` 只是传给 hook 的上下文；
+- `transitionKey` 是**过渡实例的身份**（stateKey），必须在多次渲染之间保持稳定；
+  用它承载“当前是否可见”之类的变化值会让每次渲染都变成新状态，`leave` / `enter` 不会触发；
 - 运行时不自动生成 `fade-enter-active` 等 class；
-- `leave` 会在下一帧执行，确保节点仍在文档中；
+- `leave` 会在下一帧执行，确保节点仍在文档中；页面不可见时 `requestAnimationFrame` 会被浏览器暂停，
+  运行时此时退回定时器，保证离场 hook 仍会执行；
+- 离场快照会在 `leave` 完成后移除；同一 `stateKey` 不要在多处复用，否则多个过渡实例会互相覆盖状态；
 - 节点尚未连接时，hook 会延迟到插入后执行。
 
 ## `TransitionGroup`
@@ -554,7 +561,9 @@ interface TransitionGroupProps {
 - 消失项走 `leave`；
 - 位置变化走 `move`；
 - 离开中的节点保留到 `leave` 完成；
-- `context` 提供 `key` / `index` / `previousIndex`。
+- `context` 提供 `key` / `index` / `previousIndex`；
+- `keys` 必须与列表条目的稳定 key 一致；不传时会退回按元素的 `data-key` / `id` / 标签名推断；
+- `groupKey` 是这一组过渡实例的身份（stateKey），需要保持稳定。
 
 ## `Suspense`
 

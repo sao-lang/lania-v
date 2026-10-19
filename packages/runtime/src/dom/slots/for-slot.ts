@@ -17,6 +17,7 @@ import {
   appendNodesBeforeAnchor,
   cloneFactoryNodes,
   collectKeyedBlockElements,
+  collectKeyedBlockNodes,
   insertNodeBeforeSafe,
   normalizeDynamicResult,
   removeNodes,
@@ -341,6 +342,17 @@ export class ForSlot implements Slot<unknown> {
     }
 
     this.keyedBlockOrder = nextOrder;
+  }
+
+  // 读取方（TransitionGroup 等）需要“当前真实条目节点”。
+  // keyed 模式下 `mountedNodes` 只承载普通列表/fallback 节点，条目节点必须以 block 为准；
+  // 这里返回一份快照，避免调用方持有内部缓冲区引用。
+  collectMountedNodes(): Node[] {
+    if (this.keyedBlocks && this.keyedBlockOrder.length > 0) {
+      return this.keyedBlockOrder.flatMap((block) => collectKeyedBlockNodes(block));
+    }
+
+    return this.mountedNodes ? [...this.mountedNodes] : [];
   }
 
   private applyKeyedSlots(

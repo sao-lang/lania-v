@@ -63,6 +63,266 @@ type LifecycleHistory = {
   hookLogs: string[];
 };
 
+/**
+ * Transition / TransitionGroup 演示独立成组件：
+ * 过渡状态与日志都只在本组件内闭环，避免被 Tab 的 `<When>` 包裹后走动态组件分支，
+ * 也避免日志信号反过来触发整段 Tab 内容重挂。
+ */
+function TransitionDemoSection() {
+  const visible = createSignal(true);
+  const logs = createSignal<string[]>([]);
+  const items = createSignal<TransitionListItem[]>([
+    { id: 'a', label: 'A' },
+    { id: 'b', label: 'B' },
+    { id: 'c', label: 'C' },
+  ]);
+  const nextItemId = createSignal(3);
+  const itemKey = ((item: TransitionListItem, _index: number) => item.id) as never;
+
+  const pushLog = (line: string) => {
+    logs.set((prev) => [line, ...prev].slice(0, 8));
+  };
+
+  const animateElement = (
+    element: Element,
+    keyframes: Keyframe[],
+    options: KeyframeAnimationOptions
+  ): Animation | null => {
+    if (!(element instanceof HTMLElement) || typeof element.animate !== 'function') {
+      return null;
+    }
+
+    return element.animate(keyframes, {
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'both',
+      ...options,
+    });
+  };
+
+  const clearAnimatedStyle = (element: Element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    element.style.transform = '';
+    element.style.opacity = '';
+    element.style.willChange = '';
+  };
+
+  // 进场：淡入 + 轻微下移回弹；出场：淡出 + 向上收起。
+  const playEnterAnimation = (element: Element): Animation | null => {
+    const animation = animateElement(
+      element,
+      [
+        { opacity: 0, transform: 'translate3d(0, 16px, 0) scale(0.96)' },
+        { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' },
+      ],
+      { duration: 320 }
+    );
+    animation?.addEventListener('finish', () => clearAnimatedStyle(element), {
+      once: true,
+    });
+    animation?.addEventListener('cancel', () => clearAnimatedStyle(element), {
+      once: true,
+    });
+    return animation;
+  };
+
+  const playLeaveAnimation = (element: Element): Animation | null => {
+    const animation = animateElement(
+      element,
+      [
+        { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' },
+        { opacity: 0, transform: 'translate3d(0, -12px, 0) scale(0.96)' },
+      ],
+      { duration: 220 }
+    );
+    animation?.addEventListener('finish', () => clearAnimatedStyle(element), {
+      once: true,
+    });
+    animation?.addEventListener('cancel', () => clearAnimatedStyle(element), {
+      once: true,
+    });
+    return animation;
+  };
+
+  // 列表重排：按索引差做一次 FLIP 位移动画。
+  const playMoveAnimation = (
+    element: Element,
+    previousIndex: number | undefined,
+    index: number
+  ): Animation | null => {
+    if (!(element instanceof HTMLElement)) {
+      return null;
+    }
+
+    const delta = (previousIndex ?? index) - index;
+    if (delta === 0) {
+      return null;
+    }
+
+    const fromTransform = `translate3d(${delta * 32}px, 0, 0) scale(0.92)`;
+    element.style.transform = fromTransform;
+    element.style.opacity = '0.6';
+    element.style.willChange = 'transform, opacity';
+
+    const animation = animateElement(
+      element,
+      [
+        { transform: fromTransform, opacity: 0.6 },
+        { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 1 },
+      ],
+      { duration: 260 }
+    );
+    animation?.addEventListener('finish', () => clearAnimatedStyle(element), {
+      once: true,
+    });
+    animation?.addEventListener('cancel', () => clearAnimatedStyle(element), {
+      once: true,
+    });
+    return animation;
+  };
+
+  const appendItem = () => {
+    nextItemId.set((value) => value + 1);
+    const id = `item-${nextItemId.peek()}`;
+    items.set((prev) => prev.concat({ id, label: `#${nextItemId.peek()}` }));
+  };
+
+  const moveFirstItem = () => {
+    items.set((prev) => {
+      if (prev.length <= 1) {
+        return prev;
+      }
+
+      const next = [...prev];
+      const first = next.shift();
+      if (first) {
+        next.splice(Math.min(1, next.length), 0, first);
+      }
+      return next;
+    });
+  };
+
+  const removeFirstItem = () => {
+    items.set((prev) => prev.slice(1));
+  };
+
+  return (
+    <div>
+      <div className="item">
+        <p className="summary">&lt;Transition /&gt;（进场 / 出场动画）</p>
+        <div className="row">
+          <button
+            className="btn"
+            onClick={() => visible.set((value) => !value)}
+          >
+            {visible() ? '出场（leave）' : '进场（enter）'}
+          </button>
+        </div>
+        <Transition
+          name="visibility"
+          onEnter={(element: Element, ctx: { phase: string }) => {
+            playEnterAnimation(element);
+            pushLog(`enter:${ctx.phase}`);
+          }}
+          onLeave={(element: Element, ctx: { phase: string }) => {
+            playLeaveAnimation(element);
+            pushLog(`leave:${ctx.phase}`);
+          }}
+        >
+          <When when={visible()}>
+            <div
+              data-demo="transition-block"
+              style={{
+                marginTop: '8px',
+                padding: '12px',
+                borderRadius: '12px',
+                background: '#e2e8f0',
+                color: '#0f172a',
+                fontWeight: '600',
+              }}
+            >
+              进场 / 出场内容
+            </div>
+          </When>
+        </Transition>
+      </div>
+
+      <div className="item">
+        <p className="summary">
+          &lt;TransitionGroup /&gt;（进场 / 移动 / 出场动画）
+        </p>
+        <div className="row">
+          <button className="btn" onClick={appendItem}>
+            进场：append item
+          </button>
+          <button className="btn" onClick={moveFirstItem}>
+            移动：move first
+          </button>
+          <button className="btn" onClick={removeFirstItem}>
+            出场：remove first
+          </button>
+        </div>
+        <TransitionGroup
+          keys={items().map((item) => item.id)}
+          onEnter={(element: Element, ctx: { key: PropertyKey; phase: string }) => {
+            playEnterAnimation(element);
+            pushLog(`enter:${String(ctx.key)}:${ctx.phase}`);
+          }}
+          onLeave={(element: Element, ctx: { key: PropertyKey; phase: string }) => {
+            playLeaveAnimation(element);
+            pushLog(`leave:${String(ctx.key)}:${ctx.phase}`);
+          }}
+          onMove={(
+            element: Element,
+            ctx: {
+              key: PropertyKey;
+              phase: string;
+              previousIndex?: number;
+              index: number;
+            }
+          ) => {
+            playMoveAnimation(element, ctx.previousIndex, ctx.index);
+            pushLog(`move:${String(ctx.key)}:${ctx.phase}`);
+          }}
+        >
+          <Each items={items()} key={itemKey} fallback={<p className="empty">empty</p>}>
+            {(item: TransitionListItem): any => (
+              <div
+                data-key={item.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '48px',
+                  height: '40px',
+                  marginRight: '8px',
+                  marginTop: '8px',
+                  borderRadius: '999px',
+                  color: '#0f172a',
+                  background: '#e2e8f0',
+                  border: '1px solid #cbd5e1',
+                  fontWeight: '600',
+                }}
+              >
+                {item.label}
+              </div>
+            )}
+          </Each>
+        </TransitionGroup>
+      </div>
+
+      <div className="item">
+        <p className="summary">transition logs</p>
+        <Each items={logs()} fallback={<p className="empty">no logs</p>}>
+          {(line: string): any => <p className="empty">{line}</p>}
+        </Each>
+      </div>
+    </div>
+  );
+}
+
 function FcShowcase() {
   const sleep = (ms: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, ms));
@@ -400,160 +660,14 @@ function FcShowcase() {
     suspenseTabSession.set((value) => value + 1);
   };
 
-  // 6) Transition demos (events only)
-  const transitionVisible = createSignal(true);
+  // 6) Transition tab：LazyLoad 可见性日志与演示共用同一个日志面板入口
   const transitionLog = createSignal<string[]>([]);
-  const transitionTabSession = createSignal(0);
   const pushTransitionLog = (msg: string) => {
     transitionLog.set((prev) => [msg, ...prev].slice(0, 8));
   };
   const resetTransitionTabState = () => {
-    transitionVisible.set(true);
     transitionLog.set([]);
-    transitionTabSession.set((value) => value + 1);
-    transitionCounter.set(3);
-    group.setValue([
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-      { id: 'c', label: 'C' },
-    ]);
   };
-  const pushTransitionLogLater = (msg: string, delayMs: number) => {
-    window.setTimeout(() => {
-      pushTransitionLog(msg);
-    }, delayMs);
-  };
-  const animateElement = (
-    element: HTMLElement,
-    keyframes: Keyframe[],
-    options: KeyframeAnimationOptions
-  ) => {
-    if (typeof element.animate !== 'function') {
-      return null;
-    }
-    return element.animate(keyframes, {
-      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      fill: 'both',
-      ...options,
-    });
-  };
-  const cleanupAnimatedStyle = (element: HTMLElement) => {
-    element.style.transform = '';
-    element.style.opacity = '';
-    element.style.willChange = '';
-  };
-  const playVisibilityAnimation = (
-    element: Element,
-    phase: 'enter' | 'leave'
-  ) => {
-    if (!(element instanceof HTMLElement)) {
-      return;
-    }
-
-    const keyframes =
-      phase === 'enter'
-        ? [
-            { opacity: 0, transform: 'translateY(8px) scale(0.98)' },
-            { opacity: 1, transform: 'translateY(0) scale(1)' },
-          ]
-        : [
-            { opacity: 1, transform: 'translateY(0) scale(1)' },
-            { opacity: 0, transform: 'translateY(-8px) scale(0.98)' },
-          ];
-
-    const animation = animateElement(element, keyframes, {
-      duration: phase === 'enter' ? 260 : 180,
-    });
-    if (!animation) {
-      return;
-    }
-    animation.addEventListener(
-      'finish',
-      () => cleanupAnimatedStyle(element),
-      { once: true }
-    );
-    animation.addEventListener(
-      'cancel',
-      () => cleanupAnimatedStyle(element),
-      { once: true }
-    );
-  };
-  const transitionCounter = createSignal(3);
-  const appendTransitionItem = () => {
-    transitionCounter.set((v) => v + 1);
-    const next = transitionCounter.peek();
-    group.set((prev) =>
-      prev.concat({
-        id: `item-${next}`,
-        label: `#${next}`,
-      })
-    );
-  };
-  const shuffleTransitionItems = () => {
-    group.set((prev) => {
-      if (prev.length <= 1) {
-        return prev;
-      }
-
-      const next = [...prev];
-      const first = next.shift();
-      if (first) {
-        next.splice(1, 0, first);
-      }
-      return next;
-    });
-  };
-  const removeTransitionFirst = () => {
-    group.set((prev) => prev.slice(1));
-  };
-  const playMoveAnimation = (
-    element: Element,
-    previousIndex: number | undefined,
-    index: number
-  ) => {
-    if (!(element instanceof HTMLElement)) {
-      return;
-    }
-
-    const delta = (previousIndex ?? index) - index;
-    if (delta === 0) {
-      return;
-    }
-
-    const fromTransform = `translateX(${delta * 28}px) scale(0.94)`;
-    element.style.transform = fromTransform;
-    element.style.opacity = '0.72';
-    element.style.willChange = 'transform, opacity';
-
-    requestAnimationFrame(() => {
-      const animation = animateElement(
-        element,
-        [
-          { transform: fromTransform, opacity: 0.72 },
-          { transform: 'translateX(0) scale(1)', opacity: 1 },
-        ],
-        { duration: 240 }
-      );
-      animation?.addEventListener(
-        'finish',
-        () => cleanupAnimatedStyle(element),
-        { once: true }
-      );
-      animation?.addEventListener(
-        'cancel',
-        () => cleanupAnimatedStyle(element),
-        { once: true }
-      );
-    });
-  };
-
-  const group = createSignal<TransitionListItem[]>([
-    { id: 'a', label: 'A' },
-    { id: 'b', label: 'B' },
-    { id: 'c', label: 'C' },
-  ]);
-  const transitionItemKey = ((item: TransitionListItem, _index: number) =>
-    item.id) as never;
 
   onMount(() => {
     withLifecycleHookSync(() => {
@@ -747,7 +861,7 @@ function FcShowcase() {
                 <button
                   className="btn"
                   onClick={() => {
-                    inputRef.current?.focus();
+                    inputRef?.focus();
                   }}
                 >
                   focus()
@@ -1418,130 +1532,7 @@ function FcShowcase() {
         </When>
 
         <When when={tab() === 'transition'} mode="remount">
-          <div className="item">
-            <p className="summary">&lt;Transition /&gt;</p>
-            <div className="row">
-              <button
-                className="btn"
-                onClick={() => transitionVisible.set((v) => !v)}
-              >
-                toggle block
-              </button>
-            </div>
-            <Transition
-              transitionKey={String(transitionVisible())}
-              onEnter={(
-                el: Element,
-                ctx: { phase: string }
-              ) => {
-                playVisibilityAnimation(el, 'enter');
-                pushTransitionLogLater(`enter:${ctx.phase}`, 320);
-              }}
-              onLeave={(
-                el: Element,
-                ctx: { phase: string }
-              ) => {
-                playVisibilityAnimation(el, 'leave');
-                pushTransitionLogLater(`leave:${ctx.phase}`, 200);
-              }}
-            >
-              <When when={transitionVisible()}>
-                <div
-                  style={{
-                    marginTop: '8px',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: '#e2e8f0',
-                  }}
-                >
-                  Toggle me
-                </div>
-              </When>
-            </Transition>
-          </div>
-
-          <div className="item">
-            <p className="summary">&lt;TransitionGroup /&gt;</p>
-            <div className="row">
-              <button className="btn" onClick={appendTransitionItem}>
-                append item
-              </button>
-              <button className="btn" onClick={shuffleTransitionItems}>
-                move first
-              </button>
-              <button className="btn" onClick={removeTransitionFirst}>
-                remove first
-              </button>
-            </div>
-            <TransitionGroup
-              keys={group().map((item) => item.id)}
-              onMove={(
-                el: Element,
-                ctx: { key: PropertyKey; phase: string; previousIndex?: number; index: number }
-              ) => {
-                playMoveAnimation(el, ctx.previousIndex, ctx.index);
-                pushTransitionLogLater(
-                  `move:${String(ctx.key)}:${ctx.phase}`,
-                  260
-                );
-              }}
-              onEnter={(
-                el: Element,
-                ctx: { key: PropertyKey; phase: string }
-              ) => {
-                playVisibilityAnimation(el, 'enter');
-                pushTransitionLogLater(
-                  `enter:${String(ctx.key)}:${ctx.phase}`,
-                  320
-                );
-              }}
-              onLeave={(
-                el: Element,
-                ctx: { key: PropertyKey; phase: string }
-              ) => {
-                playVisibilityAnimation(el, 'leave');
-                pushTransitionLogLater(
-                  `leave:${String(ctx.key)}:${ctx.phase}`,
-                  200
-                );
-              }}
-            >
-              <Each
-                items={group()}
-                key={transitionItemKey}
-                fallback={renderEmpty('empty')}
-              >
-                {(item: TransitionListItem): any => (
-                  <div
-                    data-key={item.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '48px',
-                      height: '40px',
-                      marginRight: '8px',
-                      marginTop: '8px',
-                      borderRadius: '999px',
-                      color: '#0f172a',
-                      background: '#e2e8f0',
-                      border: '1px solid #cbd5e1',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {item.label}
-                  </div>
-                )}
-              </Each>
-            </TransitionGroup>
-          </div>
-
-          <div className="item">
-            <p className="summary">transition logs</p>
-            <Each items={transitionLog()} fallback={renderEmpty('no logs')}>
-              {(line: string): any => <p className="empty">{line}</p>}
-            </Each>
-          </div>
+          <TransitionDemoSection />
         </When>
         <When when={tab() === 'local'} mode="remount">
           <Dynamic component="x-local-state-counter-card" />

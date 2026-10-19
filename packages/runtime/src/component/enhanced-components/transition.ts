@@ -14,10 +14,12 @@ import {
 } from '@lania-v/shared';
 import { renderGroup } from '../transition/group-registry';
 import { renderTransition } from '../transition/host';
+import { getTransitionState } from '../transition/registry';
 import { defineEnhancedComponent } from './utils/factory';
 import { readCompatUpdateHost } from './utils/compat';
 import {
   asRenderable,
+  collectRenderableNodes,
   getRenderableElements,
   hasRenderableContent,
   invokeRenderable,
@@ -102,6 +104,38 @@ const resolveTransitionGroupPayload = (
   );
 };
 
+const resolveTransitionStateKey = (props: TransitionProps): string =>
+  String(props.transitionKey ?? props.name ?? 'default');
+
+/**
+ * 离场快照会短暂停留在同一段 DOM 区间里，但它已经不再属于“当前 children”。
+ * 如果不过滤，内部 slot 下次从 DOM 同步节点时会把快照当成新内容读回来：
+ * 隐去时误判为“又有内容”触发 enter，重新显示时又会把旧节点一并渲染，导致节点累积。
+ */
+const pruneLeavingNodes = (
+  rendered: EnhancedRenderable,
+  leavingSnapshot: unknown
+): EnhancedRenderable => {
+  if (leavingSnapshot == null) {
+    return rendered;
+  }
+
+  const leavingNodes = new Set(collectRenderableNodes(leavingSnapshot as EnhancedRenderable));
+  if (leavingNodes.size === 0) {
+    return rendered;
+  }
+
+  const remaining = toRenderableArray(rendered).filter(
+    (entry) => !(entry instanceof Node && leavingNodes.has(entry))
+  );
+
+  if (remaining.length === 0) {
+    return null;
+  }
+
+  return remaining.length === 1 ? remaining[0]! : remaining;
+};
+
 export const Transition: EnhancedComponentDefinition<
   'Transition',
   TransitionProps,
@@ -110,12 +144,16 @@ export const Transition: EnhancedComponentDefinition<
   'Transition',
   (props: TransitionProps): EnhancedRenderable => {
     const rendered = invokeRenderable(asRenderable(props.children));
+    const previous = getTransitionState(resolveTransitionStateKey(props));
+    const pruned = previous?.leaving
+      ? pruneLeavingNodes(rendered, previous.snapshot)
+      : rendered;
     const host = readCompatUpdateHost();
     const { result } = renderTransition<EnhancedRenderable>({
       payload: resolveTransitionPayload(props),
       // 单节点过渡用“是否有可渲染内容”推导显隐状态，供 enter / leave 判定。
-      visible: hasRenderableContent(rendered),
-      rendered,
+      visible: hasRenderableContent(pruned),
+      rendered: pruned,
       host,
       getElements: getRenderableElements,
     });

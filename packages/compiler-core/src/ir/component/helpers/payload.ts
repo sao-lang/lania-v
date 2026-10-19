@@ -296,6 +296,15 @@ export const getTransitionPayloadValue = (
       const stringValue = getAttributeStringValue(child, transitionConfig.keyPropName);
       return stringValue !== null ? stringValue : undefined;
     })(),
+    // TransitionGroup 需要列表 key 才能判断 enter / move / leave；编译期把表达式原样带下去。
+    keys: (() => {
+      if (componentName !== 'TransitionGroup') {
+        return undefined;
+      }
+
+      const expression = getAttributeExpression(child, 'keys');
+      return expression ? rawExpression(expression) : undefined;
+    })(),
     tag: transitionConfig.tagPropName
       ? getPayloadFieldValue(child, transitionConfig.tagPropName)
       : undefined,

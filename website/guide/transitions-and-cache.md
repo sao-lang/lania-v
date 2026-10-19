@@ -64,10 +64,14 @@ type TransitionLifecycleHook = (
 - `appear`：首次出现；
 - `enter`：从不可见变为可见；
 - `leave`：从可见变为不可见；
+- `transitionKey` 是过渡实例的身份（stateKey），需要在多次渲染间保持稳定；
+  不要用它承载“当前是否可见”这类变化值，否则每次渲染都会变成新状态；
 - hook 可以返回 `Promise` 或 `Animation`，运行时会等待其完成；
 - 返回 `Animation` 时等待 `animation.finished`；
 - 如果 hook 触发了新的 CSS 动画，运行时会等待这些动画结束；
+  若动画被暂停（例如页面不可见），会按动画自身结束时间兜底，避免离场节点滞留在 DOM；
 - `leave` 阶段会延后到下一帧再执行，确保节点仍在文档中；
+  页面不可见时 `requestAnimationFrame` 会被暂停，此时运行时退回定时器；
 - 多个钩子按 `Promise.allSettled()` 汇合；
 - 节点尚未连入文档时，钩子会延迟到插入后再执行。
 
@@ -146,7 +150,9 @@ interface TransitionGroupHookContext {
 行为：
 
 - `tag` 指定包装元素（默认不额外包装）；
-- `keys` 显式提供列表 key；不提供时会尝试从 keyed `Each` 推导；
+- `keys` 显式提供列表 key（编译期会把 `keys` 表达式带进 block payload）；
+  不提供时会退回按元素的 `data-key` / `id` / 标签名推断；
+- `groupKey` 是这一组过渡实例的身份（stateKey），需要在多次渲染间保持稳定；
 - 新项走 `enter`，消失项走 `leave`，位置变化走 `move`；
 - 离开中的节点会保留到 `leave` 完成；
 - 同一轮的移动会按 DOM 快照计算 `previousIndex` / `index`。

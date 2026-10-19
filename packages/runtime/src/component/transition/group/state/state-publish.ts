@@ -311,6 +311,20 @@ export const pruneLeavingState = <
   return assignLeavingSnapshots(current, nextLeavingSnapshots);
 };
 
+// 旧 snapshot 可能属于上一轮挂载的子树：宿主卸载后这些节点已经脱离文档，
+// 继续复用会把游离节点重新塞回 DOM。这里只复用仍然“活着”的快照。
+const isReusableSnapshot = (snapshot: unknown): boolean => {
+  if (
+    snapshot &&
+    typeof snapshot === 'object' &&
+    typeof (snapshot as { isConnected?: unknown }).isConnected === 'boolean'
+  ) {
+    return (snapshot as { isConnected: boolean }).isConnected;
+  }
+
+  return true;
+};
+
 // 对同 key 的条目尽量复用 previous snapshot，减少无谓元素替换。
 // 这对保留 DOM/过渡上下文尤为重要，因为许多宿主逻辑依赖 snapshot 身份稳定。
 export const resolveSnapshots = <TRenderable>(options: {
@@ -323,9 +337,11 @@ export const resolveSnapshots = <TRenderable>(options: {
 
   return keys.map((key, index) => {
     const previousIndex = previousKeys.indexOf(key);
-    // 只要 key 稳定就优先复用旧 snapshot 身份，让依赖引用稳定的 host/runtime 得到更少扰动。
-    return previousIndex === -1
-      ? renderedSnapshots[index]!
-      : (previousSnapshots[previousIndex] ?? renderedSnapshots[index]!);
+    const previousSnapshot =
+      previousIndex === -1 ? undefined : previousSnapshots[previousIndex];
+    // 只要 key 稳定且旧节点仍在文档里，就优先复用旧 snapshot 身份，让依赖引用稳定的 host/runtime 得到更少扰动。
+    return previousSnapshot !== undefined && isReusableSnapshot(previousSnapshot)
+      ? previousSnapshot
+      : renderedSnapshots[index]!;
   });
 };

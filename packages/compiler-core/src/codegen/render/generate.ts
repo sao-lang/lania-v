@@ -230,7 +230,7 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
   const componentSlotDeclarations = componentBindings.map((binding) => {
     return [
       `const slot${binding.slotIndex}Node = resolveSlotAnchor(mounted, ${binding.slotIndex}, [${binding.path.join(', ')}]);`,
-      `const slot${binding.slotIndex} = this.registerSlot(new ComponentSlot(slot${binding.slotIndex}Node, ${binding.tagName}, ${binding.slotIndex}));`,
+      `const slot${binding.slotIndex} = this.registerSlot(new ComponentSlot(slot${binding.slotIndex}Node, ${JSON.stringify(binding.tagName)}, ${binding.slotIndex}));`,
       `this._slots[${binding.slotIndex}] = slot${binding.slotIndex}.node;`,
     ].join('\n');
   });
@@ -569,12 +569,17 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
               ? 'EffectUpdater'
               : 'SimpleUpdater';
       // effect updater 的表达式本身是语句块，其它 updater 默认是可直接返回的表达式。
+      // 对象字面量开头的表达式必须补括号，否则箭头函数体会被解析成语句块。
+      const updaterExpression = updater.expression.trim();
+      const normalizedExpression = updaterExpression.startsWith('{')
+        ? `(${updaterExpression})`
+        : updaterExpression;
       const evaluate =
         updater.kind === 'effect'
           ? `() => {
 ${indent(updater.expression, 1)}
 }`
-          : `() => ${updater.expression}`;
+          : `() => ${normalizedExpression}`;
       const ctorArgs =
         updater.kind === 'effect'
           ? `${evaluate}, 'low', this._scheduler`

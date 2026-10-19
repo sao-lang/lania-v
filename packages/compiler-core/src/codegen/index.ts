@@ -606,6 +606,7 @@ export const generateClassComponentCode = (
     className: component.name,
     staticHtml: component.renderPlan.staticHtml,
     textBindings: component.renderPlan.textBindings,
+    componentBindings: component.renderPlan.componentBindings,
     listBindings: component.renderPlan.listBindings,
     conditionBindings: component.renderPlan.conditionBindings,
     dynamicBindings: component.renderPlan.dynamicBindings,

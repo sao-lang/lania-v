@@ -3313,4 +3313,87 @@ describe('BoundarySlot', () => {
     expect(host.textContent).toContain('ready');
     vi.unstubAllGlobals();
   });
+
+  it('replays the most recently mounted LazyLoad instance sharing a key', () => {
+    const createSlotHost = () => {
+      const host = document.createElement('div');
+      const anchor = document.createComment('boundary-lazy');
+      host.appendChild(anchor);
+      return { host, anchor };
+    };
+
+    let callback: IntersectionObserverCallback | null = null;
+    class MockIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        callback = next;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal(
+      'IntersectionObserver',
+      MockIntersectionObserver as unknown as typeof IntersectionObserver
+    );
+
+    const payload = {
+      __lania_boundary: 'block',
+      payload: {
+        protocol: ENHANCED_CONTRACT_PROTOCOL,
+        version: ENHANCED_CONTRACT_VERSION,
+        payloadKind: 'boundary',
+        component: 'LazyLoad',
+        irKind: 'BoundaryIR',
+        boundaryIndex: 3,
+        initialState: 'inactive',
+        childrenTemplate: {},
+        fallbackTemplate: {},
+        metadata: {
+          lazyKey: 'remount-lazy',
+          once: true,
+        },
+      },
+      bindings: [
+        {
+          kind: 'text',
+          slotIndex: 0,
+          path: [0, 0],
+          evaluate: () => 'ready',
+        },
+      ],
+    };
+
+    const first = createSlotHost();
+    const firstSlot = new BoundarySlot(
+      first.anchor,
+      createStaticTemplate('<span>__LANIA_SLOT_0__</span>'),
+      303,
+      createStaticTemplate('<span>loading</span>')
+    );
+    firstSlot.write(payload as never);
+    expect(first.host.textContent).toContain('loading');
+
+    // 卸载第一个实例，换一个同 key 的新实例：共享 observer 必须回调新实例。
+    firstSlot.destroy();
+
+    const second = createSlotHost();
+    const secondSlot = new BoundarySlot(
+      second.anchor,
+      createStaticTemplate('<span>__LANIA_SLOT_0__</span>'),
+      304,
+      createStaticTemplate('<span>loading-2</span>')
+    );
+    secondSlot.write(payload as never);
+    expect(second.host.textContent).toContain('loading-2');
+
+    callback?.(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver
+    );
+    expect(second.host.textContent).toContain('ready');
+
+    secondSlot.destroy();
+    vi.unstubAllGlobals();
+  });
 });

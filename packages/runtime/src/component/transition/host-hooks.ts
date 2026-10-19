@@ -14,6 +14,43 @@ import type {
   TransitionDispatchOptions,
 } from './host-types';
 
+// 离场 hook 需要等到下一帧再执行，确保节点仍挂在文档里。
+// 但后台标签页会暂停 rAF，此时必须退回定时器，否则离场 hook 永远不执行、节点会一直留在 DOM。
+const runOnNextFrame = (callback: () => void): void => {
+  const isPageHidden =
+    typeof document !== 'undefined' && document.visibilityState === 'hidden';
+
+  if (typeof requestAnimationFrame === 'function' && !isPageHidden) {
+    requestAnimationFrame(callback);
+    return;
+  }
+
+  setTimeout(callback, 16);
+};
+
+// 动画可能因为页面不可见 / `animation-play-state: paused` 而永远停在 currentTime=0，
+// 只等 `finished` 会让离场快照一直留在 DOM 里。按动画自身的结束时间加一点余量兜底。
+const waitForAnimation = (animation: Animation): Promise<void> => {
+  const finished = animation.finished.then(
+    () => undefined,
+    () => undefined
+  );
+  const endTime = Number(
+    animation.effect?.getComputedTiming().endTime ?? Number.NaN
+  );
+
+  if (!Number.isFinite(endTime) || endTime <= 0) {
+    return finished;
+  }
+
+  return Promise.race([
+    finished,
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, endTime + 100);
+    }),
+  ]);
+};
+
 // 单个 hook 执行时会记录执行前后的动画集合，用于等待新启动的动画完成。
 const runTransitionHook = <TContext extends TransitionDispatchContext>(
   hook: TransitionDispatchHook<TContext> | undefined,
@@ -42,13 +79,13 @@ const runTransitionHook = <TContext extends TransitionDispatchContext>(
       }
 
       return new Promise((resolve) => {
-        requestAnimationFrame(() => resolve(run()));
+        runOnNextFrame(() => resolve(run()));
       });
     };
 
     return invoke().then(({ result, animationsBefore }) => {
       if (typeof Animation !== 'undefined' && result instanceof Animation) {
-        return result.finished.then(() => undefined, () => undefined);
+        return waitForAnimation(result);
       }
 
       const awaited = Promise.resolve(result).then(() => undefined);
@@ -68,9 +105,7 @@ const runTransitionHook = <TContext extends TransitionDispatchContext>(
           return;
         }
 
-        await Promise.allSettled(
-          newAnimations.map((animation) => animation.finished.then(() => undefined, () => undefined))
-        );
+        await Promise.allSettled(newAnimations.map((animation) => waitForAnimation(animation)));
       });
     });
   } catch (error) {
