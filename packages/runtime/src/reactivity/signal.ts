@@ -30,6 +30,28 @@ export interface DeferredOptions {
   timeoutMs?: number;
 }
 
+/** `watch()` 的选项，与 Vue 的 `watch` 保持同一套命名。 */
+export interface WatchOptions {
+  /** 创建时立即用当前值执行一次回调，此时 `previous` 为 `undefined`。 */
+  immediate?: boolean;
+  /**
+   * 按值比较新旧快照：内容没有变化时不触发回调。
+   * `previous` 会是上一次快照的深拷贝，因此可以安全地和 `current` 做逐层比较。
+   */
+  deep?: boolean;
+}
+
+/**
+ * `watch()` 回调。
+ *
+ * `immediate: true` 时首次执行的 `previous` 一定是 `undefined`，
+ * 因此这里用 `Immediate` 把该信息带到类型层，普通场景仍然拿到 `T`。
+ */
+export type WatchCallback<T, Immediate extends boolean = false> = (
+  current: T,
+  previous: Immediate extends true ? T | undefined : T
+) => void;
+
 // 依赖收集栈：每一层对应一次 trackSignals 的收集上下文
 const trackingStack: Array<Set<Signal<any>>> = [];
 // 当 updaters 较少时用线性数组更省；超过阈值再构建 indexMap 加速 delete/has
@@ -376,38 +398,117 @@ export const createEffect = (
   return stop;
 };
 
-export function watch<T>(
+const isPlainObject = (value: unknown): value is Record<PropertyKey, unknown> => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+/**
+ * `deep: true` 时用于判断快照是否真的发生变化。
+ *
+ * 只深入普通对象与数组：DOM 节点、Map/Set、类实例这类值一律退回引用比较，
+ * 避免在 watch 热路径上做代价不可控的遍历。
+ */
+const isDeepEqual = (current: unknown, previous: unknown): boolean => {
+  if (Object.is(current, previous)) {
+    return true;
+  }
+
+  if (Array.isArray(current) && Array.isArray(previous)) {
+    return (
+      current.length === previous.length &&
+      current.every((item, index) => isDeepEqual(item, previous[index]))
+    );
+  }
+
+  if (isPlainObject(current) && isPlainObject(previous)) {
+    const currentKeys = Object.keys(current);
+
+    if (currentKeys.length !== Object.keys(previous).length) {
+      return false;
+    }
+
+    return currentKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(previous, key) &&
+        isDeepEqual(current[key], previous[key])
+    );
+  }
+
+  return false;
+};
+
+const cloneWatchSnapshot = <T>(value: T): T => {
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(value);
+    } catch {
+      // 含函数 / 类实例时退回原引用，此时 deep 只能比较到引用这一层。
+    }
+  }
+
+  return value;
+};
+
+export function watch<T, Immediate extends boolean = false>(
   source: SignalSource<T>,
-  callback: (current: T, previous: T) => void,
+  callback: WatchCallback<T, Immediate>,
+  options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle;
-export function watch<T extends readonly unknown[]>(
+export function watch<T extends readonly unknown[], Immediate extends boolean = false>(
   sources: { [K in keyof T]: SignalSource<T[K]> },
-  callback: (current: T, previous: T) => void,
+  callback: WatchCallback<T, Immediate>,
+  options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle;
 export function watch<T>(
   source: SignalSource<T> | readonly SignalSource<unknown>[],
-  callback: ((current: T, previous: T) => void) | ((current: T[], previous: T[]) => void),
+  callback:
+    | ((current: T, previous: T | undefined) => void)
+    | ((current: T[], previous: T[] | undefined) => void),
+  options: WatchOptions = {},
   scheduler: Scheduler = defaultScheduler
 ): WatchStopHandle {
   const sources = Array.isArray(source) ? source : [source];
-  let previousValues = sources.map((entry) => entry.peek());
+  const isMultiSource = Array.isArray(source);
+  const { immediate = false, deep = false } = options;
+  const takeSnapshot = (value: unknown): unknown =>
+    deep ? cloneWatchSnapshot(value) : value;
 
-  const runWatch = () => {
-    const nextValues = sources.map((entry) => entry());
-    const snapshot = previousValues;
-    previousValues = [...nextValues];
+  let previousValues: unknown[] = sources.map((entry) => takeSnapshot(entry.peek()));
 
-    if (Array.isArray(source)) {
-      (callback as (current: T[], previous: T[]) => void)(nextValues as T[], snapshot as T[]);
+  const invoke = (currentValues: unknown[], snapshot: unknown[] | undefined): void => {
+    if (isMultiSource) {
+      (callback as (current: unknown[], previous: unknown[] | undefined) => void)(
+        currentValues,
+        snapshot
+      );
       return;
     }
 
-    (callback as (current: T, previous: T) => void)(
-      nextValues[0] as T,
-      snapshot[0] as T
+    (callback as (current: unknown, previous: unknown | undefined) => void)(
+      currentValues[0],
+      snapshot ? snapshot[0] : undefined
     );
+  };
+
+  const runWatch = () => {
+    const nextValues = sources.map((entry) => entry());
+
+    if (deep && previousValues.every((previous, index) => isDeepEqual(nextValues[index], previous))) {
+      // 内容没变时不回调，但仍然保留最新引用，避免用户原地改值后快照过期。
+      previousValues = nextValues.map(takeSnapshot);
+      return;
+    }
+
+    const snapshot = previousValues;
+    previousValues = nextValues.map(takeSnapshot);
+    invoke(nextValues, snapshot);
   };
 
   const scheduleWatch = () => {
@@ -417,6 +518,11 @@ export function watch<T>(
 
   for (const entry of sources) {
     entry.updaters.add(scheduleWatch);
+  }
+
+  if (immediate) {
+    // 首次执行与 createEffect 对齐：同步跑一次，旧值语义是“不存在”。
+    invoke(sources.map((entry) => entry.peek()), undefined);
   }
 
   return () => {
@@ -448,6 +554,7 @@ export const createDeferred = <T>(
         timerId = null;
       }, timeoutMs);
     },
+    undefined,
     scheduler
   );
 

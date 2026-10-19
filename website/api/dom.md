@@ -336,20 +336,34 @@ readModelModifiers(binding?): ModelModifier[]
 ### `createRef()`
 
 ```ts
-interface RefObject<T> {
-  current: T | null;
-}
-
-createRef<T>(): RefObject<T>
+createRef<T>(): T // compile-only
 ```
 
 ```tsx
 const inputRef = createRef<HTMLInputElement>();
 
 <input ref={inputRef} />;
+
+// 挂载后直接访问绑定值，不需要 .current
+inputRef?.focus();
 ```
 
-挂载后 `inputRef.current` 指向真实 DOM；卸载后为 `null`。
+编译产物：
+
+```ts
+protected inputRef: HTMLInputElement | null = null;
+// ref={inputRef} → ref={(element) => { this.inputRef = element; }}
+```
+
+要点：
+
+- 这是编译期 API，只能在 `.lania.tsx` 的组件内使用；未编译直接调用会抛错；
+- 变量类型就是绑定的类型（`createRef<HTMLInputElement>()` 得到 `HTMLInputElement`）；
+- 挂载前值为 `null`，`onMount()` 阶段仍然拿不到元素，需要时请用 `?.` 或在事件回调里访问；
+- 元素卸载 / 组件销毁时字段会被置回 `null`；
+- 旧写法 `inputRef.current` 在编译组件里仍会被改写成同一字段，但新代码请直接用 `inputRef`。
+
+组件上的 ref 会收到子组件 `createExpose()` 的返回值；子组件没有暴露面时退回宿主元素。
 
 ### 函数 ref
 

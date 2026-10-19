@@ -51,6 +51,7 @@ import {
 } from './core';
 import { writeClassAttribute } from '../class-value';
 import { writeStyleAttribute } from '../style-value';
+import { readRefExposed, setRef, type RefBinding } from '../ref';
 import {
   createDirectiveSlotForBinding,
   readDynamicDirectives,
@@ -237,6 +238,7 @@ class DynamicElementBindingController {
   private eventSlots = new Map<string, EventSlot>();
   private directiveSlots = new Map<string, Slot<unknown>>();
   private previousPropKeys = new Set<string>();
+  private currentRef: RefBinding<unknown> | null = null;
   private readonly staticClassValue: string;
   private readonly staticStyleValue: string;
 
@@ -248,8 +250,13 @@ class DynamicElementBindingController {
   write(props: Record<string, unknown>): void {
     const nextPropKeys = new Set<string>();
     for (const [name, value] of Object.entries(props)) {
-      if (name === 'children' || name === '__lania_events' || name === '__lania_directives') {
-        // 这些字段不直接落成普通 DOM prop/attr，而是走专门的 children/事件/指令通道。
+      if (
+        name === 'children' ||
+        name === '__lania_events' ||
+        name === '__lania_directives' ||
+        name === 'ref'
+      ) {
+        // 这些字段不直接落成普通 DOM prop/attr，而是走专门的 children/事件/指令/ref 通道。
         continue;
       }
 
@@ -335,6 +342,11 @@ class DynamicElementBindingController {
     const directiveBindings = readDynamicDirectives(props);
     const nextDirectiveKeys = new Set<string>();
     directiveBindings.forEach((binding, bindingIndex) => {
+      if (binding.kind === 'ref') {
+        // ref 的写入目标是组件暴露面（或元素本身），不走 RefSlot。
+        return;
+      }
+
       const key = `${binding.kind}:${binding.name}`;
       nextDirectiveKeys.add(key);
       let slot = this.directiveSlots.get(key);
@@ -358,6 +370,17 @@ class DynamicElementBindingController {
         this.directiveSlots.delete(key);
       }
     });
+
+    const refBinding = directiveBindings.find((binding) => binding.kind === 'ref') ?? null;
+    if (refBinding) {
+      const refValue = (refBinding.value as RefBinding<unknown> | null | undefined) ?? null;
+      this.currentRef = refValue;
+
+      if (refValue) {
+        // 子组件调用过 `createExpose()` 时回写暴露面，否则退回元素本身。
+        setRef(refValue, readRefExposed(refValue) ?? this.element);
+      }
+    }
   }
 
   destroy(): void {
@@ -366,6 +389,10 @@ class DynamicElementBindingController {
     this.eventSlots.clear();
     this.directiveSlots.forEach((slot) => slot.destroy());
     this.directiveSlots.clear();
+    if (this.currentRef) {
+      setRef(this.currentRef, null);
+      this.currentRef = null;
+    }
     this.previousPropKeys.forEach((name) => {
       if (name === 'class') {
         writeClassAttribute(this.element, null, this.staticClassValue);
@@ -479,6 +506,13 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
           : { ...props, children: scopedSlotChild };
       const resolvedChildBindings =
         scopedSlotChild === undefined ? childBindings : [];
+      // 组件 ref 需要以 prop 形式进入子组件，`createExpose()` 才能读到并回写暴露面。
+      const refDirective = readDynamicDirectives(resolvedProps).find(
+        (binding) => binding.kind === 'ref'
+      );
+      if (refDirective) {
+        (resolvedProps as Record<string, unknown>).ref = refDirective.value;
+      }
       const tagName = getComponentTagName(target);
       if (tagName) {
         try {

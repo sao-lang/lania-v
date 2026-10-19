@@ -59,6 +59,8 @@ export type {
 import {
   watch as reactiveWatch,
   type SignalSource,
+  type WatchCallback,
+  type WatchOptions,
   type WatchStopHandle,
 } from './reactivity/signal';
 export {
@@ -77,22 +79,34 @@ export {
   type Signal,
   type SignalSetter,
   type SignalSource,
+  type WatchCallback,
+  type WatchOptions,
   type WatchStopHandle,
 } from './reactivity/signal';
-export function watch<T>(
+export function watch<T, Immediate extends boolean = false>(
   source: SignalSource<T>,
-  callback: (current: T, previous: T) => void,
+  callback: WatchCallback<T, Immediate>,
+  options?: WatchOptions & { immediate?: Immediate },
   scheduler?: import('./reactivity/scheduler').Scheduler
 ): WatchStopHandle;
-export function watch<T extends readonly unknown[]>(
+export function watch<T extends readonly unknown[], Immediate extends boolean = false>(
   sources: { [K in keyof T]: SignalSource<T[K]> },
-  callback: (current: T, previous: T) => void,
+  callback: WatchCallback<T, Immediate>,
+  options?: WatchOptions & { immediate?: Immediate },
   scheduler?: import('./reactivity/scheduler').Scheduler
 ): WatchStopHandle;
 export function watch(
   sourceOrSourceKey: SignalSource<unknown> | readonly SignalSource<unknown>[],
-  callback: ((current: unknown, previous: unknown) => void) | import('./reactivity/scheduler').Scheduler,
+  callback:
+    | ((current: unknown, previous: unknown | undefined) => void)
+    | ((current: unknown[], previous: unknown[] | undefined) => void),
+  options?: WatchOptions,
   scheduler?: import('./reactivity/scheduler').Scheduler
 ): WatchStopHandle {
-  return reactiveWatch(sourceOrSourceKey as never, callback as never, scheduler);
+  return reactiveWatch(
+    sourceOrSourceKey as never,
+    callback as never,
+    options,
+    scheduler
+  );
 }

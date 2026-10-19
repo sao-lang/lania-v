@@ -164,7 +164,7 @@ type CommonDomProps<TElement extends Element = HTMLElement> = {
   download?: PrimitiveAttributeValue;
   [attributeName: `data-${string}`]: PrimitiveAttributeValue;
   [attributeName: `aria-${string}`]: PrimitiveAttributeValue;
-  ref?: RefBinding<TElement>;
+  ref?: RefBinding<TElement> | TElement;
 };
 
 type LaniaDirectiveProps = {

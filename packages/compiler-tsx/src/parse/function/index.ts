@@ -29,6 +29,7 @@ import {
   collectFunctionLifecycleCallbacks,
   collectFunctionLifecycleHooks,
   collectFunctionPropDestructuring,
+  collectFunctionRefNames,
   collectFunctionSetupBindings,
   collectFunctionSignals,
 } from './collectors';
@@ -72,7 +73,12 @@ const createComponentDeclaration = (
   );
   const rawSignals = collectFunctionSignals(functionDeclaration, sourceFile);
   const rawComputed = collectFunctionComputed(functionDeclaration, sourceFile);
-  const rawSetupBindings = collectFunctionSetupBindings(functionDeclaration, sourceFile);
+  const refNames = collectFunctionRefNames(functionDeclaration, sourceFile);
+  const rawSetupBindings = collectFunctionSetupBindings(
+    functionDeclaration,
+    sourceFile,
+    functionProps.propAlias
+  );
   const destructuredProps = collectFunctionPropDestructuring(
     functionDeclaration,
     functionProps.propAlias,
@@ -110,6 +116,7 @@ const createComponentDeclaration = (
     signalNames: new Set(rawSignals.map((signal) => signal.name)),
     signalSetterToName: new Map(),
     computedNames: new Set(rawComputed.map((computed) => computed.name)),
+    refNames,
     localBindingNames: new Set(rawSetupBindings.map((binding) => binding.name)),
     emitAliases,
   };

@@ -371,15 +371,30 @@ const slots = bindSlots();
 #### 插槽内容来源
 
 - 运行时 JSX：读取当前 runtime scope 的 `slotContent`；
-- 编译后的 Custom Element：编译器把 `bindSlots()` 改写成 `bindSlots(this.props)`，从 `children` prop 读取。
+- 编译后的 Custom Element：编译器把 `bindSlots()` 改写成
+  `bindSlots(this.props)`，从 `children` prop 读取。
 
-#### `has()` 的语义
+编译组件的普通子节点不会自动进入 `props.children`，具名槽需要显式传对象：
 
-```ts
-slots.has('footer');
+```tsx
+<Panel
+  children={{
+    header: <h2>标题</h2>,
+    default: <p>正文</p>,
+  }}
+/>
 ```
 
-只判断具名槽本身是否存在，不会被默认槽兜底。
+#### 解析顺序
+
+- `render(name, fallback, ...args)`：
+  `children[name] ?? children.default ?? fallback`；
+- `renderDefault(fallback, ...args)`：`children.default ?? fallback`；
+- `get(name)`：`children[name] ?? children.default`；
+- `has(name)`：只检查 `children[name]`，不兜底。
+
+因此具名槽缺失但默认槽存在时，`render('footer', 'fallback')` 返回的是默认槽内容。
+完整说明见 [插槽](/guide/slots)。
 
 #### 函数型 slot
 
@@ -388,20 +403,23 @@ slots.has('footer');
 slots.renderDefault('empty', item);
 
 // 父组件
-<Child>{(item: Item) => <Row item={item} />}</Child>
+<Child children={(item: Item) => <Row item={item} />} />
 ```
 
-额外参数会按位置传给函数型 slot。
+额外参数会按位置传给函数型 slot。`get()` / `has()` 不会调用函数。
 
 #### Shadow DOM 行为
 
-当宿主有 `shadowRoot` 时，`render()` 会创建一个原生 `<slot>` 并投影内容；否则直接展开为可渲染值。
+当宿主有 `shadowRoot` 时，`render()` 可能返回原生 `<slot>` 元素交给浏览器投影；否则直接展开为可渲染值。
+子节点上的 `slot="name"` 属于原生投影路径，不会被 `has(name)` 识别。
 
 ### `createExpose()`
 
 ```ts
+type RefProp<T> = T | RefBinding<T> | null | undefined;
+
 createExpose<T extends object>(
-  props: { ref?: RefBinding<T> | null | undefined },
+  props: { ref?: RefProp<T> },
   exposed: T
 ): T
 ```
@@ -412,18 +430,26 @@ type PanelExpose = {
 };
 
 createExpose(props, {
-  focusInput() {
-    inputRef.current?.focus();
+  focusInput: () => {
+    inputRef?.focus();
   },
 });
 ```
 
 行为：
 
-- 如果 `props.ref` 存在，立即 `setRef(ref, exposed)`；
+- 如果 `props.ref` 存在，立即 `setRef(ref, exposed)`，并记录该暴露面；
 - 在当前函数组件渲染结果上登记 cleanup；
 - 组件替换内容或卸载时把 ref 置空；
 - 没有 ref 时原样返回 `exposed`。
+
+编译组件里父组件写 `<Panel ref={panelRef} />` 时，`createRef()` 声明的字段
+会收到这里的 `exposed`；子组件没有调用 `createExpose()` 时退回宿主元素。
+
+::: tip 用箭头函数声明暴露方法
+编译器会把组件内的本地引用改写成 `this.xxx`，普通对象方法的 `this` 不是组件实例。
+`createExpose()` 的回调请写成箭头函数属性（`focusInput: () => {}`）。
+:::
 
 父组件：
 
@@ -432,7 +458,7 @@ const panelRef = createRef<PanelExpose>();
 
 <Panel ref={panelRef} />;
 
-panelRef.current?.focusInput();
+panelRef?.focusInput();
 ```
 
 ## 生命周期
@@ -850,6 +876,21 @@ validatePropValue(...)
 
 ## 事件系统
 
+### 模板/JSX 写法
+
+```tsx
+// DOM 事件
+<button onClick={submit} />
+<button onClick={{ handler: submit, modifiers: { stop: true, prevent: true } }} />
+
+// 组件事件（子组件 emit）
+<child-card onToggle={handleToggle} />
+<child-card onToggle={{ handler: handleToggle, listener: { once: true } }} />
+```
+
+`onXxx` 在原生标签上映射为小写 DOM 事件（`onKeyDown` → `keydown`），在组件标签上映射为组件事件（`onToggle` → `toggle`）。
+`directive-extended` 模式下还额外支持 `on:close`、`onClick.stop` 这类指令式写法。
+
 ### 解析事件名
 
 ```ts
@@ -861,9 +902,10 @@ parseEventBindingName(sourceName: string): ParsedEventBindingName | null
 | 写法 | 结果 |
 | --- | --- |
 | `onClick` | DOM `click` |
+| `onKeyDown` | DOM `keydown`（事件名转小写） |
 | `onToggle` | 组件事件 `toggle` |
-| `on:close` | 组件事件 `close` |
-| `click.stop` | DOM `click` + `stop`（扩展模式） |
+| `on:close` | 组件事件 `close`（`directive-extended`） |
+| `onClick.stop` | DOM `click` + `stop`（`directive-extended`） |
 
 ### 修饰符
 
@@ -878,13 +920,24 @@ type EventModifier =
   | (string & {});
 ```
 
-执行顺序：
+| 修饰符 | 行为 |
+| --- | --- |
+| `stop` | `event.stopPropagation()` |
+| `prevent` | `event.preventDefault()` |
+| `self` | `event.target === event.currentTarget` 时才继续 |
+| `enter` | 键盘 `Enter` 时才继续（仅键盘事件） |
+| `key:<name>` | `event.key` 匹配时才继续（仅键盘事件） |
+| `system:ctrl` / `shift` / `alt` / `meta` | 对应系统键按下时才继续 |
 
-1. `key:*` / `system:*` 过滤；
-2. `stop` / `prevent` / `self` / `enter`；
-3. 用户 handler。
+规则：
 
-任一过滤失败都会短路。
+- `enter` / `key:*` / `system:*` 只允许出现在 `keydown` / `keyup` / `keypress` 上，否则编译报错；
+- 键盘事件上的普通词会被规范化为 `key:<词>`（`keydown.escape` → `key:escape`）；
+- 执行顺序：先做 `key:*` / `system:*` 过滤，
+  再执行 `stop` / `prevent` / `self` / `enter`，最后调用用户 handler；
+- 任一过滤失败即短路；
+- `once` / `capture` / `passive` 不是修饰符，属于原生监听选项，写在 `listener` 里；
+- 组件事件只接受 `listener`，写了 `modifiers` 会编译报错。
 
 ### `withEventModifiers()`
 
@@ -922,6 +975,11 @@ click input change keydown keyup keypress submit focus blur pointerdown pointeru
 - `event.cancelBubble` 为真时停止。
 
 ## 运行时作用域（高级）
+
+::: tip 不是 Context API
+这一节的运行时作用域用于框架内部桥接，不是 `createContext()` / `useContext()` 的 Context。
+业务侧跨层传值请见 [上下文（Context）](/guide/context)。
+:::
 
 ```ts
 withRuntimeScope<T>(scope: RuntimeScope, run: () => T): T

@@ -13,6 +13,7 @@
 onMount(() => { /* ... */ });
 provideContext(ThemeContext, theme);
 useFormValue(() => account());
+const inputRef = createRef<HTMLInputElement>();
 ```
 
 它们不会作为普通函数执行，而是作为“标记”被编译器识别并改写。公共运行时仍然导出同名函数，但直接调用会抛错：
@@ -95,6 +96,8 @@ onUpdated((changedProps) => {
 `onMount` 的编译产物是 `__fcOnMount(): void`，返回值会被丢弃。清理逻辑请使用 `onCleanup()`。
 
 ## 上下文标记
+
+实践用法见 [上下文（Context）](/guide/context)。
 
 ### `provideContext()`
 
@@ -231,14 +234,34 @@ useFormValidity(() =>
 <div>{props.user?.name}</div>
 ```
 
+### 本地声明与解构
+
+除响应式工厂外，函数体顶层的本地声明都会提升为实例字段，模板里的裸引用会改写成 `this.<name>`：
+
+| 源码 | 编译后 |
+| --- | --- |
+| `const store = createStore(initial)` | `store = createStore(initial)`，引用变为 `this.store` |
+| `const { pending, start } = useTransition()` | 临时字段 `__setup_object_0 = useTransition()`，`pending = this.__setup_object_0["pending"]` |
+| `const { a: alias, ...rest } = source` | `alias` / `rest` 各自成为实例字段，`source` 只求值一次 |
+| `const [first, second] = pair()` | `__setup_tuple_0 = pair()`，元素按索引取字段 |
+
+注意：
+
+- 解构右值只会执行一次，避免重复调用产生新的引用；
+- 支持别名、嵌套对象解构与 rest 元素；计算属性名和数组解构嵌套暂不支持；
+- `props` 解构是特例，仍走上面的 Props 表中的响应式替换逻辑。
+
 ### 事件
 
 | 源码 | 编译后 |
 | --- | --- |
 | `onClick={fn}` | DOM event slot |
-| `onToggle={fn}` | 组件事件 / 回调 prop |
+| `onKeyDown={fn}` | DOM `keydown` 事件 slot（事件名转小写） |
+| `onToggle={fn}`（组件标签） | 组件事件 `toggle` |
 | `onClick={ { handler, modifiers } }` | 带修饰符的事件 slot |
-| `on:close={fn}` | 组件事件 `close` |
+| `onClick={ { handler, listener } }` | 带原生监听选项、不走委托的事件 slot |
+| `on:close={fn}` | 组件事件 `close`（`directive-extended`） |
+| `onClick.stop={fn}` | DOM `click` + `stop`（`directive-extended`） |
 
 ### 指令
 
@@ -246,7 +269,7 @@ useFormValidity(() =>
 | --- | --- |
 | `model={ { target } }` | `ModelBindingSlot` |
 | `html={html\`...\`}` | HTML slot |
-| `ref={ref}` | `RefSlot` |
+| `ref={ref}` | `RefSlot`（`createRef()` 声明时改写为字段赋值） |
 | `use={ { name: value } }` | `UseDirectiveSlot` |
 | `class={...}` / `className={...}` | ClassSlot / AttrSlot |
 | `style={...}` | StyleSlot / StyleObjectSlot |

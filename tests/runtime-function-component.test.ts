@@ -23,7 +23,6 @@ import {
   bindSlots,
   createExpose,
   createComponentElement,
-  createRef,
   createRoot,
   defineComponent,
   lazy,
@@ -525,7 +524,7 @@ describe('function component runtime helpers', () => {
   });
 
   it('writes function component expose refs and clears them on root teardown', () => {
-    const panelRef = createRef<{ focus(): string }>();
+    const panelRef = { current: null as { focus(): string } | null };
     const Panel = defineComponent((props: { ref?: typeof panelRef }) => {
       createExpose(props, {
         focus() {
@@ -1445,6 +1444,7 @@ describe('function component runtime helpers', () => {
           once: false,
         }),
         fallback: 'pending',
+        onVisibleChange: (visible) => repeatChanges.push(visible),
         children: list,
       })
     ).toBe(list);
@@ -1460,6 +1460,7 @@ describe('function component runtime helpers', () => {
         once: false,
       }),
       fallback: 'pending',
+      onVisibleChange: (visible) => repeatChanges.push(visible),
       children: list,
     });
     expect(Array.isArray(repeatFallback)).toBe(true);

@@ -340,6 +340,20 @@ const createBindingTransformer = (
         );
       }
 
+      // `inputRef.current` 是旧写法：编译后 ref 本身就是实例，直接前移即可。
+      if (
+        ts.isPropertyAccessExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        bindings.refNames.has(node.expression.text) &&
+        node.name.text === 'current' &&
+        !isShadowedByLocalScope(node.expression.text)
+      ) {
+        return ts.factory.createPropertyAccessExpression(
+          ts.factory.createThis(),
+          node.expression.text
+        );
+      }
+
       // `props.foo` 在组件实例模型里等价于 `this.foo`。
       if (
         ts.isPropertyAccessExpression(node) &&
@@ -544,10 +558,24 @@ export const rewriteFunctionTemplateNode = (
             ...event,
             expression: rewriteExpressionWithBindings(event.expression, bindings),
           })),
-          directives: child.directives.map((directive) => ({
-            ...directive,
-            expression: rewriteExpressionWithBindings(directive.expression, bindings),
-          })),
+          directives: child.directives.map((directive) => {
+            if (directive.kind === 'ref') {
+              const target = directive.expression.trim();
+
+              if (/^[A-Za-z_$][\w$]*$/.test(target) && bindings.refNames.has(target)) {
+                // `createRef()` 声明的 ref：把绑定结果直接写回实例字段，业务侧无需 `.current`。
+                return {
+                  ...directive,
+                  expression: `(refValue) => { this.${target} = refValue; }`,
+                };
+              }
+            }
+
+            return {
+              ...directive,
+              expression: rewriteExpressionWithBindings(directive.expression, bindings),
+            };
+          }),
           spreadAttributes: child.spreadAttributes?.map((expression) =>
             rewriteExpressionWithBindings(expression, bindings)
           ),

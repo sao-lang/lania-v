@@ -90,6 +90,10 @@ state.list[index].name; // 动态下标，截断到 list
 
 ## 4. Slot 分配
 
+::: tip 术语
+这里的 Slot 是**运行时更新槽**，不是组件插槽。组件插槽见 [插槽](/guide/slots)。
+:::
+
 Slot 是运行时最小的写入单位。编译器会为每个动态位置分配一个 Slot：
 
 ```ts

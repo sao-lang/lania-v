@@ -331,9 +331,11 @@ emit<T>(
 
 ## 插槽
 
+完整协议见 [插槽](/guide/slots)；这里只列最常用的入口。
+
 ### `props.children`
 
-最简单的插槽读取方式：
+最简单的插槽读取方式：父组件显式传入 `children`。
 
 ```tsx
 function Panel(props: { children?: unknown }) {
@@ -372,13 +374,32 @@ interface SlotBindings {
 }
 ```
 
+- `render(name, fallback)` 的解析顺序是 `children[name] ?? children.default ?? fallback`；
 - `has(name)` 只判断具名槽本身是否存在，不会被默认槽兜底；
 - 编译产物会把 `bindSlots()` 改写成 `bindSlots(this.props)`，从 `children` prop 读取；
 - `render()` / `renderDefault()` 的额外参数会透传给函数型 slot。
 
+### 具名插槽
+
+编译组件不会把普通子节点写进 `props.children`，具名槽需要显式传对象：
+
+```tsx
+<Panel
+  children={{
+    header: <h2>标题</h2>,
+    footer: <small>底部</small>,
+    default: <p>默认内容</p>,
+  }}
+/>
+```
+
+子节点上的 `slot="header"` 是浏览器原生投影语法，只在 Shadow DOM 宿主下生效，
+`bindSlots().has('header')` 读不到它。两条路径的区别见
+[插槽 · Shadow DOM 与 light DOM](/guide/slots#shadow-dom-与-light-dom)。
+
 ### Scoped slot
 
-当 children 是函数时，额外参数会按位置传入：
+当 `children` 是函数时，额外参数会按位置传入：
 
 ```tsx
 // 子组件
@@ -386,28 +407,11 @@ const slots = bindSlots();
 return <div>{slots.renderDefault('empty', item) as any}</div>;
 
 // 父组件
-<Child>{(item: string) => <span>{item}</span>}</Child>;
+<Child children={(item: string) => <span>{item}</span>} />;
 ```
 
-也可以使用 `<Slot>` 增强组件：
-
-```tsx
-<Slot name="item" args={item} fallback={<span>empty</span>} />
-```
-
-### 具名插槽的写法
-
-父组件：
-
-```tsx
-<Panel>
-  <h2 slot="header">标题</h2>
-  <p>默认内容</p>
-  <small slot="footer">底部</small>
-</Panel>
-```
-
-需要注意：在非 Shadow DOM 的场景，运行时会直接把具名内容解析为对象；在 Shadow DOM 宿主下会保留原生 `<slot>`，让浏览器完成投影。
+`<Slot>` 是运行时 JSX 路径的占位组件；`.lania.tsx` 编译组件内请使用 `bindSlots()`
+（见 [插槽 · 编译组件与运行时 JSX](/guide/slots#编译组件与运行时-jsx)）。
 
 ## `createExpose()`
 
@@ -422,7 +426,7 @@ type PanelExpose = {
 };
 
 type PanelProps = {
-  ref?: { current: PanelExpose | null };
+  ref?: PanelExpose;
   children?: unknown;
 };
 
@@ -430,11 +434,13 @@ export default defineComponent(function Panel(props: PanelProps) {
   const inputRef = createRef<HTMLInputElement>();
 
   createExpose(props, {
-    focusInput() {
-      inputRef.current?.focus();
+    focusInput: () => {
+      inputRef?.focus();
     },
-    clearInput() {
-      inputRef.current?.value = '';
+    clearInput: () => {
+      if (inputRef) {
+        inputRef.value = '';
+      }
     },
   });
 
@@ -449,10 +455,15 @@ const panelRef = createRef<PanelExpose>();
 
 <Panel ref={panelRef} />;
 
-panelRef.current?.focusInput();
+panelRef?.focusInput();
 ```
 
 `createExpose()` 建立在现有 `ref` 通道上，不会引入新的组件实例系统。组件替换内容或卸载时会自动把 ref 置空。
+
+::: tip 用箭头函数声明暴露方法
+编译器会把组件内的本地引用改写成 `this.xxx`，而普通对象方法的 `this` 不是组件实例。
+因此 `createExpose()` 的回调请写成箭头函数属性（`focusInput: () => {}`）。
+:::
 
 ## `bindProps()` 与 `bindHandlers()`
 
@@ -479,9 +490,10 @@ export default defineComponent(function Panel(props: PanelProps) {
 - `bindHandlers()` 是**父传回调输入**，不是 `emit()`；
 - handler 的识别优先使用编译期写入的 `handlerKeys`，缺失时才按 `onXxx` 推断。
 
-## Context
+## 上下文
 
-Context 通过事件冒泡实现，不依赖组件树全局状态。
+Context 通过 DOM 事件冒泡查找最近的 provider，不依赖组件树全局状态。完整用法见
+[上下文（Context）](/guide/context)。
 
 ```tsx
 import {
@@ -494,7 +506,9 @@ import {
 
 const ThemeContext = createContext<'light' | 'dark'>('light');
 
-const Provider = defineComponent(function Provider(props: { children?: unknown }) {
+const ThemeProvider = defineComponent(function ThemeProvider(props: {
+  children?: unknown;
+}) {
   const theme = createSignal<'light' | 'dark'>('dark');
 
   // 编译期改写成 provideContext(this, ThemeContext, theme)
@@ -503,53 +517,21 @@ const Provider = defineComponent(function Provider(props: { children?: unknown }
   return <div>{props.children as any}</div>;
 });
 
-const Consumer = defineComponent(function Consumer() {
+const ThemeLabel = defineComponent(function ThemeLabel() {
+  // 编译期改写成 useContext(ThemeContext, this)
   const theme = useContext(ThemeContext);
 
   return <p>theme: {theme()}</p>;
 });
 ```
 
-在组件外或手写 Custom Element 时，用三参形式显式传入宿主：
+- `createContext(defaultValue)` 创建带默认值的 Context；
+- `provideContext(Context, value)` 只能在编译组件内使用，编译期会补上 `this`；
+- 组件外或手写 Custom Element 使用 `provideContext(host, Context, value)` 和
+  `useContext(Context, host)`；
+- `useContext()` 返回只读 Signal，没有 provider 时退回默认值。
 
-```ts
-import { provideContext, useContext } from '@lania-v/runtime';
-
-const dispose = provideContext(element, ThemeContext, themeSignal);
-const theme = useContext(ThemeContext, element);
-dispose();
-```
-
-API：
-
-```ts
-createContext<T>(defaultValue: T, description?: string): Context<T>;
-
-// 运行时：显式宿主
-provideContext<T>(
-  host: EventTarget,
-  context: Context<T>,
-  value: T | ReadonlySignal<T> | (() => T)
-): () => void;
-
-// 编译组件内：编译器补 this
-provideContext<T>(
-  context: Context<T>,
-  value: T | ReadonlySignal<T> | (() => T)
-): () => void;
-
-useContext<T>(
-  context: Context<T>,
-  host?: { dispatchEvent(event: Event): boolean }
-): ReadonlySignal<T>;
-```
-
-说明：
-
-- `provideContext()` 返回取消提供的函数；
-- 最近的 provider 会 `stopPropagation()`；
-- 传入普通函数 `() => T` 时只会在初始化时求值一次；需要响应式联动请传 Signal；
-- `useContext()` 在组件作用域内自动使用当前宿主；在组件外传第二个参数指定宿主，否则退回默认值。
+值类型、Provider 查找规则与运行时作用域的区别见 [上下文（Context）](/guide/context)。
 
 ## 样式
 

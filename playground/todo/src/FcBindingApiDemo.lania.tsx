@@ -27,9 +27,7 @@ type BindingPanelProps = {
   status?: string;
   onToggle?: () => void;
   onSubmit?: (id: string) => void;
-  ref?: {
-    current: BindingPanelExpose | null;
-  };
+  ref?: BindingPanelExpose;
   children?: unknown;
 };
 
@@ -38,16 +36,17 @@ const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelPr
   const h = bindHandlers(props);
   const slots = bindSlots();
   const inputRef = createRef<HTMLInputElement>();
+  // 编译组件里本地引用会被改写成 `this.xxx`，因此这里用箭头函数保留组件 `this`。
   createExpose(props, {
-    focusInput() {
-      inputRef.current?.focus();
+    focusInput: () => {
+      inputRef?.focus();
     },
-    clearInput() {
-      if (inputRef.current) {
-        inputRef.current.value = '';
+    clearInput: () => {
+      if (inputRef) {
+        inputRef.value = '';
       }
     },
-    submitFromExpose() {
+    submitFromExpose: () => {
       h.onSubmit?.(`panel-${p.count}`);
     },
   });
@@ -133,19 +132,17 @@ const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelPr
 
 const BindingInput = defineComponent(function BindingInput(props: {
   value: string;
-  ref?: {
-    current: BindingInputExpose | null;
-  };
+  ref?: BindingInputExpose;
 }) {
   const inputRef = createRef<HTMLInputElement>();
 
   createExpose(props, {
-    focus() {
-      inputRef.current?.focus();
+    focus: () => {
+      inputRef?.focus();
     },
-    clear() {
-      if (inputRef.current) {
-        inputRef.current.value = '';
+    clear: () => {
+      if (inputRef) {
+        inputRef.value = '';
       }
     },
   });
@@ -179,7 +176,7 @@ const BindingInput = defineComponent(function BindingInput(props: {
 
 export default defineComponent(function FcBindingApiDemo() {
   const collapsed = createSignal(false);
-  const title = createSignal('FC Binding Panel');
+  const panelTitle = createSignal('FC Binding Panel');
   const footerEnabled = createSignal(true);
   const panelRef = createRef<BindingPanelExpose>();
   const inputExposeRef = createRef<BindingInputExpose>();
@@ -194,7 +191,7 @@ export default defineComponent(function FcBindingApiDemo() {
       header: (
         <div>
           <p className="summary">named slot: header</p>
-          <h4 style={{ margin: '6px 0 0' }}>{title()}</h4>
+          <h4 style={{ margin: '6px 0 0' }}>{panelTitle()}</h4>
         </div>
       ),
       default: (
@@ -242,7 +239,7 @@ export default defineComponent(function FcBindingApiDemo() {
             <button
               className="btn"
               onClick={() =>
-                title.set((value) =>
+                panelTitle.set((value) =>
                   value === 'FC Binding Panel'
                     ? 'Panel Title Updated'
                     : 'FC Binding Panel'
@@ -261,19 +258,19 @@ export default defineComponent(function FcBindingApiDemo() {
           <div className="row">
             <button
               className="btn"
-              onClick={() => panelRef.current?.focusInput()}
+              onClick={() => panelRef?.focusInput()}
             >
               ref.focusInput()
             </button>
             <button
               className="btn"
-              onClick={() => panelRef.current?.clearInput()}
+              onClick={() => panelRef?.clearInput()}
             >
               ref.clearInput()
             </button>
             <button
               className="btn"
-              onClick={() => panelRef.current?.submitFromExpose()}
+              onClick={() => panelRef?.submitFromExpose()}
             >
               ref.submitFromExpose()
             </button>
@@ -287,7 +284,7 @@ export default defineComponent(function FcBindingApiDemo() {
           <p className="summary">子组件实例</p>
           <BindingPanel
             ref={panelRef}
-            title={title()}
+            title={panelTitle()}
             count={submitLog().length}
             collapsed={collapsed()}
             status={footerEnabled() ? 'footer-ready' : 'footer-hidden'}
@@ -307,13 +304,13 @@ export default defineComponent(function FcBindingApiDemo() {
           <div className="row">
             <button
               className="btn"
-              onClick={() => inputExposeRef.current?.focus()}
+              onClick={() => inputExposeRef?.focus()}
             >
               inputRef.focus()
             </button>
             <button
               className="btn"
-              onClick={() => inputExposeRef.current?.clear()}
+              onClick={() => inputExposeRef?.clear()}
             >
               inputRef.clear()
             </button>

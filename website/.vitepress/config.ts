@@ -15,6 +15,8 @@ const guideSidebar = [
       { text: '响应式基础', link: '/guide/reactivity' },
       { text: '模板与绑定', link: '/guide/templates' },
       { text: '组件', link: '/guide/components' },
+      { text: '插槽', link: '/guide/slots' },
+      { text: '上下文', link: '/guide/context' },
       { text: '条件与列表', link: '/guide/control-flow' },
       { text: '异步与边界', link: '/guide/async-and-boundaries' },
       { text: '状态管理', link: '/guide/state' },

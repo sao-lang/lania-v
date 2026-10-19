@@ -21,7 +21,7 @@ import type { PropOptionsMap } from './prop-options';
 import type { ReadonlySignal } from '../../reactivity/signal';
 import type { ChangedProps } from './reactive-element';
 import { appendRenderable, collectRenderableNodes } from '../enhanced-components/utils/renderable';
-import { setRef } from '../../dom/ref';
+import { markRefExposed, setRef, type RefBinding } from '../../dom/ref';
 
 export type FunctionComponent<Props = Record<string, unknown>, Result = unknown> = (
   props: Props
@@ -439,21 +439,34 @@ export const bindSlots = (props?: { children?: unknown }): SlotBindings => {
   };
 };
 
+/**
+ * 子组件 `ref` 的声明类型。
+ *
+ * 编译产物会把父组件的 `ref={panelRef}` 改写成赋值函数，所以运行时既可能收到
+ * 函数 ref、也可能收到对象 ref；声明面上则直接写成公开面本身（`T`）。
+ */
+export type RefProp<T> = T | RefBinding<T> | null | undefined;
+
 export const createExpose = <T extends object>(
-  props: { ref?: import('../../dom/ref').RefBinding<T> | null | undefined },
+  props: { ref?: RefProp<T> },
   exposed: T
 ): T => {
   const ref = props.ref;
+
   if (!ref) {
     return exposed;
   }
 
-  setRef(ref, exposed);
-  // expose 走的还是现有 ref 通道，所以只要把清理挂进当前函数组件
-  // 的 render result cleanup 链，替换内容或卸载时就能自动置空。
-  registerFunctionComponentCleanup(() => {
-    setRef(ref, null);
-  });
+  // 组件 ref 需要优先回写暴露面；记录后由 ComponentSlot 统一写入父组件。
+  markRefExposed(ref, exposed);
+
+  if (typeof ref === 'function' || 'current' in ref) {
+    setRef(ref as RefBinding<T>, exposed);
+    // expose 走的还是现有 ref 通道，所以只要把清理挂进当前函数组件
+    // 的 render result cleanup 链，替换内容或卸载时就能自动置空。
+    registerFunctionComponentCleanup(() => setRef(ref as RefBinding<T>, null));
+  }
+
   return exposed;
 };
 

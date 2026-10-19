@@ -11,11 +11,11 @@ import {
   RefSlot,
   SimpleUpdater,
   createContext,
-  createRef,
   createSignal,
   provideContext,
   useContext,
   setRef,
+  type RefObject,
   type Signal,
 } from '@lania-v/runtime';
 
@@ -192,9 +192,10 @@ describe('communication runtime', () => {
     const themeContext = createContext('light', 'theme');
     const provider = document.createElement('section');
     const child = document.createElement('div');
-    const domRef = createRef<HTMLDivElement>();
-    const componentRef =
-      createRef<InstanceType<typeof CommunicationChildElement>>();
+    const domRef: RefObject<HTMLDivElement> = { current: null };
+    const componentRef: RefObject<InstanceType<typeof CommunicationChildElement>> = {
+      current: null,
+    };
 
     provider.appendChild(child);
     document.body.appendChild(provider);
@@ -231,7 +232,7 @@ describe('communication runtime', () => {
   });
 
   it('supports generic handle refs for non-DOM targets', () => {
-    const handleRef = createRef<{ focus(): string }>();
+    const handleRef: RefObject<{ focus(): string }> = { current: null };
     const handle = {
       focus() {
         return 'focused';

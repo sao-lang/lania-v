@@ -336,15 +336,28 @@ scope.dispose(); // effect 自动停止
 ### `watch()`
 
 ```ts
-watch<T>(
+interface WatchOptions {
+  immediate?: boolean;
+  deep?: boolean;
+}
+
+watch<T, Immediate extends boolean = false>(
   source: SignalSource<T>,
-  callback: (current: T, previous: T) => void,
+  callback: (
+    current: T,
+    previous: Immediate extends true ? T | undefined : T
+  ) => void,
+  options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle
 
-watch<T extends readonly unknown[]>(
+watch<T extends readonly unknown[], Immediate extends boolean = false>(
   sources: { [K in keyof T]: SignalSource<T[K]> },
-  callback: (current: T, previous: T) => void,
+  callback: (
+    current: T,
+    previous: Immediate extends true ? T | undefined : T
+  ) => void,
+  options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle
 ```
@@ -355,11 +368,32 @@ const stop = watch(count, (current, previous) => {
 });
 ```
 
+第三参是选项，第四参才是调度器：
+
+```ts
+watch(count, (current, previous) => {
+  console.log(current, previous);
+}, { immediate: true });
+
+watch(form, (current, previous) => {
+  console.log(current, previous);
+}, { deep: true });
+```
+
+选项行为：
+
+| 选项 | 行为 |
+| --- | --- |
+| `immediate` | 创建时同步执行一次回调，首次 `previous` 为 `undefined` |
+| `deep` | 按值比较新旧快照，内容没变时不回调；`previous` 是上一次快照的深拷贝 |
+
+`deep` 的比较范围限于普通对象与数组，DOM 节点、类实例按引用比较。
+
 与 `createEffect()` 的区别：
 
 | `createEffect` | `watch` |
 | --- | --- |
-| 创建时立即执行 | 不立即执行 |
+| 创建时立即执行 | 默认不立即执行（`immediate: true` 时立即执行） |
 | 回调无参数 | 回调收到新旧值 |
 | 适合副作用 | 适合观察变化 |
 | 可返回清理函数 | 不处理清理函数 |
@@ -960,6 +994,8 @@ onOwnerCleanup(cleanup: () => void): () => void
 - 返回一个函数用于手动移除。
 
 ## Context
+
+实践用法、Provider 查找规则与常见问题见 [上下文（Context）](/guide/context)。
 
 ### 设计模型
 

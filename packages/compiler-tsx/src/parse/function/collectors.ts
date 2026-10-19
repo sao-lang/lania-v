@@ -28,6 +28,7 @@ import {
   EFFECT_FACTORIES,
   FUNCTION_LIFECYCLE_HOOK_ALIASES,
   FUNCTION_LIFECYCLE_HOOKS,
+  REF_FACTORIES,
   REMOVED_FUNCTION_LIFECYCLE_HOOKS,
   SIGNAL_FACTORIES,
   type FunctionComponentLike,
@@ -225,6 +226,42 @@ export const collectFunctionPropDestructuring = (
   });
 
   return { aliases, replacements };
+};
+
+/** 收集 `createRef()` 声明的模板引用名。 */
+export const collectFunctionRefNames = (
+  functionDeclaration: FunctionComponentLike,
+  _sourceFile: ts.SourceFile
+): Set<string> => {
+  const names = new Set<string>();
+
+  if (!functionDeclaration.body || !ts.isBlock(functionDeclaration.body)) {
+    return names;
+  }
+
+  functionDeclaration.body.statements.forEach((statement) => {
+    if (!ts.isVariableStatement(statement)) {
+      return;
+    }
+
+    statement.declarationList.declarations.forEach((declaration) => {
+      if (
+        !ts.isIdentifier(declaration.name) ||
+        !declaration.initializer ||
+        !ts.isCallExpression(declaration.initializer)
+      ) {
+        return;
+      }
+
+      const calleeName = getCallExpressionName(declaration.initializer.expression);
+
+      if (calleeName && REF_FACTORIES.has(calleeName)) {
+        names.add(declaration.name.text);
+      }
+    });
+  });
+
+  return names;
 };
 
 /** 收集 `createSignal` 形式的响应式声明。 */
@@ -590,7 +627,8 @@ export const collectFunctionFormValidity = (
 /** 收集除响应式工厂外，其余需要提升到组件实例上的本地绑定。 */
 export const collectFunctionSetupBindings = (
   functionDeclaration: FunctionComponentLike,
-  sourceFile: ts.SourceFile
+  sourceFile: ts.SourceFile,
+  propsAlias: string | null = null
 ): SetupBindingDeclaration[] => {
   if (!functionDeclaration.body || !ts.isBlock(functionDeclaration.body)) {
     return [];
@@ -598,6 +636,18 @@ export const collectFunctionSetupBindings = (
 
   const bindings: SetupBindingDeclaration[] = [];
   let statementIndex = 0;
+
+  const readPropertyKey = (name: ts.PropertyName): string | null => {
+    if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+      return name.text;
+    }
+
+    if (ts.isNumericLiteral(name)) {
+      return name.text;
+    }
+
+    return null;
+  };
 
   functionDeclaration.body.statements.forEach((statement, sourceIndex) => {
     // setup 区域显式跳过最终 return，模板 JSX 会由专门的模板解析阶段处理。
@@ -674,6 +724,104 @@ export const collectFunctionSetupBindings = (
         return;
       }
 
+      if (ts.isObjectBindingPattern(declaration.name)) {
+        // `const { a, b: c } = source` 先把右值落到临时字段，再把每个绑定名映射成独立字段：
+        // 右值只求值一次，模板里的裸引用也能统一提升为 `this.x`。
+        if (
+          propsAlias &&
+          ts.isIdentifier(declaration.initializer) &&
+          declaration.initializer.text === propsAlias
+        ) {
+          // props 解构由 collectFunctionPropDestructuring 单独处理，避免覆盖 prop 字段。
+          return;
+        }
+
+        const objectFieldName = `__setup_object_${statementIndex}`;
+        bindings.push({
+          type: 'SetupBindingDeclaration',
+          name: objectFieldName,
+          kind: 'field',
+          params: '',
+          body: null,
+          initializer: declaration.initializer.getText(sourceFile),
+          order: createDeclarationOrder(sourceIndex),
+        });
+
+        let propertyOrder = 1;
+        const collectObjectPattern = (
+          pattern: ts.ObjectBindingPattern,
+          access: string
+        ): void => {
+          const usedKeys: string[] = [];
+
+          pattern.elements.forEach((element) => {
+            if (ts.isOmittedExpression(element)) {
+              return;
+            }
+
+            if (element.dotDotDotToken) {
+              if (!ts.isIdentifier(element.name)) {
+                throw new Error('Rest elements must be identifiers when destructuring in a function component.');
+              }
+
+              // rest 用同一份临时对象做一次解构剔除，保持右值只求值一次。
+              const excluded = usedKeys
+                .map((key, index) => `${JSON.stringify(key)}: __lania_rest_${index}`)
+                .join(', ');
+              const patternText = excluded.length > 0 ? `{ ${excluded}, ...rest }` : `{ ...rest }`;
+              bindings.push({
+                type: 'SetupBindingDeclaration',
+                name: element.name.text,
+                kind: 'field',
+                params: '',
+                body: null,
+                initializer: `((__laniaSource: any) => { const ${patternText} = __laniaSource; return rest; })(${access})`,
+                order: createDeclarationOrder(sourceIndex, propertyOrder),
+              });
+              propertyOrder += 1;
+              return;
+            }
+
+            const key = element.propertyName
+              ? readPropertyKey(element.propertyName)
+              : ts.isIdentifier(element.name)
+                ? element.name.text
+                : null;
+
+            if (key === null) {
+              throw new Error('Computed property names are not supported when destructuring in a function component.');
+            }
+
+            usedKeys.push(key);
+
+            if (ts.isIdentifier(element.name)) {
+              bindings.push({
+                type: 'SetupBindingDeclaration',
+                name: element.name.text,
+                kind: 'field',
+                params: '',
+                body: null,
+                initializer: `${access}[${JSON.stringify(key)}]`,
+                order: createDeclarationOrder(sourceIndex, propertyOrder),
+              });
+              propertyOrder += 1;
+              return;
+            }
+
+            if (ts.isObjectBindingPattern(element.name)) {
+              collectObjectPattern(element.name, `${access}[${JSON.stringify(key)}]`);
+              return;
+            }
+
+            throw new Error('Only identifier or nested object patterns are supported when destructuring in a function component.');
+          });
+        };
+
+        collectObjectPattern(declaration.name, objectFieldName);
+        statementIndex += 1;
+        return;
+      }
+
       if (ts.isArrayBindingPattern(declaration.name)) {
         // 解构初始化先保留整组临时字段，再把各元素映射成独立字段，避免重复求值。
         const tupleFieldName = `__setup_tuple_${statementIndex}`;
@@ -713,6 +861,20 @@ export const collectFunctionSetupBindings = (
 
       if (!ts.isIdentifier(declaration.name)) {
         // 仅提升可稳定命名的字段；复杂对象解构目前不在 setup field 里展开。
+        return;
+      }
+
+      if (calleeName && REF_FACTORIES.has(calleeName)) {
+        // `createRef()` 在编译产物里就是普通实例字段：初值为 null，由模板 ref 赋值。
+        bindings.push({
+          type: 'SetupBindingDeclaration',
+          name: declaration.name.text,
+          kind: 'field',
+          params: '',
+          body: null,
+          initializer: 'null',
+          order: createDeclarationOrder(sourceIndex, declarationIndex),
+        });
         return;
       }
 

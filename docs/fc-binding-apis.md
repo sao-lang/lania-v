@@ -96,7 +96,7 @@ const Panel = defineComponent((props: PanelProps) => {
   const slots = bindSlots();
 
   createExpose(props, {
-    toggle() {
+    toggle: () => {
       h.onToggle?.();
     },
   });
@@ -241,7 +241,9 @@ const Layout = defineComponent((props: { title: string }) => {
 
 ```ts
 export function createExpose<T extends object>(
-  props: { ref?: import('@lania-v/runtime').RefBinding<T> | null | undefined },
+  props: {
+    ref?: T | import('@lania-v/runtime').RefBinding<T> | null | undefined;
+  },
   exposed: T
 ): T;
 ```
@@ -262,16 +264,16 @@ type InputExpose = {
   clear(): void;
 };
 
-const Input = defineComponent((props: { ref?: RefBinding<InputExpose> }) => {
+const Input = defineComponent((props: { ref?: InputExpose }) => {
   const inputRef = createRef<HTMLInputElement>();
 
   createExpose(props, {
-    focus() {
-      inputRef.current?.focus();
+    focus: () => {
+      inputRef?.focus();
     },
-    clear() {
-      if (inputRef.current) {
-        inputRef.current.value = '';
+    clear: () => {
+      if (inputRef) {
+        inputRef.value = '';
       }
     },
   });
@@ -449,8 +451,9 @@ this.emit('submit', '42');
 实现上就是：
 
 - 对象 ref 就写 `current`
-- 函数 ref 就直接回调
+- 函数 ref 就直接回调（编译组件里的 `ref={panelRef}` 会被改写成这种函数）
 - 多次渲染时以最后一次 `createExpose()` 调用结果为准
+- 子组件没有暴露面时，父组件 ref 会退回宿主元素
 
 这一期先不做：
 

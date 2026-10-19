@@ -74,6 +74,7 @@ const double = createMemo(() => count() * 2);
 onMount(() => { /* ... */ });
 provideContext(ThemeContext, theme);
 useFormValue(() => account());
+const inputRef = createRef<HTMLInputElement>();
 ```
 
 ### 3. 编辑器 / 类型 API

@@ -179,6 +179,8 @@ scope.dispose();
 
 ## Context
 
+完整用法见 [上下文（Context）](/guide/context)。
+
 ### 用默认值保证可用性
 
 ```ts

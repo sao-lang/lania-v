@@ -51,6 +51,37 @@ const loadComponent = (source: string): any => {
 };
 
 describe('compiled component runtime integration', () => {
+  it('promotes object destructured setup bindings to instance fields', async () => {
+    const DestructuredSetup = loadComponent(`
+import { defineComponent, createSignal, useTransition } from '@lania-v/runtime';
+
+export default defineComponent(function DestructuredSetup() {
+  const { pending } = useTransition();
+  const { label, nested, ...rest } = { label: 'ready', nested: { count: 2 }, extra: 7 };
+  const count = createSignal(0);
+  return (
+    <section>
+      <button onClick={() => count.set((v) => v + 1)}>go</button>
+      <p>{label}:{nested.count}:{String(rest.extra)}</p>
+      <p>{pending() ? 'pending' : 'idle'}</p>
+      <p>{count()}</p>
+    </section>
+  );
+});
+`);
+
+    const element = mountComponent(document.body, DestructuredSetup, {});
+    await flush();
+    expect(element.shadowRoot?.textContent).toContain('ready:2:7');
+    expect(element.shadowRoot?.textContent).toContain('idle');
+
+    element.shadowRoot?.querySelector('button')?.click();
+    await flush();
+    expect(element.shadowRoot?.textContent).toContain('1');
+
+    element.remove();
+  });
+
   it('mounts destructured props and updates them reactively', async () => {
     const CardProps = loadComponent(`
 import { defineComponent } from '@lania-v/runtime';

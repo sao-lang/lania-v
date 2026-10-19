@@ -109,10 +109,28 @@ const stopMany = watch([first, last], ([nextFirst, nextLast], [prevFirst, prevLa
 });
 ```
 
-`watch()` 不会立即执行首次回调。需要首屏执行时使用 `createEffect()`。
+`watch()` 不会立即执行首次回调。需要首屏执行时，开启 `immediate`：
+
+```ts
+watch(count, (current, previous) => {
+  // 首次立即执行，此时 previous 是 undefined
+  console.log(previous ?? '(initial)', current);
+}, { immediate: true });
+```
+
+传入对象时，`deep: true` 会按值比较新旧快照，内容没变就不触发回调，`previous` 是上一次快照的深拷贝：
+
+```ts
+watch(form, (current, previous) => {
+  console.log(previous, current);
+}, { deep: true });
+```
+
+`watch(source, callback, options, scheduler)` 的第三参是选项，第四参才是调度器。
 
 ::: tip 在编译组件中使用 watch
-编译器只接管 `createEffect()`。在 `.lania.tsx` 里直接调用 `watch()` 时，请自己保留停止函数并在 `onCleanup()` 中调用，或把 watch 放进 `createScope()`。
+编译器只接管 `createEffect()`。在 `.lania.tsx` 里直接调用 `watch()` 时，
+请自己保留停止函数并在 `onCleanup()` 中调用，或把 watch 放进 `createScope()`。
 :::
 
 ## `readonly()`

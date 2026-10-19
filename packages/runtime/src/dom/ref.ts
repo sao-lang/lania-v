@@ -9,10 +9,19 @@ export interface RefObject<T> {
 
 export type RefBinding<T> = RefObject<T> | ((value: T | null) => void);
 
-export const createRef = <T>(): RefObject<T> => {
-  return {
-    current: null,
-  };
+/**
+ * 声明一个可直接读取绑定结果的模板引用。
+ *
+ * 编译期会把 `const input = createRef<HTMLInputElement>()` 改写成组件实例字段
+ * `input: HTMLInputElement | null = null`，并把 `ref={input}` 改写成对该字段赋值，
+ * 因此业务代码可以直接写 `input?.focus()`，不需要 `.current`。
+ *
+ * 这个函数本身只是编译期标记：未编译直接调用会抛错，避免得到静默失效的空引用。
+ */
+export const createRef = <T>(): T => {
+  throw new Error(
+    'createRef() is compile-time only. It must be rewritten by the Lania compiler inside a compiled component instead of running in the public runtime directly.'
+  );
 };
 
 // 对象 ref 直接改 current，函数 ref 则立即回调。
@@ -29,7 +38,10 @@ const applyRefValue = <T>(
     return;
   }
 
-  ref.current = value;
+  // 编译产物里的 `ref={inputRef}` 会被改写成赋值函数，这里只兜底真正的对象 ref。
+  if ('current' in ref) {
+    ref.current = value;
+  }
 };
 
 const pendingRefWrites = new Map<RefBinding<unknown>, unknown>();
@@ -68,4 +80,21 @@ export const setRef = <T>(
   value: T | null
 ): void => {
   applyRefValue(ref, value);
+};
+
+// `createExpose()` 记录的暴露面：组件 ref 需要优先写入它，而不是宿主元素。
+const exposedRefValues = new WeakMap<object, unknown>();
+
+export const markRefExposed = (ref: unknown, exposed: object): void => {
+  if ((typeof ref === 'function' || typeof ref === 'object') && ref !== null) {
+    exposedRefValues.set(ref, exposed);
+  }
+};
+
+export const readRefExposed = (ref: unknown): unknown => {
+  if ((typeof ref === 'function' || typeof ref === 'object') && ref !== null) {
+    return exposedRefValues.get(ref);
+  }
+
+  return undefined;
 };

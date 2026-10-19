@@ -126,7 +126,39 @@ const content = html`<strong>${title()}</strong>`;
 <input onInput={(event) => draft.set(event.target.value)} />
 ```
 
-原生标签上的 `onXxx` 会映射为小写 DOM 事件（`onClick` → `click`）。组件标签上的 `onXxx` 会映射为组件事件（`onToggle` → `toggle`）。
+事件名解析规则：
+
+| 写法 | 目标 | 适用模式 |
+| --- | --- | --- |
+| `onClick` | DOM `click` | 全部模式 |
+| `onKeyDown` | DOM `keydown` | 全部模式 |
+| `onToggle`（组件标签上） | 组件事件 `toggle` | 全部模式 |
+| `on:close`（组件标签上） | 组件事件 `close` | 仅 `directive-extended` |
+| `onClick.stop` | DOM `click` + `stop` 修饰符 | 仅 `directive-extended` |
+
+::: warning 组件标签上的 `onXxx` 是事件，不是普通 prop
+编译器会把组件标签上的 `onXxx` 一律当作组件事件（子组件通过 `emit()` 派发）。
+需要父传回调时，请改用非 `on` 前缀的 prop 名（如 `submitHandler`），
+或用 `props` 显式传入。
+:::
+
+标准 JSX 模式（默认）下使用对象写法表达修饰符：
+
+```tsx
+<button
+  onClick={{
+    handler: submit,
+    modifiers: { stop: true, prevent: true },
+  }}
+/>
+```
+
+扩展语法模式（`directive-extended`）可以直接把修饰符写在事件名上：
+
+```tsx
+<button onClick.stop.prevent={submit} />
+<input onKeydown.enter={submit} />
+```
 
 ### 对象写法与修饰符
 
@@ -139,18 +171,23 @@ const content = html`<strong>${title()}</strong>`;
 />
 ```
 
-支持：
-
 | 修饰符 | 行为 |
 | --- | --- |
 | `stop` | `event.stopPropagation()` |
 | `prevent` | `event.preventDefault()` |
 | `self` | 仅当 `event.target === event.currentTarget` 时执行 |
-| `enter` | 仅键盘 Enter 时执行 |
-| `key:escape` | 仅指定 `event.key` 时执行 |
+| `enter` | 仅键盘 `Enter` 时执行，只对键盘事件有效 |
+| `key:escape` | 仅当 `event.key` 匹配时执行 |
 | `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下时执行 |
 
-也可以在 `listener` 中声明原生监听选项：
+补充规则：
+
+- `enter`、`key:*`、`system:*` 只能用于键盘事件（`keydown` / `keyup` / `keypress`），其他元素上会报编译错误；
+- 键盘事件上写任意普通词等价于 `key:<词>`，例如 `keydown.escape` → `key:escape`；
+- 多个修饰符按声明顺序执行，任一过滤条件不满足就直接短路，后面的修饰符与 handler 都不会执行；
+- `once` / `capture` / `passive` 属于原生监听选项，不是修饰符，需要写在 `listener` 里。
+
+### 原生监听选项
 
 ```tsx
 <button
@@ -160,6 +197,30 @@ const content = html`<strong>${title()}</strong>`;
   }}
 />
 ```
+
+`listener` 直接透传给 `addEventListener` 的第三参；一旦声明了 `listener`，该监听不会走事件委托。
+
+### 组件事件
+
+组件标签上的 `onXxx` / `on:xxx` 是**组件事件**，由子组件通过 `emit()` 派发：
+
+```tsx
+<child-card onToggle={handleToggle} />
+<child-card on:close={handleClose} /> {/* directive-extended */}
+```
+
+组件事件只支持 `listener` 选项，不接受 DOM 修饰符：
+
+```tsx
+// ✅ 允许
+<child-card onToggle={{ handler: handleToggle, listener: { once: true } }} />
+
+// ❌ 编译报错：组件事件不支持修饰符
+<child-card onToggle={{ handler: handleToggle, modifiers: { stop: true } }} />
+```
+
+需要“父传回调”而不是事件时，请使用非 `on` 前缀的 prop 名（如 `submitHandler`），
+或用 `props` 显式传入；`onXxx` 在组件标签上一定会被当作事件处理。
 
 ### 事件委托
 
@@ -229,7 +290,8 @@ import { createRef } from '@lania-v/runtime';
 const inputRef = createRef<HTMLInputElement>();
 
 <input ref={inputRef} />;
-// inputRef.current 指向真实 DOM
+// 挂载后直接访问即可，mount 之前为 null
+inputRef?.focus();
 ```
 
 也支持函数 ref：
@@ -321,7 +383,8 @@ import Card from './Card.lania.tsx';
 
 - 普通 props 会写入组件实例的对应 Signal；
 - `onXxx` 会作为回调 prop 传入；
-- 子节点会进入 `children`，供插槽读取；
+- 子节点会成为宿主的 light DOM / childBindings，不会自动写入 `props.children`；
+  需要 `bindSlots()` 时请显式传 `children={...}`（见 [插槽](/guide/slots)）；
 - `ref={...}` 会收到 `createExpose()` 的返回值；
 - `client:idle` 等 island 标记不会作为 prop 传递。
 

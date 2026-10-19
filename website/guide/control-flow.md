@@ -163,13 +163,18 @@ interface DynamicProps {
 
 ## `Slot`
 
-`Slot` 读取函数组件 / 组件元素的插槽内容：
+`Slot` 读取当前运行时作用域的插槽内容：
 
 ```tsx
 <Slot name="header" fallback={<h2>默认标题</h2>} />
 
 <Slot args={item} fallback={<span>empty</span>} />
 ```
+
+::: warning 适用范围
+`<Slot>` 面向运行时 JSX 路径（`jsx(Child, { children })`）。在 `.lania.tsx` 编译组件中请使用
+`bindSlots()`，两种路径的差异见 [插槽](/guide/slots#编译组件与运行时-jsx)。
+:::
 
 ```ts
 interface SlotProps {
@@ -184,7 +189,7 @@ interface SlotProps {
 当插槽内容是函数时，`args` 会作为参数传入：
 
 ```tsx
-// 父组件
+// 父组件（运行时 JSX）
 <Child>{(item: Item) => <Row item={item} />}</Child>;
 
 // 子组件

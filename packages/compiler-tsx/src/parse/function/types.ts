@@ -49,6 +49,8 @@ export interface FunctionBindingContext {
   signalSetterToName: Map<string, string>;
   // computed/memo 之类衍生值名称集合。
   computedNames: Set<string>;
+  // `createRef()` 声明的模板引用名；它们在实例上是可直接读取的普通字段。
+  refNames: Set<string>;
   // 当前函数作用域里声明的局部绑定，避免误判成组件输入或运行时 helper。
   localBindingNames: Set<string>;
   // `emit` 可能被重命名或解构，因此用集合统一记录可识别别名。

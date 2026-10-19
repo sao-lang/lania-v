@@ -9,12 +9,20 @@ import {
   isComponentElementConstructor,
   type ComponentElementConstructor,
 } from '../../../component/host/function-component';
+import { readRefExposed, setRef, type RefBinding } from '../../ref';
 import { EventSlot, type Slot, writeComponentProp } from '../core';
 import {
   createDirectiveSlotForBinding,
   readDynamicDirectives,
   readDynamicEvents,
+  type DynamicDirectiveBinding,
 } from './directive-slots';
+
+const readComponentRefBinding = (
+  props: Record<string, unknown>
+): DynamicDirectiveBinding | null => {
+  return readDynamicDirectives(props).find((binding) => binding.kind === 'ref') ?? null;
+};
 
 type ComponentSlotValue<TProps extends Record<string, unknown> = Record<string, unknown>> =
   | TProps
@@ -36,6 +44,7 @@ export class ComponentSlot<
   instance: TElement | null = null;
   private eventSlots = new Map<string, EventSlot>();
   private directiveSlots = new Map<string, Slot<unknown>>();
+  private currentRef: RefBinding<unknown> | null = null;
 
   constructor(
     anchor: Comment,
@@ -70,6 +79,12 @@ export class ComponentSlot<
     const props = value as Record<string, unknown>;
 
     if (!this.instance) {
+      // 组件 ref 需要以 prop 形式进入子组件，`createExpose()` 才能读到并回写暴露面。
+      const initialRef = readComponentRefBinding(props);
+      if (initialRef) {
+        props.ref = initialRef.value;
+      }
+
       // 首次创建时把 props 一并传入，让组件在字段初始化阶段就能读到真实 props。
       this.instance = this.createElement(props);
       this.node.parentNode?.insertBefore(this.instance, this.node);
@@ -77,9 +92,10 @@ export class ComponentSlot<
 
     const eventBindings = readDynamicEvents(props);
     const directiveBindings = readDynamicDirectives(props);
+    const refBinding = directiveBindings.find((binding) => binding.kind === 'ref') ?? null;
 
     for (const [key, propValue] of Object.entries(props)) {
-      if (key === '__lania_events' || key === '__lania_directives') {
+      if (key === '__lania_events' || key === '__lania_directives' || key === 'ref') {
         continue;
       }
 
@@ -119,6 +135,11 @@ export class ComponentSlot<
 
     const nextDirectiveKeys = new Set<string>();
     directiveBindings.forEach((binding, bindingIndex) => {
+      if (binding.kind === 'ref') {
+        // 组件 ref 的写入目标是暴露面或宿主实例，不走 RefSlot（它只会写节点本身）。
+        return;
+      }
+
       const key = `${binding.kind}:${binding.name}`;
       nextDirectiveKeys.add(key);
       let slot = this.directiveSlots.get(key);
@@ -145,6 +166,17 @@ export class ComponentSlot<
         this.directiveSlots.delete(key);
       }
     });
+
+    if (refBinding) {
+      const refValue = (refBinding.value as RefBinding<unknown> | null | undefined) ?? null;
+      this.currentRef = refValue;
+
+      if (refValue) {
+        // 子组件调用过 `createExpose()` 时回写暴露面，否则退回宿主元素。
+        const exposed = readRefExposed(refValue);
+        setRef(refValue, (exposed ?? this.instance) as unknown);
+      }
+    }
   }
 
   destroy(): void {
@@ -152,6 +184,10 @@ export class ComponentSlot<
     this.eventSlots.clear();
     this.directiveSlots.forEach((slot) => slot.destroy());
     this.directiveSlots.clear();
+    if (this.currentRef) {
+      setRef(this.currentRef, null);
+      this.currentRef = null;
+    }
     this.instance?.remove();
     this.instance = null;
   }

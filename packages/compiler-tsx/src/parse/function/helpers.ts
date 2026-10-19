@@ -50,6 +50,8 @@ export const printer = ts.createPrinter({
 export const SIGNAL_FACTORIES = new Set(['createSignal', 'readonly', 'createDeferred']);
 export const COMPUTED_FACTORIES = new Set(['computed', 'createMemo']);
 export const EFFECT_FACTORIES = new Set(['effect', 'createEffect']);
+// `createRef` 声明会被改写成普通实例字段，因此不属于信号类响应式来源。
+export const REF_FACTORIES = new Set(['createRef']);
 export const FUNCTION_LIFECYCLE_HOOKS = new Set([
   'onMount',
   'onMounted',

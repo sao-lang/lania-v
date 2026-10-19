@@ -186,7 +186,12 @@ const Label = defineComponent(() => {
 
 ```ts
 const buttonRef = createRef<HTMLButtonElement>();
+// 挂载后直接访问，不需要 .current
+buttonRef?.focus();
 ```
+
+`createRef()` 是编译期 API：编译产物里会变成普通实例字段
+（`buttonRef: HTMLButtonElement | null = null`），`ref={buttonRef}` 会被改写成对该字段赋值。
 
 ### `bindProps()` / `bindHandlers()` / `bindSlots()` / `createExpose()`
 
@@ -210,7 +215,7 @@ type PanelProps = {
   collapsed?: boolean;
   onToggle?: () => void;
   onSubmit?: (id: string) => void;
-  ref?: RefBinding<PanelExpose>;
+  ref?: PanelExpose;
 };
 
 const Panel = defineComponent((props: PanelProps) => {
@@ -220,12 +225,12 @@ const Panel = defineComponent((props: PanelProps) => {
   const inputRef = createRef<HTMLInputElement>();
 
   createExpose(props, {
-    focusInput() {
-      inputRef.current?.focus();
+    focusInput: () => {
+      inputRef?.focus();
     },
-    clearInput() {
-      if (inputRef.current) {
-        inputRef.current.value = '';
+    clearInput: () => {
+      if (inputRef) {
+        inputRef.value = '';
       }
     },
   });
@@ -401,8 +406,15 @@ DOM 事件和组件事件统一使用 `onXxx`：
 
 规则：
 
-- 事件修饰符在 `FC` 中推荐使用对象型事件绑定。
-- `click={...}`、`click.stop={...}`、`on:*` 不再属于 `FC` 标准 TSX 主路径。
+- 事件修饰符在 `FC` 中推荐使用对象型事件绑定（`modifiers`）。
+- 组件标签上的 `onXxx` 会被当作组件事件；需要父传回调时请用 `props={{ ... }}` 或非 `on` 前缀的字段名。
+- `once` / `capture` / `passive` 属于 `listener` 选项，不属于 `modifiers`。
+- `enter`、`key:*`、`system:*` 只能用于键盘事件（`keydown` / `keyup` / `keypress`）。
+- `click={...}`、`click.stop={...}`、`on:*` 不属于 `FC` 标准 TSX 主路径，
+  仅在 `directive-extended` 模式下兼容。
+
+修饰符执行顺序：`key:*` / `system:*` 过滤 → `stop` / `prevent` / `self` / `enter` → 用户 handler，
+任一过滤失败即短路。
 
 ### 5.2 DOM 属性与双向绑定
 
