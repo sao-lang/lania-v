@@ -274,7 +274,7 @@ type ModelBinding<T> = ModelTargetBinding<T> | ModelSourceBinding<T>;
   model={{
     source: {
       get: () => state.query,
-      set: (value) => setState('query', value),
+      set: (value) => state.set('query', value),
     },
   }}
 />
@@ -757,7 +757,7 @@ registerDirective<{ text: string; tone: 'violet' | 'emerald' }>('watermark', {
   model={{
     source: {
       get: () => state.query,
-      set: (value) => setState('query', value),
+      set: (value) => state.set('query', value),
     },
     modifiers: { trim: true },
   }}

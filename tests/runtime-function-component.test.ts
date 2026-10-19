@@ -3446,7 +3446,7 @@ describe('function reactive apis', () => {
   });
 
   it('updates nested store paths immutably through createStore', async () => {
-    const [store, setStore] = createStore({
+    const store = createStore({
       user: {
         name: 'Ada',
         age: 20,
@@ -3459,8 +3459,8 @@ describe('function reactive apis', () => {
       values.push(`${store.user.name}:${store.user.age}`);
     });
 
-    setStore('user', 'name', 'Grace');
-    setStore('user', 'age', (age: number) => Number(age) + 1);
+    store.set('user', 'name', 'Grace');
+    store.set('user', 'age', (age: number) => Number(age) + 1);
     await flushMicrotasks(3);
 
     expect(store.user.name).toBe('Grace');
@@ -3469,8 +3469,44 @@ describe('function reactive apis', () => {
     expect(values).toEqual(['Ada:20', 'Grace:21']);
   });
 
+  it('resolves dot paths in store.set', async () => {
+    const store = createStore({
+      user: { name: 'Ada', age: 20 },
+      todos: [{ title: 'write docs' }],
+    });
+
+    store.set('user.name', 'Grace');
+    store.set('user.age', (age: number) => age + 1);
+    store.set('todos.0.title', 'ship code');
+
+    expect(store.user.name).toBe('Grace');
+    expect(store.user.age).toBe(21);
+    expect(store.todos[0]?.title).toBe('ship code');
+  });
+
+  it('exposes signal-like set and peek on the store handle', async () => {
+    const store = createStore({
+      user: { name: 'Ada' },
+      count: 0,
+    });
+    const runs: string[] = [];
+
+    createEffect(() => {
+      runs.push(store.user.name);
+    });
+
+    expect(store.peek()).toEqual({ user: { name: 'Ada' }, count: 0 });
+    expect(runs).toEqual(['Ada']);
+
+    store.set({ user: { name: 'Grace' }, count: 1 });
+    await flushMicrotasks(3);
+
+    expect(store.peek().count).toBe(1);
+    expect(runs).toEqual(['Ada', 'Grace']);
+  });
+
   it('tracks store dependencies by exact path instead of invalidating sibling reads', async () => {
-    const [store, setStore] = createStore({
+    const store = createStore({
       user: {
         name: 'Ada',
         age: 20,
@@ -3486,13 +3522,13 @@ describe('function reactive apis', () => {
       ageRuns.push(store.user.age);
     });
 
-    setStore('user', 'name', 'Grace');
+    store.set('user', 'name', 'Grace');
     await flushMicrotasks(3);
 
     expect(nameRuns).toEqual(['Ada', 'Grace']);
     expect(ageRuns).toEqual([20]);
 
-    setStore('user', 'age', 21);
+    store.set('user', 'age', 21);
     await flushMicrotasks(3);
 
     expect(nameRuns).toEqual(['Ada', 'Grace']);
@@ -3500,7 +3536,7 @@ describe('function reactive apis', () => {
   });
 
   it('invalidates descendant paths when replacing a parent object', async () => {
-    const [store, setStore] = createStore({
+    const store = createStore({
       user: {
         name: 'Ada',
         age: 20,
@@ -3512,7 +3548,7 @@ describe('function reactive apis', () => {
       values.push(`${store.user.name}:${store.user.age}`);
     });
 
-    setStore('user', {
+    store.set('user', {
       name: 'Grace',
       age: 21,
     });

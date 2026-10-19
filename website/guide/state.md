@@ -17,7 +17,7 @@
 ```ts
 import { createStore } from '@lania-v/runtime';
 
-const [state, setState] = createStore({
+const state = createStore({
   user: { name: 'Ada', age: 36 },
   list: [] as number[],
 });
@@ -25,11 +25,17 @@ const [state, setState] = createStore({
 state.user.name; // 'Ada'
 ```
 
-返回一个二元组：
+返回一个与 `createSignal()` 用法一致的句柄：
 
 ```ts
-const [store, setStore] = createStore(initialValue, scheduler?);
+const state = createStore(initialValue, scheduler?);
 ```
+
+| API | 作用 |
+| --- | --- |
+| `state.xxx` | 响应式读取；嵌套对象按路径惰性代理 |
+| `state.set(...)` | 写入 |
+| `state.peek()` | 读取当前原始快照，不建立订阅 |
 
 ### 读取
 
@@ -45,18 +51,25 @@ state.list[0];
 
 ```ts
 // 整体替换
-setState({ user: { name: 'Grace', age: 45 }, list: [] });
+state.set({ user: { name: 'Grace', age: 45 }, list: [] });
 
-// 按路径写入
-setState('user', 'name', 'Grace');
+// 点路径写入
+state.set('user.name', 'Grace');
+
+// 分段路径写入
+state.set('user', 'name', 'Grace');
 
 // 路径 + updater
-setState('user', 'age', (age) => age + 1);
+state.set('user.age', (age: number) => age + 1);
 
 // 数组
-setState('list', (list) => [...list, 1]);
-setState('list', 0, 99);
+state.set('list', (list: number[]) => [...list, 1]);
+state.set('list', 0, 99);
+state.set('list.0.title', 'updated');
 ```
+
+两个参数且首参是字符串时，首参按 `.` 拆成路径；三个及以上参数保持分段路径语义。
+路径不存在时会按需创建中间对象。
 
 路径写入采用**沿路径浅拷贝**的不可变更新策略：
 
@@ -68,7 +81,7 @@ setState('list', 0, 99);
 
 ```ts
 const before = state.user;
-setState('user', 'name', 'Grace');
+state.set('user.name', 'Grace');
 const after = state.user;
 
 before !== after; // true
@@ -79,7 +92,7 @@ before !== after; // true
 Store 中的方法会自动绑定到所属对象：
 
 ```ts
-const [state] = createStore({
+const state = createStore({
   count: 1,
   increment() {
     this.count += 1;
@@ -88,6 +101,14 @@ const [state] = createStore({
 
 state.increment();
 ```
+
+### `peek()`
+
+```ts
+const snapshot = state.peek();
+```
+
+`peek()` 返回当前原始对象且不建立订阅，适合事件回调、日志等非渲染场景。
 
 ### `__raw`
 
@@ -104,7 +125,7 @@ const raw = state.user.__raw;
 Signal 层使用 `Object.is()`。因此：
 
 ```ts
-setState('user', 'name', 'Ada'); // 值没变，不会触发订阅者
+state.set('user', 'name', 'Ada'); // 值没变，不会触发订阅者
 ```
 
 ## `produce()`
@@ -114,12 +135,12 @@ setState('user', 'name', 'Ada'); // 值没变，不会触发订阅者
 ```ts
 import { createStore, produce } from '@lania-v/runtime';
 
-const [state, setState] = createStore({
+const state = createStore({
   list: [] as number[],
   user: { name: 'Ada' },
 });
 
-produce(setState, (draft) => {
+produce(state, (draft) => {
   draft.list.push(1);
   draft.user.name = 'Grace';
 });
@@ -138,14 +159,14 @@ produce(setState, (draft) => {
 ```ts
 import { createStore, getStorePathSignal, createEffect } from '@lania-v/runtime';
 
-const [state, setState] = createStore({ user: { name: 'Ada' } });
+const state = createStore({ user: { name: 'Ada' } });
 const nameSignal = getStorePathSignal(state, ['user', 'name']);
 
 createEffect(() => {
   console.log(nameSignal());
 });
 
-setState('user', 'name', 'Grace'); // effect 触发
+state.set('user.name', 'Grace'); // effect 触发
 ```
 
 这在编写 composable 或需要手动订阅路径时很有用。
@@ -218,7 +239,7 @@ import {
 type Todo = { id: string; text: string; done: boolean };
 
 export default defineComponent(function TodoApp() {
-  const [state, setState] = createStore({
+  const state = createStore({
     todos: [] as Todo[],
     filter: 'all' as 'all' | 'active' | 'done',
   });
@@ -240,7 +261,7 @@ export default defineComponent(function TodoApp() {
     const text = draft().trim();
     if (!text) return;
 
-    produce(setState, (next) => {
+    produce(state, (next) => {
       next.todos.push({ id: crypto.randomUUID(), text, done: false });
     });
     draft.set('');
@@ -254,7 +275,7 @@ export default defineComponent(function TodoApp() {
         model={{
           source: {
             get: () => state.filter,
-            set: (value) => setState('filter', value as 'all' | 'active' | 'done'),
+            set: (value) => state.set('filter', value as 'all' | 'active' | 'done'),
           },
         }}
       >
@@ -272,7 +293,7 @@ export default defineComponent(function TodoApp() {
                 source: {
                   get: () => todo.done,
                   set: () =>
-                    setState('todos', (list) =>
+                    state.set('todos', (list) =>
                       list.map((entry) =>
                         entry.id === todo.id ? { ...entry, done: !entry.done } : entry
                       )

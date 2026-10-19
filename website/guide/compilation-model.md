@@ -82,7 +82,7 @@ interface ComponentIR {
 对于 Store 路径，编译器只保留**可静态命名**的部分。遇到动态下标会截断到最后一个静态前缀：
 
 ```ts
-const [state] = createStore({ list: [{ name: 'a' }] });
+const state = createStore({ list: [{ name: 'a' }] });
 
 state.list[0].name;   // 可稳定分析的路径
 state.list[index].name; // 动态下标，截断到 list

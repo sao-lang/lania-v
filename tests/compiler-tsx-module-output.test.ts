@@ -56,6 +56,26 @@ export default defineComponent(function OrderHost() {
     expect(moduleCode.indexOf(declaration)).toBeLessThan(moduleCode.indexOf(initializer));
   });
 
+  it('tracks createStore path reads without tuple destructuring', () => {
+    const moduleCode = compile(`
+import { createStore, defineComponent } from '@lania-v/runtime';
+
+export default defineComponent(function StoreHost() {
+  const store = createStore({ user: { name: 'Ada' } });
+  return (
+    <button onClick={() => store.set('user.name', 'Grace')}>
+      {store.user.name}
+    </button>
+  );
+});
+`);
+
+    expect(moduleCode).toContain('createStore({ user: { name: \'Ada\' } })');
+    expect(moduleCode).toContain("this.store.set('user.name', 'Grace')");
+    expect(moduleCode).toContain('getStorePathSignal(this.store, ["user","name"])');
+    expect(moduleCode).not.toContain('getStorePathSignal(this.store, ["set"])');
+  });
+
   it('tracks unary negation reads as updater dependencies', () => {
     const moduleCode = compile(`
 import { createMemo, createSignal, defineComponent } from '@lania-v/runtime';

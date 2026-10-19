@@ -259,7 +259,7 @@ function FcShowcase() {
   };
 
   // 2) Store
-  const [store, setStore] = createStore({
+  const store = createStore({
     user: { name: 'lania', clicks: 0 },
     nested: { counter: 0 },
     list: [{ id: 'a' }, { id: 'b' }] as StoreListItem[],
@@ -873,28 +873,28 @@ function FcShowcase() {
             <div className="row">
               <button
                 className="btn"
-                onClick={() => setStore('user', 'clicks', (v: number) => v + 1)}
+                onClick={() => store.set('user', 'clicks', (v: number) => v + 1)}
               >
                 click +1
               </button>
               <button
                 className="btn"
                 onClick={() =>
-                  setStore('nested', 'counter', (v: number) => v + 1)
+                  store.set('nested', 'counter', (v: number) => v + 1)
                 }
               >
                 nested +1
               </button>
               <button
                 className="btn"
-                onClick={() => setStore('user', 'name', (v: string) => `${v}!`)}
+                onClick={() => store.set('user', 'name', (v: string) => `${v}!`)}
               >
                 name +!
               </button>
               <button
                 className="btn"
                 onClick={() =>
-                  setStore('list', (prev: StoreListItem[]) =>
+                  store.set('list', (prev: StoreListItem[]) =>
                     prev.concat({ id: `item-${prev.length + 1}` })
                   )
                 }

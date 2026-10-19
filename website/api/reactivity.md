@@ -645,11 +645,13 @@ transitionPending: ReadonlySignal<boolean>
 createStore<T extends object>(
   initialValue: T,
   scheduler?: Scheduler
-): [T, StoreSetter<T>]
+): Store<T>
 ```
 
+`Store<T>` 在 `T` 的对象式访问之上提供 `set` / `peek`，与 `createSignal()` 的句柄形态一致。
+
 ```ts
-const [state, setState] = createStore({
+const state = createStore({
   user: { name: 'Ada', age: 36 },
   list: [] as number[],
 });
@@ -671,17 +673,23 @@ state.list.length;
 
 ```ts
 // 整体替换
-setState({ user: { name: 'Grace', age: 45 }, list: [] });
+state.set({ user: { name: 'Grace', age: 45 }, list: [] });
 
-// 路径写入
-setState('user', 'name', 'Grace');
+// 点路径写入
+state.set('user.name', 'Grace');
+
+// 分段路径写入
+state.set('user', 'name', 'Grace');
 
 // 路径 + updater
-setState('list', (list) => [...list, 1]);
+state.set('list', (list: number[]) => [...list, 1]);
 
 // 数组下标
-setState('list', 0, 99);
+state.set('list', 0, 99);
+state.set('list.0.title', 'updated');
 ```
+
+两个参数且首参为字符串时按 `.` 拆分路径；三个及以上参数按分段路径处理。
 
 路径更新采用不可变策略：
 
@@ -691,14 +699,14 @@ setState('list', 0, 99);
 
 ```ts
 const before = state.user;
-setState('user', 'name', 'Grace');
+state.set('user.name', 'Grace');
 state.user !== before; // true
 ```
 
 #### 方法绑定
 
 ```ts
-const [state] = createStore({
+const state = createStore({
   count: 1,
   increment() {
     this.count += 1;
@@ -709,6 +717,14 @@ state.increment();
 ```
 
 代理会把方法绑定回当前路径，因此 `this` 指向正确对象。
+
+#### `peek()`
+
+```ts
+const raw = state.peek();
+```
+
+返回当前原始对象且不建立订阅。
 
 #### `__raw`
 
@@ -722,7 +738,7 @@ const raw = state.user.__raw;
 
 ```ts
 produce<T extends object>(
-  setStore: StoreSetter<T>,
+  store: Store<T>,
   recipe: (draft: T) => void
 ): T
 ```
@@ -730,7 +746,7 @@ produce<T extends object>(
 用可变写法更新 Store：
 
 ```ts
-produce(setState, (draft) => {
+produce(state, (draft) => {
   draft.list.push(1);
   draft.user.name = 'Grace';
 });

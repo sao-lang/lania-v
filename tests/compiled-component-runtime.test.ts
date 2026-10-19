@@ -120,6 +120,40 @@ export default defineComponent(function CardComposable() {
     element.remove();
   });
 
+  it('updates compiled store paths through store.set', async () => {
+    const StoreView = loadComponent(`
+import { createStore, defineComponent } from '@lania-v/runtime';
+export default defineComponent(function StoreView() {
+  const store = createStore({
+    user: { name: 'Ada' },
+    list: [{ title: 'a' }],
+  });
+  return (
+    <div>
+      <button
+        onClick={() => {
+          store.set('user.name', 'Grace');
+          store.set('list.0.title', 'b');
+        }}
+      >
+        update
+      </button>
+      <output>{store.user.name}|{store.list[0].title}</output>
+    </div>
+  );
+});
+`);
+
+    const element = mountComponent(document.body, StoreView, {});
+    await flush();
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('Ada|a');
+
+    (element.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
+    await flush();
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('Grace|b');
+    element.remove();
+  });
+
   it('keeps bindProps, bindHandlers and bindSlots live in compiled components', async () => {
     const BindingPanel = loadComponent(`
 import {

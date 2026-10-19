@@ -96,6 +96,14 @@ const extractStorePathRead = (
     return null;
   }
 
+  // `store.set(...)` / `store.peek()` 是句柄方法，不属于数据路径读取。
+  if (
+    segments.length === 1 &&
+    (segments[0] === 'set' || segments[0] === 'peek')
+  ) {
+    return null;
+  }
+
   return { storeName, accessPath: segments };
 };
 

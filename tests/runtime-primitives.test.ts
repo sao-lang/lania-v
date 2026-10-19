@@ -101,9 +101,9 @@ describe('runtime primitives', () => {
   });
 
   it('produce applies mutable updates to a store', () => {
-    const [state, setState] = createStore({ list: [1, 2] });
+    const state = createStore({ list: [1, 2] });
 
-    produce(setState, (draft) => {
+    produce(state, (draft) => {
       draft.list.push(3);
     });
 

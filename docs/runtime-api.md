@@ -270,7 +270,16 @@ return <div>{slots.renderDefault('empty', item)}</div>;
 ### `createResource()` / `createStore()`
 
 - `createResource()`：管理异步资源状态。
-- `createStore()`：管理对象型状态容器。
+- `createStore()`：管理对象型状态容器，返回与 `createSignal()` 一致的 `set` / `peek` 句柄：
+
+```ts
+const state = createStore({ user: { name: 'Ada' } });
+
+state.user.name; // 响应式读取
+state.set('user.name', 'Grace'); // 点路径写入
+state.set('user', 'name', 'Ada'); // 分段路径写入
+state.peek(); // 原始快照
+```
 
 ### `createSelector()`
 
@@ -301,15 +310,15 @@ startTransition(() => {
 ### `produce()`
 
 ```ts
-const [state, setState] = createStore({ list: [] as number[] });
+const state = createStore({ list: [] as number[] });
 
-produce(setState, (draft) => {
+produce(state, (draft) => {
   draft.list.push(1);
 });
 ```
 
 `produce` 基于 `structuredClone` 生成草稿；含函数/类实例的数据请优先使用
-`setState('path.to.value', next)` 的路径写法。
+`state.set('path.to.value', next)` 的路径写法。
 
 ### `createScope()`
 

@@ -14,9 +14,25 @@ import { defaultScheduler, type Scheduler } from './scheduler';
 
 export type StorePathSegment = string | number | symbol;
 export type StoreUpdater<T> = T | ((previous: T) => T);
+export type StorePathUpdater = unknown | ((previous: unknown) => unknown);
 export type StoreSetter<T> = {
+  /** 整体替换 store。 */
   (value: StoreUpdater<T>): T;
-  (...pathAndValue: [...StorePathSegment[], unknown | ((previous: unknown) => unknown)]): T;
+  /** 点路径写入：`set('user.name', 'Grace')`。 */
+  (path: string, value: StorePathUpdater): T;
+  /** 分段路径写入：`set('user', 'name', 'Grace')`。 */
+  (...pathAndValue: [...StorePathSegment[], StorePathUpdater]): T;
+};
+
+/**
+ * `createStore()` 的返回句柄：保留对象式响应式读取，同时提供与 `createSignal()`
+ * 一致的 `set` / `peek` 方法。
+ *
+ * `set` 与 `peek` 是保留字段，store 数据里不要使用同名属性。
+ */
+export type Store<T extends object> = T & {
+  set: StoreSetter<T>;
+  peek: () => T;
 };
 
 // 仅供编译产物和内部工具读取 store runtime，用户侧不应依赖这个 symbol。
@@ -27,14 +43,22 @@ const isObjectLike = (value: unknown): value is Record<PropertyKey, unknown> => 
 };
 
 const pathKey = (path: readonly StorePathSegment[]): string => {
+  // 数字下标与字符串下标在读代理和点路径写法中会以不同形态出现，
+  // 这里统一成字符串，保证二者订阅到同一个版本 signal。
   // symbol 不能直接稳定地 JSON 序列化，这里先编码成显式对象结构。
   return JSON.stringify(
     path.map((segment) => {
-      return typeof segment === 'symbol'
-        ? { type: 'symbol', value: String(segment) }
-        : { type: typeof segment, value: String(segment) };
+      if (typeof segment === 'symbol') {
+        return { type: 'symbol', value: String(segment) };
+      }
+
+      return { type: 'string', value: String(segment) };
     })
   );
+};
+
+const normalizePath = (path: readonly StorePathSegment[]): StorePathSegment[] => {
+  return path.map((segment) => (typeof segment === 'number' ? String(segment) : segment));
 };
 
 const isPrefixPath = (
@@ -94,6 +118,8 @@ interface StoreRuntime<T> {
   versionSignals: Map<string, Signal<number>>;
   pathCache: Map<string, unknown>;
   scheduler: Scheduler;
+  set: StoreSetter<T>;
+  peek: () => T;
 }
 
 const ensureVersionSignal = (
@@ -123,6 +149,8 @@ const notifyPathMutation = (
   runtime: StoreRuntime<any>,
   changedPath: readonly StorePathSegment[]
 ): void => {
+  const normalizedChangedPath = normalizePath(changedPath);
+
   for (const [key, signal] of runtime.versionSignals.entries()) {
     const decoded = JSON.parse(key) as Array<{ type: string; value: string }>;
     const registeredPath = decoded.map((entry) => {
@@ -134,8 +162,8 @@ const notifyPathMutation = (
     });
 
     if (
-      isPrefixPath(registeredPath, changedPath) ||
-      isPrefixPath(changedPath, registeredPath)
+      isPrefixPath(registeredPath, normalizedChangedPath) ||
+      isPrefixPath(normalizedChangedPath, registeredPath)
     ) {
       // 祖先路径和后代路径都视为受影响，例如改 `user.name` 也会影响 `user`。
       signal.set((value) => value + 1);
@@ -170,6 +198,15 @@ const createStoreProxy = <T>(
     get(_target, property) {
       if (property === STORE_RUNTIME_SYMBOL) {
         return runtime;
+      }
+      if (path.length === 0) {
+        // 根句柄暴露与 createSignal 一致的 set / peek，读写入口不再需要元组解构。
+        if (property === 'set') {
+          return runtime.set;
+        }
+        if (property === 'peek') {
+          return runtime.peek;
+        }
       }
       if (property === '__raw') {
         // 提供一个显式逃生口，允许内部逻辑读取当前路径的原始值。
@@ -238,36 +275,68 @@ const createStoreProxy = <T>(
   return proxy;
 };
 
+const parseStorePathString = (path: string): StorePathSegment[] => {
+  const segments = path.split('.');
+
+  if (segments.some((segment) => segment.length === 0)) {
+    throw new TypeError(`createStore().set() received an invalid path: "${path}"`);
+  }
+
+  return segments;
+};
+
+const resolveSetterArgs = (
+  args: readonly unknown[]
+): { path: StorePathSegment[]; value: unknown } => {
+  if (args.length === 1) {
+    return { path: [], value: args[0] };
+  }
+
+  const [first] = args;
+
+  // 两个参数且首参为字符串时按点路径解析：`set('user.name', 'Grace')`。
+  // 三个及以上参数保持分段路径语义：`set('user', 'name', 'Grace')`。
+  if (args.length === 2 && typeof first === 'string') {
+    return {
+      path: parseStorePathString(first),
+      value: args[1],
+    };
+  }
+
+  return {
+    path: args.slice(0, -1) as StorePathSegment[],
+    value: args[args.length - 1],
+  };
+};
+
 export const createStore = <T extends object>(
   initialValue: T,
   scheduler: Scheduler = defaultScheduler
-): [T, StoreSetter<T>] => {
+): Store<T> => {
   const signal = createSignal<T>(initialValue, scheduler);
   const runtime: StoreRuntime<T> = {
     source: signal,
     versionSignals: new Map(),
     pathCache: new Map(),
     scheduler,
+    set: undefined as unknown as StoreSetter<T>,
+    peek: () => signal.peek(),
   };
   const store = createStoreProxy<T>(runtime);
 
   const setStore = ((...args: unknown[]) => {
-    if (args.length === 1) {
-      const next = signal.set(args[0] as T | ((previous: T) => T));
-      // 整体替换会影响所有路径，因此按根路径通知。
-      notifyPathMutation(runtime, []);
-      return next;
-    }
-
-    const path = args.slice(0, -1) as StorePathSegment[];
-    const nextValue = args[args.length - 1] as unknown;
-
-    const next = signal.set((previous) => applyPathUpdate(previous, path, nextValue) as T);
+    const { path, value } = resolveSetterArgs(args);
+    const next =
+      path.length === 0
+        ? signal.set(value as StoreUpdater<T>)
+        : signal.set((previous) => applyPathUpdate(previous, path, value) as T);
     notifyPathMutation(runtime, path);
     return next;
   }) as StoreSetter<T>;
 
-  return [store, setStore];
+  runtime.set = setStore;
+
+  return store as Store<T>;
 };
 
 const cloneForProduce = <T>(value: T): T => {
@@ -294,18 +363,18 @@ const cloneForProduce = <T>(value: T): T => {
  * 以可变写法更新 store。
  *
  * ```ts
- * const [state, setState] = createStore({ list: [] as number[] });
- * produce(setState, (draft) => { draft.list.push(1); });
+ * const state = createStore({ list: [] as number[] });
+ * produce(state, (draft) => { draft.list.push(1); });
  * ```
  *
  * 只有在数据可被 `structuredClone` 时才是真正的深拷贝；含函数/类实例时退回浅拷贝，
- * 此时请优先使用 `setState('path.to.value', next)` 的路径写法。
+ * 此时请优先使用 `state.set('path.to.value', next)` 的路径写法。
  */
 export const produce = <T extends object>(
-  setStore: StoreSetter<T>,
+  store: Store<T>,
   recipe: (draft: T) => void
 ): T => {
-  return setStore((previous) => {
+  return store.set((previous) => {
     const draft = cloneForProduce(previous);
     recipe(draft);
     return draft;

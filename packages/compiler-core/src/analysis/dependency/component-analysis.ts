@@ -81,44 +81,16 @@ export const analyzeComponentDependencies = (
   };
 
   const collectStoreBindingNames = (): Set<string> => {
-    const tupleNames = new Set<string>();
-    component.setupBindings.forEach((binding) => {
-      if (binding.kind === 'field' && binding.initializer && isCreateStoreCall(binding.initializer)) {
-        // 先记下 `createStore(...)` 返回 tuple 的临时字段名。
-        tupleNames.add(binding.name);
-      }
-    });
-
     const storeNames = new Set<string>();
     component.setupBindings.forEach((binding) => {
       if (binding.kind !== 'field' || !binding.initializer) {
         return;
       }
 
-      let parsed = parseExpressionNode(binding.initializer);
-      while (ts.isParenthesizedExpression(parsed)) {
-        parsed = parsed.expression;
+      // `const store = createStore(...)` 直接把返回句柄提升为组件字段。
+      if (isCreateStoreCall(binding.initializer)) {
+        storeNames.add(binding.name);
       }
-
-      if (!ts.isElementAccessExpression(parsed)) {
-        return;
-      }
-
-      const base = parsed.expression;
-      const arg = parsed.argumentExpression;
-      if (
-        !arg ||
-        !ts.isNumericLiteral(arg) ||
-        arg.text !== '0' ||
-        !ts.isPropertyAccessExpression(base) ||
-        base.expression.kind !== ts.SyntaxKind.ThisKeyword ||
-        !tupleNames.has(base.name.text)
-      ) {
-        return;
-      }
-
-      // 识别 `const foo = this.__setup_tuple_x[0]` 这种 store 实际绑定名。
-      storeNames.add(binding.name);
     });
 
     return storeNames;

@@ -61,7 +61,7 @@ export default defineComponent(function Card(props: CardProps) {
 
 ```ts
 // 不必要
-const [state, setState] = createStore({ count: 0, visible: true });
+const state = createStore({ count: 0, visible: true });
 
 // 更直接
 const count = createSignal(0);
