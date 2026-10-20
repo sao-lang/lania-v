@@ -134,7 +134,8 @@ const content = html`<strong>${title()}</strong>`;
 | `onKeyDown` | DOM `keydown` | 全部模式 |
 | `onToggle`（组件标签上） | 组件事件 `toggle` | 全部模式 |
 | `on:close`（组件标签上） | 组件事件 `close` | 仅 `directive-extended` |
-| `onClick.stop` | DOM `click` + `stop` 修饰符 | 仅 `directive-extended` |
+| `onClick.stop` | DOM `click` + `stop` 修饰符 | 全部模式 |
+| `click.stop` | 小写事件名 + 修饰符 | 仅 `directive-extended` |
 
 ::: warning 组件标签上的 `onXxx` 是事件，不是普通 prop
 编译器会把组件标签上的 `onXxx` 一律当作组件事件（子组件通过 `emit()` 派发）。
@@ -175,17 +176,39 @@ const content = html`<strong>${title()}</strong>`;
 | --- | --- |
 | `stop` | `event.stopPropagation()` |
 | `prevent` | `event.preventDefault()` |
+| `prevent.self` | 仅当 `event.target === event.currentTarget` 时 `preventDefault()` |
+| `prevent.immediate` | `preventDefault()` + `stopImmediatePropagation()` |
 | `self` | 仅当 `event.target === event.currentTarget` 时执行 |
 | `enter` | 仅键盘 `Enter` 时执行，只对键盘事件有效 |
+| `immediate` | `event.stopImmediatePropagation()`，同一节点后续监听不再执行 |
+| `passive` | 提示性标记；真正生效需写入 `listener: { passive: true }` |
+| `left` / `middle` / `right` | 仅对应鼠标键触发时执行 |
 | `key:escape` | 仅当 `event.key` 匹配时执行 |
 | `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下时执行 |
+| `debounce` / `throttle` | 把处理器包进定时器，见下方“提示性修饰符” |
 
 补充规则：
 
 - `enter`、`key:*`、`system:*` 只能用于键盘事件（`keydown` / `keyup` / `keypress`），其他元素上会报编译错误；
-- 键盘事件上写任意普通词等价于 `key:<词>`，例如 `keydown.escape` → `key:escape`；
+- 键盘事件上写任意普通词等价于 `key:<词>`，例如 `keydown.escape` → `key:escape`；但 `once`、`immediate`、`passive`、`left`/`middle`/`right` 等保留词保持原义；
 - 多个修饰符按声明顺序执行，任一过滤条件不满足就直接短路，后面的修饰符与 handler 都不会执行；
-- `once` / `capture` / `passive` 属于原生监听选项，不是修饰符，需要写在 `listener` 里。
+- `once` / `capture` / `passive` 属于原生监听选项，写在 `listener` 里（后缀写法 `onClick.once` 会被自动降级成 listener 选项）。
+
+### 提示性修饰符
+
+`debounce` / `throttle` 需要额外监听，编译器会把它们降级成运行时的 `withEventHint()`，也可以自己包：
+
+```tsx
+<input onInput.debounce={search} />                 {/* directive-extended */}
+<input onInput={{ handler: search, modifiers: { debounce: true } }} />
+
+// 等价的手写形式
+import { withEventHint } from '@lania-v/runtime';
+
+<input onInput={withEventHint(search, 'debounce', [], { debounceMs: 200 })} />
+```
+
+后两种写法在编译期都会拆成“处理器 + 提示”，不会出现双层包装。
 
 ### 原生监听选项
 

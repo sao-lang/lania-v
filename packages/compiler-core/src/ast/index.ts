@@ -161,6 +161,8 @@ export interface EventNode {
   expression: string;
   modifiers: string[];
   listener?: EventListenerOptionsNode;
+  /** 需要额外监听的提示性修饰符（`debounce` / `throttle`）。 */
+  hints?: string[];
   component: boolean;
 }
 

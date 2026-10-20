@@ -299,12 +299,20 @@ type ModelBinding<T> = ModelTargetBinding<T> | ModelSourceBinding<T>;
 | `trim` | 去掉字符串首尾空白 |
 | `number` | `Number(value)` |
 | `lazy` | 使用 `change` 事件而不是 `input` |
+| `checked` | 等价于 `prop: 'checked'`，同样监听 `change` |
+| `boolean` | 复选框场景：把 `checked` 读成 `true` / `false` 写回状态 |
+| `empty` | 空字符串写回 `undefined`，便于区分“未填写”和“填了空串” |
+| `debounce` | 回写前等待用户停止输入，延迟时间见 `debounceMs`（默认 16ms） |
 
 ```tsx
 <input model={{ target: draft, modifiers: { trim: true } }} />
 <input model={{ target: age, modifiers: { number: true } }} />
 <input model={{ target: name, modifiers: { lazy: true } }} />
+<input type="checkbox" model={{ target: ready, modifiers: { checked: true } }} />
+<input model={{ target: keyword, modifiers: { debounce: true, debounceMs: 200 } }} />
 ```
+
+`debounce` 只在回写侧生效：输入停止 `debounceMs` 后才写入目标 signal，元素本身仍保持实时输入。
 
 ### 初始值写入
 

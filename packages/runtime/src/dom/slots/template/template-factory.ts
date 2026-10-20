@@ -22,7 +22,7 @@ import {
   resolveSlotAnchor,
   resolveTextSlotNode,
 } from '../../../render/dom';
-import { withEventModifiers, type EventModifier } from '../../../component/events';
+import { withEventHint, withEventModifiers, type EventModifier } from '../../../component/events';
 import type { ModelModifier } from '../../directives';
 import {
   AttrSlot,
@@ -195,13 +195,14 @@ const commitBindingValue = (
 ): void => {
   if (binding.kind === 'event') {
     // 事件绑定先包一层 modifier 适配，再把最终 handler 写入 EventSlot。
+    const modifiers = (binding.modifiers ?? []) as readonly EventModifier[];
+    const hint = binding.hints?.[0];
     const handler =
-      typeof nextValue === 'function'
-        ? withEventModifiers(
-            nextValue as (event: Event) => unknown,
-            (binding.modifiers ?? []) as readonly EventModifier[]
-          )
-        : null;
+      typeof nextValue !== 'function'
+        ? null
+        : hint
+          ? withEventHint(nextValue as (event: Event) => unknown, hint, modifiers)
+          : withEventModifiers(nextValue as (event: Event) => unknown, modifiers);
     slot.write(handler);
     return;
   }

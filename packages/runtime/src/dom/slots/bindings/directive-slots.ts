@@ -23,6 +23,8 @@ import {
   type ModelBinding,
   type ModelModifier,
   normalizeModelValue,
+  parseModelDebounceModifier,
+  readModelDebounceMs,
   readModelModifiers,
   resolveDirective,
 } from '../../directives';
@@ -41,6 +43,8 @@ export interface DynamicEventBinding {
     capture?: boolean;
     passive?: boolean;
   };
+  /** 提示性修饰符（`debounce` / `throttle`），运行时据此额外包装处理器。 */
+  hints?: readonly string[];
 }
 
 export interface DynamicDirectiveBinding {
@@ -269,6 +273,7 @@ export class ModelBindingSlot implements Slot<unknown> {
   private currentModelProp: string | null = null;
   private currentModelModifiers: readonly ModelModifier[] = [];
   private currentModelHandler: EventListener | null = null;
+  private currentModelDebounceMs: number | undefined;
 
   constructor(
     public readonly node: HTMLElement,
@@ -332,18 +337,19 @@ export class ModelBindingSlot implements Slot<unknown> {
     set: (next: unknown) => unknown;
     prop: string;
     modifiers: readonly ModelModifier[];
+    debounceMs?: number;
     eventName: string;
   } | null {
     // 兼容 signal 直接作为 model 值传入的简写形式。
     if (typeof value === 'function' && 'set' in value) {
       const signal = value as (() => unknown) & { set(next: unknown): unknown };
-      const eventName =
-        this.name === 'checked' || this.modifiers.includes('lazy') ? 'change' : 'input';
+      const eventName = this.resolveEventName(this.name, this.modifiers);
       return {
         get: signal,
         set: signal.set,
         prop: this.name,
         modifiers: this.modifiers,
+        debounceMs: parseModelDebounceModifier(this.modifiers),
         eventName,
       };
     }
@@ -357,8 +363,9 @@ export class ModelBindingSlot implements Slot<unknown> {
     const modifiers = readModelModifiers(binding);
     // 运行时修饰符优先读 binding 自带配置；没有时再回退到编译期静态 modifiers。
     const mergedModifiers = modifiers.length > 0 ? modifiers : [...this.modifiers];
-    // eventName 与最终 prop 绑定在一起推导，确保 checked/lazy 两类特殊场景共用同一规则。
-    const eventName = prop === 'checked' || mergedModifiers.includes('lazy') ? 'change' : 'input';
+    // 运行时没显式配置时，回退到编译期静态的 `debounceMs`。
+    const debounceMs = readModelDebounceMs(binding) ?? parseModelDebounceModifier(mergedModifiers);
+    const eventName = this.resolveEventName(prop, mergedModifiers);
 
     if ('target' in binding && typeof binding.target === 'function' && 'set' in binding.target) {
       return {
@@ -366,6 +373,7 @@ export class ModelBindingSlot implements Slot<unknown> {
         set: binding.target.set,
         prop,
         modifiers: mergedModifiers,
+        debounceMs,
         eventName,
       };
     }
@@ -381,6 +389,7 @@ export class ModelBindingSlot implements Slot<unknown> {
         set: binding.source.set,
         prop,
         modifiers: mergedModifiers,
+        debounceMs,
         eventName,
       };
     }
@@ -388,15 +397,22 @@ export class ModelBindingSlot implements Slot<unknown> {
     return null;
   }
 
+  /** 由最终 prop 与修饰符推导监听事件：`checked` / `lazy` 用 `change`，其余用 `input`。 */
+  private resolveEventName(prop: string, modifiers: readonly ModelModifier[]): string {
+    return prop === 'checked' || modifiers.includes('lazy') ? 'change' : 'input';
+  }
+
   private getModelEventHandler(binding: {
     set: (next: unknown) => unknown;
     prop: string;
     modifiers: readonly ModelModifier[];
+    debounceMs?: number;
   }): EventListener {
     if (
       this.currentModelHandler &&
       this.currentModelSetter === binding.set &&
       this.currentModelProp === binding.prop &&
+      this.currentModelDebounceMs === binding.debounceMs &&
       sameModelModifiers(this.currentModelModifiers, binding.modifiers)
     ) {
       return this.currentModelHandler;
@@ -405,10 +421,12 @@ export class ModelBindingSlot implements Slot<unknown> {
     this.currentModelSetter = binding.set;
     this.currentModelProp = binding.prop;
     this.currentModelModifiers = binding.modifiers;
+    this.currentModelDebounceMs = binding.debounceMs;
     this.currentModelHandler = createModelEventHandler(
       { set: binding.set },
       binding.modifiers,
-      binding.prop
+      binding.prop,
+      { debounceMs: binding.debounceMs }
     );
     return this.currentModelHandler;
   }

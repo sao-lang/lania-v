@@ -31,7 +31,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "npm run build && changeset publish",
-    "release:dry": "npm run build && changeset publish --dry-run"
+    "release:dry": "npm run build && changeset publish --dry-run",
+    "compile:preview": "node scripts/compile-preview.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",

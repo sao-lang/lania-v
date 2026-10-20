@@ -678,6 +678,12 @@ ${indent(updater.expression, 1)}
     .concat(
       interactiveSlots.map((slot) => {
         if (slot.type === 'event') {
+          if (slot.eventEntries && slot.eventEntries.length > 0) {
+            // 提示性修饰符（`.debounce` / `.throttle`）需要独立监听，这里按条目逐条包装。
+            const hint = slot.eventEntries[0]!;
+            return `slot${slot.slotIndex}.write(withEventHint(${slot.expression}, ${JSON.stringify(hint)}, ${JSON.stringify(slot.modifiers ?? [])}));`;
+          }
+
           // 事件处理器在编译期已拆出修饰符，这里重新包装成运行时可执行 listener。
           return `slot${slot.slotIndex}.write(withEventModifiers(${slot.expression}, ${JSON.stringify(slot.modifiers ?? [])}));`;
         }

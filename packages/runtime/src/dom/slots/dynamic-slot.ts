@@ -18,7 +18,7 @@ import {
   TransitionGroup,
   Virtual as VirtualComponent,
 } from '../../component/enhanced-components';
-import { withEventModifiers } from '../../component/events';
+import { withEventHint, withEventModifiers } from '../../component/events';
 import {
   createGroupState,
   getTransitionGroupState,
@@ -313,7 +313,8 @@ class DynamicElementBindingController {
     const eventBindings = readDynamicEvents(props);
     const nextEventKeys = new Set<string>();
     eventBindings.forEach((binding, bindingIndex) => {
-      const key = `${binding.name}:${binding.modifiers.join('.')}:${JSON.stringify(binding.listener ?? {})}`;
+      const hints = binding.hints ?? [];
+      const key = `${binding.name}:${binding.modifiers.join('.')}:${hints.join('.')}:${JSON.stringify(binding.listener ?? {})}`;
       nextEventKeys.add(key);
       let slot = this.eventSlots.get(key);
       if (!slot) {
@@ -327,9 +328,15 @@ class DynamicElementBindingController {
       }
 
       const handler =
-        typeof binding.handler === 'function'
-          ? withEventModifiers(binding.handler as (event: Event) => unknown, binding.modifiers)
-          : null;
+        typeof binding.handler !== 'function'
+          ? null
+          : hints.length > 0
+            ? withEventHint(
+                binding.handler as (event: Event) => unknown,
+                hints[0]!,
+                binding.modifiers
+              )
+            : withEventModifiers(binding.handler as (event: Event) => unknown, binding.modifiers);
       slot.write(handler);
     });
     this.eventSlots.forEach((slot, key) => {

@@ -105,12 +105,39 @@ const normalizeJsxOpeningTag = (source: string): string => {
     if (isIdentifierStart(char)) {
       let cursor = index + 1;
 
-      while (cursor < source.length && isIdentifierPart(source[cursor])) {
+      while (cursor < source.length && /[A-Za-z0-9_:\-]/.test(source[cursor])) {
         cursor += 1;
       }
 
-      const token = source.slice(index, cursor);
-      let lookahead = cursor;
+      // 修饰符后缀（`.`）在这里一并纳入 token，避免 `onClick.stop` 被截成 `onClick` + `stop`。
+      const baseToken = source.slice(index, cursor);
+      // 只处理 React 风格事件名，`model:` / `bind:` 等指令名本身允许点号后缀，不能牵连。
+      const isReactStyleEvent = /^on[A-Z]/.test(baseToken);
+      // 修饰符后缀（`.`）在这里一并纳入 token，避免 `onClick.stop` 被截成 `onClick` + `stop`。
+      if (isReactStyleEvent && source[cursor] === '.') {
+        let modifierCursor = cursor;
+
+        while (modifierCursor < source.length && /[A-Za-z0-9_:\-.]/.test(source[modifierCursor])) {
+          modifierCursor += 1;
+        }
+
+        // HTML event 属性名必须是小写，这里拆成 `onclick__LANIA_DOT__stop` 交给解析器还原。
+        result += escapeBindingNameForTsxParser(
+          `${baseToken.slice(0, 2)}${baseToken.slice(2)}${source.slice(cursor, modifierCursor)}`
+        );
+        index = modifierCursor;
+        continue;
+      }
+
+      // 指令名允许 `model:value.trim` 这种点号后缀，整体纳入 token 后再统一转义。
+      let tokenCursor = cursor;
+
+      while (tokenCursor < source.length && /[A-Za-z0-9_:\-.]/.test(source[tokenCursor])) {
+        tokenCursor += 1;
+      }
+
+      const token = source.slice(index, tokenCursor);
+      let lookahead = tokenCursor;
 
       while (lookahead < source.length && /\s/.test(source[lookahead])) {
         lookahead += 1;
@@ -120,8 +147,8 @@ const normalizeJsxOpeningTag = (source: string): string => {
       result +=
         lookahead < source.length && source[lookahead] === '=' && token.includes('.')
           ? escapeBindingNameForTsxParser(token)
-          : token;
-      index = cursor;
+          : baseToken;
+      index = token.includes('.') ? tokenCursor : cursor;
       continue;
     }
 

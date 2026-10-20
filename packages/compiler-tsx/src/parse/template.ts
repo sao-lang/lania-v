@@ -290,6 +290,159 @@ const KEYBOARD_EVENT_NAMES = new Set(['keydown', 'keyup', 'keypress']);
 const EVENT_LISTENER_MODIFIERS = new Set(['once', 'capture', 'passive']);
 const EVENT_SYSTEM_MODIFIERS = new Set(['ctrl', 'shift', 'alt', 'meta']);
 
+/**
+ * `prevent` 的语义扩展：`prevent.self` / `prevent.immediate` 只在指定条件满足时调用
+ * `preventDefault()`，这样既保留原有 `prevent` 行为，又能表达“仅自己触发”“仅当前监听链”
+ * 这类常见诉求，同时避免把它们误当成键盘键位修饰符。
+ */
+const PREVENT_SCOPES = new Set(['self', 'immediate']);
+
+const EVENT_MOUSE_BUTTONS = new Set(['left', 'middle', 'right']);
+
+/** 需要额外监听才能实现的提示性修饰符，生成阶段会拆成多个事件槽位。 */
+const EVENT_HINT_MODIFIERS = new Set(['debounce', 'throttle']);
+
+interface EventModifierLowering {
+  modifiers: string[];
+  listener?: EventNode['listener'];
+  preventScopes: string[];
+  hints: string[];
+}
+
+/**
+ * 事件表达式本身也可能携带 `withEventHint(fn, 'debounce')` 包装。
+ * 这里把它拆成“原始处理器 + 提示名”，保证模板 slot 与动态组件两条路径行为一致。
+ */
+const prepareEventSource = (source: string): { source: string; hints: string[] } => {
+  const hints: string[] = [];
+  const hintPattern = /\bwithEventHint\(\s*([\s\S]*?),\s*'([^']+)'\s*\)/g;
+
+  const prepared = source.replace(hintPattern, (match, handler: string, hint: string) => {
+    if (!EVENT_HINT_MODIFIERS.has(hint) || hints.includes(hint)) {
+      return match;
+    }
+
+    hints.push(hint);
+    return handler.trim();
+  });
+
+  return { source: hints.length > 0 ? prepared : source, hints };
+};
+
+const mergeHints = (
+  left: readonly string[] | undefined,
+  right: readonly string[]
+): string[] | undefined => {
+  const merged = [...(left ?? [])];
+
+  right.forEach((hint) => {
+    if (!merged.includes(hint)) {
+      merged.push(hint);
+    }
+  });
+
+  return merged.length > 0 ? merged : undefined;
+};
+
+// 把 `once` / `capture` / `passive` 拆到 listener 选项，其余归入模板修饰符。
+const lowerEventModifiers = (
+  modifiers: readonly string[],
+  eventName: string,
+  tagName: string,
+  expression: string
+): EventModifierLowering => {
+  const normalized: string[] = [];
+  const listener: NonNullable<EventNode['listener']> = {};
+  const preventScopes: string[] = [];
+  // `debounce` / `throttle` 既可以写在事件名后缀，也可以包装在处理器表达式里，两者统一收敛。
+  const prepared = prepareEventSource(expression);
+  const hints: string[] = [...prepared.hints];
+  let previousWasPrevent = false;
+
+  modifiers.forEach((modifier) => {
+    const lowerModifier = modifier.toLowerCase();
+    const isPreventScope = previousWasPrevent && PREVENT_SCOPES.has(lowerModifier);
+    previousWasPrevent = lowerModifier === 'prevent';
+
+    // `once` / `capture` / `passive` 既可以写在修饰符里，也可以写成 listener 选项。
+    const isListenerModifier =
+      EVENT_LISTENER_MODIFIERS.has(lowerModifier) ||
+      (lowerModifier.startsWith('listener:') &&
+        EVENT_LISTENER_MODIFIERS.has(lowerModifier.slice('listener:'.length)));
+
+    if (!isPreventScope && isListenerModifier) {
+      const listenerName = lowerModifier.startsWith('listener:')
+        ? lowerModifier.slice('listener:'.length)
+        : lowerModifier;
+      listener[listenerName as 'once' | 'capture' | 'passive'] = true;
+      return;
+    }
+
+    // `.debounce` / `.throttle` 需要额外监听，交由生成阶段拆分。
+    if (!isPreventScope && EVENT_HINT_MODIFIERS.has(lowerModifier)) {
+      hints.push(lowerModifier);
+      return;
+    }
+
+    if (!isPreventScope && EVENT_SYSTEM_MODIFIERS.has(lowerModifier)) {
+      normalized.push(`system:${lowerModifier}`);
+      return;
+    }
+
+    // `left` / `middle` / `right` 是鼠标键过滤，不能被键盘键位规则改写。
+    if (!isPreventScope && EVENT_MOUSE_BUTTONS.has(lowerModifier)) {
+      normalized.push(`button:${lowerModifier}`);
+      return;
+    }
+
+    if (
+      !isPreventScope &&
+      KEYBOARD_EVENT_NAMES.has(eventName) &&
+      !EVENT_RESERVED_MODIFIERS.has(lowerModifier) &&
+      !lowerModifier.startsWith('key:') &&
+      !lowerModifier.startsWith('system:') &&
+      !lowerModifier.startsWith('button:')
+    ) {
+      normalized.push(`key:${lowerModifier}`);
+      return;
+    }
+
+    if (isPreventScope) {
+      preventScopes.push(lowerModifier);
+      return;
+    }
+
+    normalized.push(lowerModifier);
+  });
+
+  const usesKeyboardModifiers = normalized.some(
+    (modifier) => modifier === 'enter' || modifier.startsWith('key:') || modifier.startsWith('system:')
+  );
+
+  if (usesKeyboardModifiers && !KEYBOARD_EVENT_NAMES.has(eventName)) {
+    throw createTemplateParseError(tagName, `on${eventName}`, 'keyboard modifiers are only valid on keyboard events.');
+  }
+
+  return {
+    modifiers: normalized,
+    listener: Object.keys(listener).length > 0 ? listener : undefined,
+    preventScopes,
+    hints,
+  };
+};
+
+const EVENT_RESERVED_MODIFIERS = new Set([
+  'stop',
+  'prevent',
+  'self',
+  'enter',
+  'immediate',
+  'passive',
+  'left',
+  'middle',
+  'right',
+]);
+
 // `style` / `use` / `model` 三类对象糖衣都在模板解析阶段展开，避免把语法分歧传到下游 IR。
 // `style={{ width: size, height.px: n }}` 会在这里拆成多个 style 指令，便于后续统一序列化。
 const collectStyleObjectDirectives = (
@@ -535,7 +688,7 @@ const collectEventObjectBinding = (
   sourceFile: ts.SourceFile,
   tagName: string,
   component: boolean
-): Pick<EventNode, 'expression' | 'modifiers' | 'listener'> => {
+): Pick<EventNode, 'expression' | 'modifiers' | 'listener' | 'hints'> => {
   // 事件对象语法是“标准 TSX 补齐模板能力”的入口，因此先把形状约束卡死再往下解包。
   assertStaticObjectLiteralShape(expression, tagName, `on${eventName}`);
 
@@ -569,6 +722,45 @@ const collectEventObjectBinding = (
     pushBooleanModifier('prevent');
     pushBooleanModifier('self');
 
+    // 提示性修饰符在对象写法里也支持，与后缀写法等价。
+    (['debounce', 'throttle', 'immediate', 'passive'] as const).forEach((name) => {
+      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+        modifiers.push(name);
+      }
+    });
+
+    // 对象写法的布尔项也必须走与后缀写法相同的降级通道，
+    // 否则 `enter` / `system` / `button` 这类修饰符在 IR 里会丢失键位语义。
+    (
+      [
+        ['enter', 'key:enter'],
+        ['immediate', 'immediate'],
+        ['passive', 'passive'],
+      ] as const
+    ).forEach(([name, modifier]) => {
+      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+        modifiers.push(modifier);
+      }
+    });
+
+    // 鼠标键与 prevent 作用域都支持直接写成布尔项，与后缀写法一一对应。
+    (['left', 'middle', 'right'] as const).forEach((name) => {
+      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+        modifiers.push(`button:${name}`);
+      }
+    });
+
+    (
+      [
+        ['preventSelf', 'prevent.self'],
+        ['preventImmediate', 'prevent.immediate'],
+      ] as const
+    ).forEach(([name, modifier]) => {
+      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+        modifiers.push(...modifier.split('.'));
+      }
+    });
+
     const keys = readStringArrayLiteral(
       readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, 'keys'))
     );
@@ -597,18 +789,6 @@ const collectEventObjectBinding = (
     }
   }
 
-  const usesKeyboardModifiers = modifiers.some(
-    (modifier) => modifier.startsWith('key:') || modifier.startsWith('system:')
-  );
-
-  if (!component && usesKeyboardModifiers && !KEYBOARD_EVENT_NAMES.has(eventName)) {
-    throw createTemplateParseError(tagName, `on${eventName}`, 'keyboard modifiers are only valid on keyboard events.');
-  }
-
-  if (component && modifiers.length > 0) {
-    throw createTemplateParseError(tagName, `on${eventName}`, 'component events only support `listener` options.');
-  }
-
   const listenerExpression = readObjectPropertyExpression(
     getObjectLiteralProperty(expression, 'listener')
   );
@@ -631,10 +811,20 @@ const collectEventObjectBinding = (
     listener = Object.keys(nextListener).length > 0 ? nextListener : undefined;
   }
 
+  // 对象写法最终统一成后缀修饰符序列，校验与降级只保留一份实现。
+  const normalized = normalizeEventBindingMetadata(
+    eventName,
+    modifiers,
+    tagName,
+    component,
+    handlerExpression.getText(sourceFile)
+  );
+
   return {
     expression: handlerExpression.getText(sourceFile),
-    modifiers,
-    listener,
+    modifiers: normalized.modifiers,
+    listener: normalized.listener ?? listener,
+    hints: normalized.hints,
   };
 };
 
@@ -673,6 +863,7 @@ const collectModelObjectDirective = (
     getObjectLiteralProperty(expression, 'modifiers')
   );
   const modifiers: string[] = [];
+
   if (modifiersExpression) {
     if (!ts.isObjectLiteralExpression(modifiersExpression)) {
       throw createTemplateParseError(tagName, 'model', '`modifiers` must be an object literal.');
@@ -680,17 +871,40 @@ const collectModelObjectDirective = (
 
     assertStaticObjectLiteralShape(modifiersExpression, tagName, 'model');
 
-    (['trim', 'number', 'lazy'] as const).forEach((name) => {
+    const modifierNames = [
+      'trim',
+      'number',
+      'lazy',
+      'checked',
+      'boolean',
+      'empty',
+      'debounce',
+    ] as const;
+
+    modifierNames.forEach((name) => {
       if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
         modifiers.push(name);
       }
     });
+
+    // `debounceMs` 不是布尔开关，单独读取数值字面量。
+    const debounceMsExpression = readObjectPropertyExpression(
+      getObjectLiteralProperty(modifiersExpression, 'debounceMs')
+    );
+    const debounceMs = debounceMsExpression ? Number(debounceMsExpression.getText(sourceFile)) : NaN;
+
+    if (debounceMsExpression && Number.isFinite(debounceMs)) {
+      modifiers.push(`debounceMs:${debounceMs}`);
+    }
   }
+
+  // 布尔语义的复选框修饰符直接推导出 prop，避免用户同时写 `prop` 与 `checked`。
+  const resolvedProp = prop === 'value' && modifiers.includes('checked') ? 'checked' : prop;
 
   return {
     type: 'DirectiveNode',
     kind: 'model',
-    name: prop,
+    name: resolvedProp,
     expression: expression.getText(sourceFile),
     modifiers,
   };
@@ -701,53 +915,31 @@ const normalizeEventBindingMetadata = (
   eventName: string,
   modifiers: readonly string[],
   tagName: string,
-  component: boolean
-): Pick<EventNode, 'modifiers' | 'listener'> => {
-  const normalizedModifiers: string[] = [];
-  const listener: NonNullable<EventNode['listener']> = {};
-
-  modifiers.forEach((modifier) => {
-    const lowerModifier = modifier.toLowerCase();
-
-    // 监听器选项与模板级修饰符进入不同桶，避免下游同时解析两套语义。
-    if (EVENT_LISTENER_MODIFIERS.has(lowerModifier)) {
-      listener[lowerModifier as 'once' | 'capture' | 'passive'] = true;
-      return;
-    }
-
-    if (EVENT_SYSTEM_MODIFIERS.has(lowerModifier)) {
-      normalizedModifiers.push(`system:${lowerModifier}`);
-      return;
-    }
-
-    if (
-      KEYBOARD_EVENT_NAMES.has(eventName) &&
-      !['stop', 'prevent', 'self', 'enter'].includes(lowerModifier) &&
-      !lowerModifier.startsWith('key:') &&
-      !lowerModifier.startsWith('system:')
-    ) {
-      normalizedModifiers.push(`key:${lowerModifier}`);
-      return;
-    }
-
-    normalizedModifiers.push(lowerModifier);
-  });
-
-  const usesKeyboardModifiers = normalizedModifiers.some(
-    (modifier) => modifier === 'enter' || modifier.startsWith('key:') || modifier.startsWith('system:')
-  );
-
-  if (!component && usesKeyboardModifiers && !KEYBOARD_EVENT_NAMES.has(eventName)) {
-    throw createTemplateParseError(tagName, `on${eventName}`, 'keyboard modifiers are only valid on keyboard events.');
-  }
-
-  if (component && normalizedModifiers.length > 0) {
+  component: boolean,
+  expression: string
+): Pick<EventNode, 'modifiers' | 'listener' | 'hints' | 'expression'> => {
+  if (component && modifiers.length > 0) {
     throw createTemplateParseError(tagName, `on${eventName}`, 'component events only support `listener` options.');
   }
 
+  const lowered = lowerEventModifiers(modifiers, eventName, tagName, expression);
+
+  // `prevent.self` / `prevent.immediate` 在 IR 里统一归一为 `prevent:<scope>`，
+  // 避免运行时再从修饰符序列里回溯“它前面是不是 prevent”。
+  const normalizedModifiers: string[] = [];
+  lowered.modifiers.forEach((modifier) => {
+    normalizedModifiers.push(modifier);
+
+    if (modifier === 'prevent') {
+      lowered.preventScopes.forEach((scope) => normalizedModifiers.push(`prevent:${scope}`));
+    }
+  });
+
   return {
     modifiers: normalizedModifiers,
-    listener: Object.keys(listener).length > 0 ? listener : undefined,
+    listener: lowered.listener,
+    hints: lowered.hints.length > 0 ? lowered.hints : undefined,
+    expression: prepareEventSource(expression).source,
   };
 };
 
@@ -829,12 +1021,16 @@ const parseJsxAttributes = (
             analysis.kind === 'component-event'
           );
 
+          // `handler: withEventHint(fn, 'debounce')` 这类包装写法在编译期拆回“处理器 + 提示”。
+          const hinted = prepareEventSource(normalizedEvent.expression);
+
           eventNodes.push({
             type: 'EventNode',
             name: analysis.bindingName,
-            expression: normalizedEvent.expression,
+            expression: hinted.source,
             modifiers: normalizedEvent.modifiers,
             listener: normalizedEvent.listener,
+            hints: mergeHints(normalizedEvent.hints, hinted.hints),
             component: analysis.kind === 'component-event',
           });
           return;
@@ -844,19 +1040,20 @@ const parseJsxAttributes = (
           analysis.bindingName,
           analysis.modifiers,
           tagName,
-          analysis.kind === 'component-event'
+          analysis.kind === 'component-event',
+          expressionText
         );
 
         eventNodes.push({
           type: 'EventNode',
           name: analysis.bindingName,
-          expression: expressionText,
+          expression: normalizedEvent.expression,
           modifiers: normalizedEvent.modifiers,
           listener: normalizedEvent.listener,
+          hints: normalizedEvent.hints,
           component: analysis.kind === 'component-event',
         });
         return;
-
       case 'if-directive':
       case 'bind-directive':
       case 'model-directive':

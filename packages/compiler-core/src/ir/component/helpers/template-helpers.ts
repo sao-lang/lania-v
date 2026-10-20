@@ -392,6 +392,7 @@ export const lowerEvent = (event: EventNode, path: number[]) => {
     expression: event.expression,
     modifiers: event.modifiers,
     listener: event.listener,
+    hints: event.hints,
     component: event.component,
     path,
   };

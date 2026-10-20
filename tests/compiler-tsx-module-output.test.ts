@@ -179,4 +179,42 @@ export default defineComponent(function ComputedParityHost() {
     // 即使 computed 以调用形态出现，updater 仍要订阅到叶子 signal。
     expect(moduleCode).toContain('.deps.add(this.count);');
   });
+
+  it('lowers extended event modifiers into listener options and runtime modifiers', () => {
+    const moduleCode = compileFunctionComponentTsxToModule(
+      'Modifiers.lania.tsx',
+      `
+import { defineComponent, withEventHint } from '@lania-v/runtime';
+
+export default defineComponent(function ModifiersHost() {
+  const save = () => {};
+  return (
+    <div>
+      <button onClick.once.stop={save}>a</button>
+      <button onClick.prevent.self={save}>b</button>
+      <button onClick={{ handler: save, modifiers: { preventImmediate: true, left: true } }}>c</button>
+      <button onClick={{ handler: withEventHint(save, 'debounce'), modifiers: { prevent: true } }}>d</button>
+      <input onInput.debounce={save} />
+    </div>
+  );
+});
+`,
+      {},
+      'jsx-standard'
+    );
+
+    // `.once` 属于原生监听选项，不能当作模板修饰符执行。
+    expect(moduleCode).toContain('new EventSlot(slot0Node, "click", 0, {"once":true})');
+    expect(moduleCode).toContain('withEventModifiers(this.save, ["stop"])');
+    expect(moduleCode).toContain('withEventModifiers(this.save, ["prevent","prevent:self"])');
+    expect(moduleCode).toContain(
+      'withEventModifiers(this.save, ["button:left","prevent","prevent:immediate"])'
+    );
+    // `withEventHint` 在编译期被拆成“处理器 + 提示”，避免同一处理器被包装两层。
+    expect(moduleCode).toContain('withEventHint(this.save, "debounce", ["prevent"])');
+    expect(moduleCode).not.toContain("withEventHint(this.save, 'debounce')");
+    // 后缀 `.debounce` 走同一条提示通道。
+    expect(moduleCode).toContain('new EventSlot(slot4Node, "input", 4, undefined)');
+    expect(moduleCode).toContain('withEventHint(this.save, "debounce", [])');
+  });
 });

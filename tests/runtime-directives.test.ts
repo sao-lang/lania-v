@@ -128,6 +128,65 @@ describe('runtime directives', () => {
     expect(signal()).toBe(42);
   });
 
+  it('supports empty, boolean and debounce model modifiers', () => {
+    vi.useFakeTimers();
+    try {
+      const emptyTarget = createSignal<string | undefined>('seed');
+      const emptyHandler = createModelEventHandler(emptyTarget, ['empty']);
+      const input = document.createElement('input');
+      input.value = '   ';
+      emptyHandler({ target: input } as Event);
+      expect(emptyTarget()).toBe('   ');
+
+      const trimmed = createSignal<string | undefined>('seed');
+      createModelEventHandler(trimmed, ['trim', 'empty'])({ target: input } as Event);
+      expect(trimmed()).toBeUndefined();
+
+      const checkboxState = createSignal<boolean | string>('');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = true;
+      createModelEventHandler(checkboxState, ['boolean'], 'checked')({ target: checkbox } as Event);
+      expect(checkboxState()).toBe(true);
+
+      const debounced = createSignal('');
+      const debouncedHandler = createModelEventHandler(debounced, ['debounce'], 'value', {
+        debounceMs: 30,
+      });
+      input.value = 'first';
+      debouncedHandler({ target: input } as Event);
+      input.value = 'second';
+      debouncedHandler({ target: input } as Event);
+
+      expect(debounced()).toBe('');
+      vi.advanceTimersByTime(30);
+      expect(debounced()).toBe('second');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('applies debounceMs from the static model modifiers', () => {
+    vi.useFakeTimers();
+    try {
+      const target = createSignal('');
+      const input = document.createElement('input');
+      const slot = new ModelBindingSlot(input, 'value', 0, ['debounce', 'debounceMs:120']);
+
+      slot.write({ source: { get: () => '', set: target.set } });
+      input.value = 'typed';
+      input.dispatchEvent(new Event('input'));
+
+      vi.advanceTimersByTime(119);
+      expect(target()).toBe('');
+      vi.advanceTimersByTime(1);
+      expect(target()).toBe('typed');
+      slot.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('supports object-style model bindings with source/get/set and lazy modifier', () => {
     let current = ' 42 ';
     const setValue = vi.fn((value: unknown) => {

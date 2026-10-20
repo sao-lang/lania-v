@@ -917,8 +917,16 @@ type EventModifier =
   | 'prevent'
   | 'self'
   | 'enter'
+  | 'passive'
+  | 'immediate'
+  | 'left'
+  | 'middle'
+  | 'right'
+  | 'prevent:self'
+  | 'prevent:immediate'
   | `key:${string}`
   | `system:${'ctrl' | 'shift' | 'alt' | 'meta'}`
+  | `button:${'left' | 'middle' | 'right'}`
   | (string & {});
 ```
 
@@ -926,19 +934,25 @@ type EventModifier =
 | --- | --- |
 | `stop` | `event.stopPropagation()` |
 | `prevent` | `event.preventDefault()` |
+| `prevent:self` | `event.target === event.currentTarget` 时才 `preventDefault()` |
+| `prevent:immediate` | `preventDefault()` + `stopImmediatePropagation()` |
 | `self` | `event.target === event.currentTarget` 时才继续 |
+| `immediate` | `event.stopImmediatePropagation()` |
 | `enter` | 键盘 `Enter` 时才继续（仅键盘事件） |
+| `passive` | 提示性标记，真正生效需走 `listener` |
+| `button:left` / `button:middle` / `button:right` | 鼠标键匹配时才继续 |
 | `key:<name>` | `event.key` 匹配时才继续（仅键盘事件） |
 | `system:ctrl` / `shift` / `alt` / `meta` | 对应系统键按下时才继续 |
 
 规则：
 
 - `enter` / `key:*` / `system:*` 只允许出现在 `keydown` / `keyup` / `keypress` 上，否则编译报错；
-- 键盘事件上的普通词会被规范化为 `key:<词>`（`keydown.escape` → `key:escape`）；
-- 执行顺序：先做 `key:*` / `system:*` 过滤，
-  再执行 `stop` / `prevent` / `self` / `enter`，最后调用用户 handler；
+- 键盘事件上的普通词会被规范化为 `key:<词>`（`keydown.escape` → `key:escape`），
+  但 `once` / `immediate` / `passive` / `left` / `middle` / `right` 等保留词保持原义；
+- 执行顺序：先做 `key:*` / `system:*` / `button:*` / `self` 过滤，
+  再执行 `stop` / `prevent` / `prevent:self` / `prevent:immediate` / `immediate`，最后调用用户 handler；
 - 任一过滤失败即短路；
-- `once` / `capture` / `passive` 不是修饰符，属于原生监听选项，写在 `listener` 里；
+- `once` / `capture` / `passive` 属于原生监听选项，写在 `listener` 里（后缀 `onClick.once` 会被降级为 listener 选项）；
 - 组件事件只接受 `listener`，写了 `modifiers` 会编译报错。
 
 ### `withEventModifiers()`
@@ -950,6 +964,21 @@ withEventModifiers(handler, modifiers)
 ```ts
 const handler = withEventModifiers(submit, ['stop', 'prevent']);
 ```
+
+### `withEventHint()`
+
+`debounce` / `throttle` 这类提示性修饰符需要额外监听，运行时通过 `withEventHint()` 包装：
+
+```ts
+withEventHint(handler, 'debounce', modifiers?, { debounceMs?: number, throttleMs?: number })
+```
+
+```ts
+const search = withEventHint(runSearch, 'debounce', [], { debounceMs: 200 });
+```
+
+编译期遇到 `onInput.debounce` 或 `handler: withEventHint(fn, 'debounce')` 会拆成“处理器 + 提示”，
+不会产生双层包装。
 
 ### 事件委托
 

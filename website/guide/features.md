@@ -63,7 +63,7 @@
 | `style` | 字符串、对象、CSS 变量 | [模板与绑定](/guide/templates#style) |
 | 原始 HTML | `html={htmlString()}` | [模板与绑定](/guide/templates#原始-html) |
 | 事件 | `onClick={fn}`、`onClick={ { handler, modifiers } }` | [模板与绑定](/guide/templates#事件) |
-| 事件修饰符 | `stop` / `prevent` / `self` / `enter` / `key:*` / `system:*` | [模板与绑定](/guide/templates#对象写法与修饰符) |
+| 事件修饰符 | `stop` / `prevent` / `self` / `immediate` / `passive` / `left`·`middle`·`right` / `key:*` / `system:*` | [模板与绑定](/guide/templates#对象写法与修饰符) |
 | 事件委托 | `enableEventDelegation(root)` | [模板与绑定](/guide/templates#事件委托) |
 | 双向绑定 | `model={ { target, prop, modifiers } }` | [模板与绑定](/guide/templates#双向绑定-model) |
 | 元素引用 | `ref={ref}`、函数 ref | [模板与绑定](/guide/templates#ref) |

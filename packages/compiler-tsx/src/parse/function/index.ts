@@ -294,9 +294,10 @@ export const parseFunctionComponentTsx = (
   }
 
   // 先预处理扩展绑定语法，再交给 TypeScript 构建 AST。
+  // 标准 TSX 模式下 `onClick.once` 这类写法同样需要转义点号，只是过滤器在解析后再做语法校验。
   const sourceFile = parseTypeScriptSource(
     fileName,
-    mode === 'directive-extended' ? preprocessTsxBindingSyntax(fileName, source) : source
+    preprocessTsxBindingSyntax(fileName, source)
   );
   const functionComponents = findFunctionComponents(sourceFile);
   const entryIndex = Math.max(

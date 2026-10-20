@@ -285,6 +285,17 @@ export interface EventIR {
   component: boolean;
   path: number[];
   slotIndex?: number;
+  /** 需要额外监听的提示性修饰符（`debounce` / `throttle`）。 */
+  hints?: string[];
+  /**
+   * 单个事件声明展开出的多条回调时（如 `.debounce` / `.throttle` 需要包装额外监听），
+   * 这里记录每条附加回调对应的提示名；为空表示只生成一条 listener。
+   */
+  entries?: EventEntryIR[];
+}
+
+export interface EventEntryIR {
+  hints: string[];
 }
 
 export interface DirectiveIR {

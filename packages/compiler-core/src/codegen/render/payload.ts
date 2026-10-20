@@ -170,10 +170,17 @@ export const renderChildPayloadBindings = (nodes: readonly TemplateIRNode[]): st
             (attribute) =>
               `{ kind: "attr", slotIndex: -1, path: [${attribute.path.join(', ')}], name: ${JSON.stringify(attribute.name)}, evaluate: () => (${attribute.expression}) }`
           ),
-          ...node.events.map(
-            (event) =>
-              `{ kind: "event", slotIndex: -1, path: [${event.path.join(', ')}], name: ${JSON.stringify(event.name)}, modifiers: ${JSON.stringify(event.modifiers)}${event.listener ? `, listener: ${JSON.stringify(event.listener)}` : ''}, evaluate: () => (${event.expression}) }`
-          ),
+          ...node.events.flatMap((event) => {
+            const base = `{ kind: "event", slotIndex: -1, path: [${event.path.join(', ')}], name: ${JSON.stringify(event.name)}, modifiers: ${JSON.stringify(event.modifiers)}${event.listener ? `, listener: ${JSON.stringify(event.listener)}` : ''}`;
+
+            // 提示性修饰符需要独立监听，因此额外生成一条只携带 hints 的绑定描述。
+            return (event.hints ?? []).length > 0
+              ? [
+                  `${base}, evaluate: () => (${event.expression}) }`,
+                  `{ kind: "event", slotIndex: -1, path: [${event.path.join(', ')}], name: ${JSON.stringify(event.name)}, modifiers: [], hints: ${JSON.stringify(event.hints)}, evaluate: () => (${event.expression}) }`,
+                ]
+              : [`${base}, evaluate: () => (${event.expression}) }`];
+          }),
           ...node.directives.flatMap((directive) => {
             if (directive.kind === 'bind') {
               return [

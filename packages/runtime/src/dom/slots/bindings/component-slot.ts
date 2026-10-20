@@ -3,7 +3,7 @@
  *
  * 组件 slot 会延迟创建宿主元素，并把事件/指令绑定拆成可复用的子 slot。
  */
-import { withEventModifiers } from '../../../component/events';
+import { withEventHint, withEventModifiers } from '../../../component/events';
 import {
   createComponentElement,
   isComponentElementConstructor,
@@ -104,7 +104,8 @@ export class ComponentSlot<
 
     const nextEventKeys = new Set<string>();
     eventBindings.forEach((binding, bindingIndex) => {
-      const key = `${binding.name}:${binding.modifiers.join('.')}:${JSON.stringify(binding.listener ?? {})}`;
+      const hints = binding.hints ?? [];
+      const key = `${binding.name}:${binding.modifiers.join('.')}:${hints.join('.')}:${JSON.stringify(binding.listener ?? {})}`;
       nextEventKeys.add(key);
       let slot = this.eventSlots.get(key);
 
@@ -119,9 +120,15 @@ export class ComponentSlot<
       }
 
       const handler =
-        typeof binding.handler === 'function'
-          ? withEventModifiers(binding.handler as (event: Event) => unknown, binding.modifiers)
-          : null;
+        typeof binding.handler !== 'function'
+          ? null
+          : hints.length > 0
+            ? withEventHint(
+                binding.handler as (event: Event) => unknown,
+                hints[0]!,
+                binding.modifiers
+              )
+            : withEventModifiers(binding.handler as (event: Event) => unknown, binding.modifiers);
       slot.write(handler);
     });
 

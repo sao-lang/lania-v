@@ -59,6 +59,8 @@ export type TemplateBindingPayload = {
     capture?: boolean;
     passive?: boolean;
   };
+  /** 提示性修饰符（`debounce` / `throttle`），需要额外监听才能生效。 */
+  hints?: readonly string[];
   template?: StaticTemplate;
   fallbackTemplate?: StaticTemplate;
   directiveKind?: 'bind' | 'model' | 'html' | 'class' | 'style' | 'use' | 'ref' | 'unknown' | 'if';

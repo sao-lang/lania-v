@@ -205,11 +205,17 @@ export const analyzeTsxBindingName = (
 
   if (/^on[A-Z]/.test(sourceName)) {
     // React 风格 `onClick` 需要在这里继续区分成 DOM 事件还是组件事件。
-    const eventName = sourceName.slice(2);
+    // 同时允许 `onClick.stop.prevent` 这类后缀修饰符，先把它们从名字里拆出来。
+    const descriptor = sourceName.slice(2);
+    const [eventNamePart, ...trailingModifiers] = descriptor.split('.');
+    const eventName = eventNamePart ?? '';
     const componentEventName = eventName.length > 0
       ? eventName[0]!.toLowerCase() + eventName.slice(1)
       : eventName;
     const domEventName = eventName.toLowerCase();
+    const modifiers = trailingModifiers
+      .filter((modifier) => modifier.length > 0)
+      .map((modifier) => modifier.toLowerCase() as EventModifier);
 
     // 标准 JSX 的 `onXxx` 在原生标签和组件标签上的含义不同，这里做一次分流。
     if (intrinsicElement) {
@@ -217,7 +223,16 @@ export const analyzeTsxBindingName = (
         kind: 'dom-event',
         sourceName,
         bindingName: domEventName,
-        modifiers: [],
+        modifiers,
+      };
+    }
+    // 已经带修饰符时也没有退化成普通事件名的余地，保持组件事件语义。
+    if (modifiers.length > 0) {
+      return {
+        kind: 'component-event',
+        sourceName,
+        bindingName: componentEventName,
+        modifiers,
       };
     }
 
@@ -225,7 +240,7 @@ export const analyzeTsxBindingName = (
       kind: DOM_EVENT_NAMES.has(domEventName) ? 'dom-event' : 'component-event',
       sourceName,
       bindingName: DOM_EVENT_NAMES.has(domEventName) ? domEventName : componentEventName,
-      modifiers: [],
+      modifiers,
     };
   }
 

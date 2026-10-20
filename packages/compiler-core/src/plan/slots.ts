@@ -61,6 +61,8 @@ export interface AllocatedSlotIR {
   };
   unit?: string;
   componentEvent?: boolean;
+  /** 同一条事件声明拆分出的附加回调（`.debounce` / `.throttle` 等），为空表示单条监听。 */
+  eventEntries?: string[];
 }
 
 export interface SlotAllocationIR {
@@ -172,9 +174,14 @@ const allocateDirectiveSlot = (
 const allocateEventSlot = (
   event: EventIR,
   element: ElementIR,
-  slotIndex: number
+  slotIndex: number,
+  entryIndex = 0
 ): AllocatedSlotIR => {
-  event.slotIndex = slotIndex;
+  const hint = event.hints?.[entryIndex];
+
+  if (entryIndex === 0) {
+    event.slotIndex = slotIndex;
+  }
 
   return {
     slotIndex,
@@ -183,9 +190,14 @@ const allocateEventSlot = (
     name: event.name,
     eventName: event.name,
     expression: event.expression,
-    updater: `attachEvent_${getPathToken(element.path)}_${event.name}`,
-    modifiers: event.modifiers,
-    listener: event.listener,
+    updater:
+      entryIndex === 0
+        ? `attachEvent_${getPathToken(element.path)}_${event.name}`
+        : `attachEvent_${getPathToken(element.path)}_${event.name}_${entryIndex}`,
+    // 附加监听只负责提示包装，过滤类修饰符仍由首个 slot 承担，避免副作用重复执行。
+    modifiers: entryIndex === 0 ? event.modifiers : [],
+    listener: entryIndex === 0 ? event.listener : undefined,
+    eventEntries: hint ? [hint] : undefined,
     componentEvent: event.component,
   };
 };
@@ -315,8 +327,13 @@ const allocateTemplateSlots = (
 
     node.events.forEach((event) => {
       // 事件 slot 也放在线性表里，便于 codegen 统一按 slot 索引恢复 listener。
-      allocated.push(allocateEventSlot(event, node, nextSlotIndexRef.value));
-      nextSlotIndexRef.value += 1;
+      // 一个事件声明可能展开成多条监听（如 `.debounce` / `.throttle`），逐条独立编号。
+      const entryCount = Math.max(1, event.hints?.length ?? 1);
+
+      for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
+        allocated.push(allocateEventSlot(event, node, nextSlotIndexRef.value, entryIndex));
+        nextSlotIndexRef.value += 1;
+      }
     });
 
     node.directives.forEach((directive) => {

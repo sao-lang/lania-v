@@ -16,8 +16,16 @@ export type EventModifier =
   | 'prevent'
   | 'self'
   | 'enter'
+  | 'passive'
+  | 'immediate'
+  | 'left'
+  | 'middle'
+  | 'right'
+  | 'prevent:self'
+  | 'prevent:immediate'
   | `key:${string}`
   | `system:${'ctrl' | 'shift' | 'alt' | 'meta'}`
+  | `button:${'left' | 'middle' | 'right'}`
   | (string & {});
 
 export interface ParsedEventBindingName {
@@ -76,6 +84,18 @@ export const DOM_EVENT_NAMES = new Set([
 
 const KEYBOARD_EVENT_NAMES = new Set(['keydown', 'keyup', 'keypress']);
 const EVENT_SYSTEM_MODIFIERS = new Set(['ctrl', 'shift', 'alt', 'meta']);
+const EVENT_MOUSE_BUTTONS = new Set(['left', 'middle', 'right']);
+// 这些修饰符带副作用或需要引擎额外支持，不能按键盘键位兜底解析。
+const EVENT_RESERVED_MODIFIERS = new Set([
+  'stop',
+  'prevent',
+  'self',
+  'enter',
+  'passive',
+  'immediate',
+  'once',
+  'capture',
+]);
 const isPotentialDomEventName = (name: string): boolean => {
   return /^[a-z][a-z0-9:-]*$/.test(name);
 };
@@ -91,11 +111,16 @@ const normalizeParsedEventModifiers = (
       return `system:${lowerModifier}` as EventModifier;
     }
 
+    if (EVENT_MOUSE_BUTTONS.has(lowerModifier)) {
+      return `button:${lowerModifier}` as EventModifier;
+    }
+
     if (
       KEYBOARD_EVENT_NAMES.has(eventName) &&
-      !['stop', 'prevent', 'self', 'enter'].includes(lowerModifier) &&
+      !EVENT_RESERVED_MODIFIERS.has(lowerModifier) &&
       !lowerModifier.startsWith('key:') &&
-      !lowerModifier.startsWith('system:')
+      !lowerModifier.startsWith('system:') &&
+      !lowerModifier.startsWith('button:')
     ) {
       return `key:${lowerModifier}` as EventModifier;
     }
@@ -299,12 +324,36 @@ export const EVENT_MODIFIER_HANDLERS: Record<string, EventModifierHandler> = {
     event.preventDefault();
     return true;
   },
+  'prevent:self'(event) {
+    // 只在“事件由当前节点自己触发”时阻止默认行为，避免父节点绑定影响子节点。
+    if (event.target === event.currentTarget) {
+      event.preventDefault();
+    }
+    return true;
+  },
+  'prevent:immediate'(event) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return true;
+  },
   self(event) {
     return event.target === event.currentTarget;
   },
   enter(event) {
     return isKeyboardEvent(event) ? event.key === 'Enter' : false;
   },
+  immediate(event) {
+    event.stopImmediatePropagation();
+    return true;
+  },
+  passive() {
+    // passive 只是提示性标记：真正的监听选项由 EventSlot 透传给 addEventListener。
+    return true;
+  },
+};
+
+const isMouseEventLike = (event: Event): boolean => {
+  return 'button' in event;
 };
 
 const matchesKeyModifier = (event: Event, modifier: EventModifier): boolean => {
@@ -324,6 +373,46 @@ const matchesSystemModifier = (event: Event, modifier: EventModifier): boolean =
 
   const key = `${modifier.slice('system:'.length)}Key`;
   return Boolean((event as unknown as Record<string, unknown>)[key]);
+};
+
+const MOUSE_BUTTON_INDEX: Record<string, number> = {
+  left: 0,
+  middle: 1,
+  right: 2,
+};
+
+const matchesButtonModifier = (event: Event, modifier: EventModifier): boolean => {
+  if (!modifier.startsWith('button:')) {
+    return true;
+  }
+
+  const expected = MOUSE_BUTTON_INDEX[modifier.slice('button:'.length)];
+  if (expected === undefined || !isMouseEventLike(event)) {
+    return true;
+  }
+
+  return (event as MouseEvent).button === expected;
+};
+
+/**
+ * 过滤型修饰符统一在真正执行副作用前判定，任一不满足就短路后续修饰符与 handler。
+ * `enter` 保留原有“匹配时放行、不匹配时拦截”的行为，因此单独处理。
+ */
+const matchesEventFilter = (event: Event, modifier: EventModifier): boolean => {
+  if (modifier === 'self') {
+    return event.target === event.currentTarget;
+  }
+
+  if (modifier === 'enter') {
+    // `enter` 不以 `key:` 前缀出现，需要单独映射到键位过滤，否则对象写法会丢失拦截语义。
+    return matchesKeyModifier(event, 'key:enter');
+  }
+
+  return (
+    matchesKeyModifier(event, modifier) &&
+    matchesSystemModifier(event, modifier) &&
+    matchesButtonModifier(event, modifier)
+  );
 };
 
 export const parseEventBindingName = (
@@ -367,8 +456,8 @@ export const withEventModifiers = <TEvent extends Event = Event>(
   return (event: TEvent) => {
     for (const modifier of modifiers) {
       // 过滤型修饰符先跑，命中失败就不再触发后续副作用型修饰符与用户 handler。
-      // 键盘键位和系统键先作为过滤条件；不匹配时直接短路。
-      if (!matchesKeyModifier(event, modifier) || !matchesSystemModifier(event, modifier)) {
+      // 键盘键位、系统键、鼠标键都先作为过滤条件；不匹配时直接短路。
+      if (!matchesEventFilter(event, modifier)) {
         return;
       }
 
@@ -386,5 +475,85 @@ export const withEventModifiers = <TEvent extends Event = Event>(
     }
 
     handler(event);
+  };
+};
+
+export type EventHint = 'debounce' | 'throttle' | (string & {});
+
+export interface EventHintOptions {
+  debounceMs?: number;
+  throttleMs?: number;
+}
+
+const DEFAULT_EVENT_HINT_MS = 16;
+
+const readEventHintDelay = (
+  hint: EventHint,
+  options?: EventHintOptions
+): number => {
+  if (hint === 'debounce') {
+    return options?.debounceMs ?? DEFAULT_EVENT_HINT_MS;
+  }
+
+  return options?.throttleMs ?? DEFAULT_EVENT_HINT_MS;
+};
+
+/**
+ * 把 `.debounce` / `.throttle` 等“提示性修饰符”落成运行时处理器。
+ * 编译期只负责识别并把这些修饰符从过滤链中摘出，真正的包装逻辑集中在这里。
+ *
+ * 每次调度都会包一层 `withEventModifiers`，确保过滤型修饰符继续生效；
+ * 同名的交互因合并到同一个排队任务而只触发最后一次（debounce）。
+ */
+export const withEventHint = <TEvent extends Event = Event>(
+  handler: ((event: TEvent) => unknown) | null | undefined,
+  hint: EventHint,
+  modifiers: readonly EventModifier[] = [],
+  options?: EventHintOptions
+): ((event: TEvent) => void) | null => {
+  if (!handler) {
+    return null;
+  }
+
+  const delay = readEventHintDelay(hint, options);
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastEvent: TEvent | null = null;
+
+  const invoke = (event: TEvent): void => {
+    withEventModifiers(handler, modifiers)?.(event);
+  };
+
+  const flush = (): void => {
+    timer = null;
+    const pending = lastEvent;
+    lastEvent = null;
+
+    if (pending) {
+      invoke(pending);
+    }
+  };
+
+  const schedule = (): void => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+
+    timer = setTimeout(flush, delay);
+  };
+
+  return (event: TEvent) => {
+    lastEvent = event;
+
+    if (hint === 'throttle') {
+      // 节流窗口内只保留最新一次事件，窗口结束时补发。
+      if (!timer) {
+        invoke(event);
+        lastEvent = null;
+        schedule();
+      }
+      return;
+    }
+
+    schedule();
   };
 };

@@ -132,6 +132,8 @@ const TSX_RUNTIME_BINDINGS = [
   'ssrSerializeAttribute',
   'createModelEventHandler',
   'withEventModifiers',
+  'withEventHint',
+  'createKeyedEventHandlers',
 ] as const;
 
 // 少量高级追踪 API 只在生成代码真正引用到时才会从 advanced 入口解构出来。

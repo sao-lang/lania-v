@@ -329,10 +329,14 @@ export const buildRuntimePropsExpression = (
       ? `{
   "__lania_events": [
     ${child.events
-      .map(
-        (event) =>
-          `{ name: ${JSON.stringify(event.name)}, handler: ${event.expression}, modifiers: ${JSON.stringify(event.modifiers)}${event.listener ? `, listener: ${JSON.stringify(event.listener)}` : ''} }`
-      )
+      .flatMap((event) => {
+        const base = `{ name: ${JSON.stringify(event.name)}, handler: ${event.expression}, modifiers: ${JSON.stringify(event.modifiers)}${event.listener ? `, listener: ${JSON.stringify(event.listener)}` : ''} }`;
+
+        // 提示性修饰符需要独立监听，这里展开成多条动态事件绑定。
+        return (event.hints ?? []).length > 0
+          ? [base, `{ name: ${JSON.stringify(event.name)}, handler: ${event.expression}, modifiers: [], hints: ${JSON.stringify(event.hints)} }`]
+          : [base];
+      })
       .join(', ')}
   ]
 }`

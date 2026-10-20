@@ -83,3 +83,32 @@ export default defineComponent(function FormField() {
     ).toThrowError(/useFormValue/);
   });
 });
+
+describe('compiler object-style event modifiers', () => {
+  const compileEvent = (attributes: string): string =>
+    compile(`
+import { defineComponent } from '@lania-v/runtime';
+
+export default defineComponent(function EventField() {
+  const submit = () => undefined;
+  return <input ${attributes} />;
+});
+`);
+
+  it('lower keyboard modifiers in object-style event bindings', () => {
+    const moduleCode = compileEvent(
+      "onKeyDown={{ handler: submit, modifiers: { enter: true } }}"
+    );
+
+    // 对象写法必须与 `onKeyDown.enter` 一样降到 `key:*`，否则运行时收不到修饰符。
+    expect(moduleCode).toContain('withEventModifiers(this.submit, ["key:enter"])');
+  });
+
+  it('lower system modifiers in object-style event bindings', () => {
+    const moduleCode = compileEvent(
+      "onKeyDown={{ handler: submit, modifiers: { system: { ctrl: true }, prevent: true } }}"
+    );
+
+    expect(moduleCode).toContain('"prevent","system:ctrl"');
+  });
+});
