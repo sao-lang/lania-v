@@ -33,7 +33,7 @@ import {
 import { renderTransition } from '../../component/transition/host';
 import type { LeaveFinalizeHost } from '../../component/transition/registry';
 import { renderGroup } from '../../component/transition/group-registry';
-import { collectRenderableNodes } from '../../component/enhanced-components/utils/renderable';
+import { collectRenderableNodes } from '../../component/renderable';
 import type { TransitionPayload } from '@lania-v/shared';
 import { acquireSlotNodeBuffer, releaseSlotNodeBuffer } from '../slot-pool';
 import {

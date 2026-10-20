@@ -55,18 +55,18 @@ interface ComponentIR {
 
 模板部分会被转成一组结构节点：
 
-| 节点 | 含义 |
-| --- | --- |
-| `ElementIR` | 普通元素、静态属性、动态属性、事件、指令 |
-| `TextIR` | 静态文本 |
-| `ExpressionIR` | 动态文本插值 |
-| `IfIR` | 条件分支 |
-| `ListIR` | 列表 |
-| `DynamicIR` | 动态组件 / 插槽 / `Await` / `Virtual` |
-| `TeleportIR` | Teleport |
-| `KeepAliveIR` | KeepAlive |
-| `TransitionIR` | Transition / TransitionGroup |
-| `BoundaryIR` | Suspense / ErrorBoundary / LazyLoad |
+| 节点           | 含义                                     |
+| -------------- | ---------------------------------------- |
+| `ElementIR`    | 普通元素、静态属性、动态属性、事件、指令 |
+| `TextIR`       | 静态文本                                 |
+| `ExpressionIR` | 动态文本插值                             |
+| `IfIR`         | 条件分支                                 |
+| `ListIR`       | 列表                                     |
+| `DynamicIR`    | 动态组件 / 插槽 / `Await` / `Virtual`    |
+| `TeleportIR`   | Teleport                                 |
+| `KeepAliveIR`  | KeepAlive                                |
+| `TransitionIR` | Transition / TransitionGroup             |
+| `BoundaryIR`   | Suspense / ErrorBoundary / LazyLoad      |
 
 ## 3. 依赖分析
 
@@ -79,13 +79,13 @@ interface ComponentIR {
 
 依赖分析的产物会进入 `renderPlan.signalBindingMap` 与 `renderPlan.storeBindingMap`。
 
-对于 Store 路径，编译器只保留**可静态命名**的部分。遇到动态下标会截断到最后一个静态前缀：
+对于状态路径，编译器只保留**可静态命名**的部分。遇到动态下标会截断到最后一个静态前缀：
 
 ```ts
-const state = createStore({ list: [{ name: 'a' }] });
+const state = createAtom({ list: [{ name: 'a' }] }, { key: 'state' });
 
-state.list[0].name;   // 可稳定分析的路径
-state.list[index].name; // 动态下标，截断到 list
+state.value.list[0].name; // 可稳定分析的路径
+state.value.list[index].name; // 动态下标，截断到 list
 ```
 
 ## 4. Slot 分配
@@ -108,21 +108,21 @@ interface SlotAllocationIR {
 
 常见的 Slot 类型：
 
-| 类型 | 写入目标 |
-| --- | --- |
-| `text` | 文本节点 |
-| `attribute` / `property` | 元素属性 |
-| `class` / `style` | class / style 字符串 |
-| `event` | 事件监听 |
-| `ref` | ref 写入 |
-| `if` | 条件块 |
-| `for` | 列表块 |
-| `component` | 组件属性 |
-| `dynamic` | 动态组件 |
-| `boundary` | 异步边界 |
-| `teleport` | Teleport |
-| `keepalive` | 缓存块 |
-| `directive` | 自定义指令 |
+| 类型                     | 写入目标             |
+| ------------------------ | -------------------- |
+| `text`                   | 文本节点             |
+| `attribute` / `property` | 元素属性             |
+| `class` / `style`        | class / style 字符串 |
+| `event`                  | 事件监听             |
+| `ref`                    | ref 写入             |
+| `if`                     | 条件块               |
+| `for`                    | 列表块               |
+| `component`              | 组件属性             |
+| `dynamic`                | 动态组件             |
+| `boundary`               | 异步边界             |
+| `teleport`               | Teleport             |
+| `keepalive`              | 缓存块               |
+| `directive`              | 自定义指令           |
 
 ## 5. Updater 规划
 
@@ -182,7 +182,9 @@ interface ComponentRenderPlanIR {
 ```tsx
 const Counter = defineComponent(function Counter() {
   const count = createSignal(0);
-  return <button onClick={() => count.set((v) => v + 1)}>count: {count()}</button>;
+  return (
+    <button onClick={() => count.set((v) => v + 1)}>count: {count()}</button>
+  );
 });
 ```
 

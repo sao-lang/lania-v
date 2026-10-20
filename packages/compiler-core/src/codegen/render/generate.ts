@@ -94,7 +94,7 @@ export const generateRenderCode = ({
     ctor: 'SimpleUpdater' | 'ConditionUpdater' = 'SimpleUpdater',
     autoRegister = false
   ): string => {
-    // updater 依赖既可能直接来自 signal，也可能来自 store path signal，这里统一展开。
+    // updater 依赖既可能直接来自 signal，也可能来自 store 路径；这里统一展开。
     const dependencyLines = dependencies.flatMap((dependency) => {
       const direct = signalBindingMap[dependency];
       if (typeof direct === 'string') {
@@ -103,7 +103,7 @@ export const generateRenderCode = ({
 
       const store = storeBindingMap[dependency];
       if (typeof store === 'string') {
-        return [`${updaterName}.deps.add(getStorePathSignal(${store}));`];
+        return [`${updaterName}.deps.add(getAtomDependency(${store}));`];
       }
 
       return [];
@@ -634,7 +634,7 @@ ${indent(updater.expression, 1)}
 
         const store = storeBindingMap[dependency];
         if (typeof store === 'string') {
-          return [`${updater.name}.deps.add(getStorePathSignal(${store}));`];
+          return [`${updater.name}.deps.add(getAtomDependency(${store}));`];
         }
 
         return [];

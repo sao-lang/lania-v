@@ -60,7 +60,7 @@ export const createEmptyDependencyAnalysis = (): DependencyAnalysisIR => {
 export const analyzeComponentDependencies = (
   component: ComponentIR
 ): DependencyAnalysisIR => {
-  const isCreateStoreCall = (expression: string): boolean => {
+  const isStoreLikeCall = (expression: string): boolean => {
     try {
       // 这里显式剥掉包裹括号，兼容 `(createStore(...))` 之类的写法。
       let parsed = parseExpressionNode(expression);
@@ -71,6 +71,8 @@ export const analyzeComponentDependencies = (
         return false;
       }
       const callee = parsed.expression;
+      // `createStore()` 已迁出 runtime，这里只保留对旧产物的兼容识别；
+      // 新的原子状态由 `@lania/store` 的 `createAtom` 提供，编译器把它当信号处理。
       return (
         (ts.isIdentifier(callee) && callee.text === 'createStore') ||
         (ts.isPropertyAccessExpression(callee) && callee.name.text === 'createStore')
@@ -88,7 +90,7 @@ export const analyzeComponentDependencies = (
       }
 
       // `const store = createStore(...)` 直接把返回句柄提升为组件字段。
-      if (isCreateStoreCall(binding.initializer)) {
+      if (isStoreLikeCall(binding.initializer)) {
         storeNames.add(binding.name);
       }
     });

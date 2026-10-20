@@ -13,17 +13,16 @@ import {
   createMemo,
   createScope,
   createSignal,
-  createStore,
   createUniqueId,
   defineComponent,
   emitDevtoolsEvent,
-  produce,
   renderToStream,
   renderToString,
   startTransition,
   tick,
   useTransition,
 } from '@lania-v/runtime';
+import { Slot } from '../packages/advanced/src/index';
 import { jsx } from '../packages/runtime/src/entry/jsx-runtime';
 import { installDevtoolsOverlay } from '../packages/runtime/src/core/devtools';
 
@@ -59,7 +58,9 @@ describe('runtime primitives', () => {
     }
 
     customElements.define('dynamic-deps-element', DynamicDepsElement);
-    const element = document.createElement('dynamic-deps-element') as DynamicDepsElement;
+    const element = document.createElement(
+      'dynamic-deps-element'
+    ) as DynamicDepsElement;
     document.body.appendChild(element);
     await flush();
     expect(element.shadowRoot?.textContent).toBe('0');
@@ -99,35 +100,6 @@ describe('runtime primitives', () => {
 
     expect(value.value).toBe(1);
     expect(pending.value).toBe(false);
-  });
-
-  it('produce applies pure updates to a store', () => {
-    const state = createStore({ list: [1, 2] });
-
-    // 回调必须是纯函数：返回下一个状态，draft 只读。
-    produce(state, (draft) => ({ ...draft, list: [...draft.list, 3] }));
-
-    expect(state.list).toEqual([1, 2, 3]);
-  });
-
-  it('produce rejects drafts that mutate state directly', () => {
-    const state = createStore({ list: [1, 2] });
-
-    expect(() =>
-      produce(state, (draft) => {
-        (draft.list as number[]).push(3);
-        return draft;
-      })
-    ).toThrowError(/read-only/);
-    expect(state.list).toEqual([1, 2]);
-  });
-
-  it('produce requires a returned state object', () => {
-    const state = createStore({ list: [1, 2] });
-
-    expect(() =>
-      produce(state, () => undefined as unknown as { list: number[] })
-    ).toThrowError(/return the next state/);
   });
 
   it('passes scoped slot args through Slot', () => {

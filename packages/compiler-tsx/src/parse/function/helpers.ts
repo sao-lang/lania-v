@@ -47,7 +47,14 @@ export const printer = ts.createPrinter({
  * 某些工厂会返回 Signal-like 可调用对象，slot/updater 需要靠这里的名单把更新器挂到
  * 正确的响应式来源上。
  */
-export const SIGNAL_FACTORIES = new Set(['createSignal', 'readonly', 'createDeferred']);
+export const SIGNAL_FACTORIES = new Set([
+  'createSignal',
+  'readonly',
+  'createDeferred',
+  // `@lania/store` 的 atom 与派生 atom 都是 Signal 形态，可直接参与模板订阅。
+  'createAtom',
+  'createDerivedAtom',
+]);
 export const COMPUTED_FACTORIES = new Set(['computed', 'createMemo']);
 export const EFFECT_FACTORIES = new Set(['effect', 'createEffect']);
 // `createRef` 声明会被改写成普通实例字段，因此不属于信号类响应式来源。

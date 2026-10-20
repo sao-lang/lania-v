@@ -1,9 +1,5 @@
-import {
-  createSignal,
-  defineComponent,
-  Each,
-  When,
-} from '@lania-v/runtime';
+import { createSignal, defineComponent } from '@lania-v/runtime';
+import { Each, When } from '@lania-v/advanced';
 import './watermark-directive';
 import type { PlaygroundWatermarkValue } from './watermark-directive';
 
@@ -79,7 +75,9 @@ export default defineComponent(function DirectiveDemo() {
           <button
             className="btn"
             onClick={() =>
-              rotate.set((value) => (value === -18 ? -32 : value === -32 ? -8 : -18))
+              rotate.set((value) =>
+                value === -18 ? -32 : value === -32 ? -8 : -18
+              )
             }
           >
             rotate: {rotate()}deg
@@ -121,16 +119,17 @@ export default defineComponent(function DirectiveDemo() {
             <p className="summary">
               registered name: <code>watermark</code>
             </p>
-            <p className="empty">
-              这个面板会被自定义指令重复铺上文字水印。
-            </p>
+            <p className="empty">这个面板会被自定义指令重复铺上文字水印。</p>
             <p className="empty">dataset.watermark = {watermarkText()}</p>
             <p className="empty">dataset.watermarkTone = {directiveTone()}</p>
             <p className="empty">dataset.watermarkRotate = {rotate()}deg</p>
           </div>
         </When>
 
-        <Each items={directiveLog()} fallback={renderEmpty('no directive logs')}>
+        <Each
+          items={directiveLog()}
+          fallback={renderEmpty('no directive logs')}
+        >
           {(line: string): any => <p className="empty">{line}</p>}
         </Each>
       </div>

@@ -73,6 +73,8 @@
 - [x] 初始化根目录 `.editorconfig`
 - [x] 初始化根目录 README 占位
 - [x] 建立 `packages/runtime`
+- [x] 建立 `packages/advanced`（增强组件从 runtime 拆出）
+- [x] 建立 `packages/store`
 - [x] 建立 `packages/compiler-core`
 - [x] 建立 `packages/compiler-tsx`
 - [x] 建立 `packages/vite-plugin`
@@ -623,8 +625,9 @@
 
 ### 14.3 数据与异步 API
 
-- [x] 支持 `createStore`
-- [x] 支持深层响应式
+- [x] 支持 `createStore`（已迁出：由 `@lania/store` 的 `createAtom` 承接）
+- [x] 新增 `packages/store`（`@lania/store`）：原子化状态、派生、动作、原子族、作用域快照与中间件
+- [x] 深层响应式
 - [x] 支持 `createResource`
 - [x] 支持 `createDeferred`
 - [x] 支持 `lazy`

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createSignal, createStore, watch } from '@lania-v/runtime';
+import { createSignal, watch } from '@lania-v/runtime';
+import { createAtom } from '@lania/store';
 
 const flush = async (times = 3): Promise<void> => {
   for (let index = 0; index < times; index += 1) {
@@ -26,11 +27,11 @@ describe('watch getter sources', () => {
   });
 
   it('subscribes to a single store path without firing on sibling fields', async () => {
-    const form = createStore({ status: 'idle', account: '' });
+    const form = createAtom({ status: 'idle', account: '' });
     const events: string[] = [];
 
     watch(
-      () => form.status,
+      () => form.value.status,
       (current) => {
         events.push(current);
       }
@@ -51,11 +52,11 @@ describe('watch getter sources', () => {
   });
 
   it('tracks a whole store object when the getter returns it', async () => {
-    const form = createStore({ status: 'idle', account: '' });
+    const form = createAtom({ status: 'idle', account: '' });
     const seen: Array<{ status: string; account: string }> = [];
 
     watch(
-      () => ({ status: form.status, account: form.account }),
+      () => ({ status: form.value.status, account: form.value.account }),
       (current) => {
         seen.push(current);
       }

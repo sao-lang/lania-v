@@ -14,31 +14,55 @@ export default defineConfig({
       {
         find: '@lania-v/runtime/jsx-dev-runtime',
         replacement: fileURLToPath(
-          new URL('../../packages/runtime/src/entry/jsx-dev-runtime.ts', import.meta.url)
+          new URL(
+            '../../packages/runtime/src/entry/jsx-dev-runtime.ts',
+            import.meta.url
+          )
         ),
       },
       {
         find: '@lania-v/runtime/jsx-runtime',
         replacement: fileURLToPath(
-          new URL('../../packages/runtime/src/entry/jsx-runtime.ts', import.meta.url)
+          new URL(
+            '../../packages/runtime/src/entry/jsx-runtime.ts',
+            import.meta.url
+          )
         ),
       },
       {
         find: '@lania-v/runtime/advanced',
         replacement: fileURLToPath(
-          new URL('../../packages/runtime/src/entry/advanced.ts', import.meta.url)
+          new URL(
+            '../../packages/runtime/src/entry/advanced.ts',
+            import.meta.url
+          )
         ),
       },
       {
         find: '@lania-v/runtime/internal',
         replacement: fileURLToPath(
-          new URL('../../packages/runtime/src/entry/internal.ts', import.meta.url)
+          new URL(
+            '../../packages/runtime/src/entry/internal.ts',
+            import.meta.url
+          )
+        ),
+      },
+      {
+        find: '@lania-v/advanced',
+        replacement: fileURLToPath(
+          new URL('../../packages/advanced/src', import.meta.url)
         ),
       },
       {
         find: '@lania-v/runtime',
         replacement: fileURLToPath(
           new URL('../../packages/runtime/src', import.meta.url)
+        ),
+      },
+      {
+        find: '@lania/store',
+        replacement: fileURLToPath(
+          new URL('../../packages/store/src', import.meta.url)
         ),
       },
     ],

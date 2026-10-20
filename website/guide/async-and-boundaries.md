@@ -251,9 +251,8 @@ import {
   createMemo,
   createResource,
   defineComponent,
-  ErrorBoundary,
-  When,
 } from '@lania-v/runtime';
+import { ErrorBoundary, When } from '@lania-v/advanced';
 
 const UserCard = defineComponent(function UserCard(props: { id: string }) {
   const id = createMemo(() => props.id);
@@ -285,6 +284,6 @@ const UserCard = defineComponent(function UserCard(props: { id: string }) {
 
 ## 下一步
 
-- [状态管理](/guide/state)：`createStore`、`produce`、`createSelector`。
+- [状态管理](/guide/state)：`createAtom`、`createDerivedAtom`、`createSelector`。
 - [SSR 与部分水合](/guide/ssr)：异步边界的服务端输出与 hydration 标记。
 - [增强组件 API](/api/enhanced-components)：完整 props 参考。

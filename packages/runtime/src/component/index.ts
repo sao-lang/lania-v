@@ -6,10 +6,12 @@
  * - 对外稳定暴露运行时组件 API，减少业务方感知内部目录拆分；
  * - 保持旧入口语义不变，即使内部实现已经迁移到 `host/`、`transition/` 等子目录。
  */
-export * from './enhanced-components';
+export * from './enhanced-marker';
 export * from './events';
 export * from './host/prop-options';
 export * from './host/reactive-element';
+export * from './renderable';
+export * from './renderable-types';
 export * from './styles';
 export type {
   BoundHandlers,
@@ -38,6 +40,7 @@ export {
   defineComponent,
   getComponentCreationProps,
   getComponentTagName,
+  getCurrentRuntimeScope,
   isComponentElementConstructor,
   lazy,
   mountComponent,
@@ -49,4 +52,5 @@ export {
   useContext,
   useFormValidity,
   useFormValue,
+  withRuntimeScope,
 } from './host/function-component';

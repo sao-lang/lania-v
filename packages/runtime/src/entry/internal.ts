@@ -37,5 +37,6 @@ export {
   withDomHost,
 } from '../component/host/function-component';
 
-// 编译器产物用它把 `store.path` 的精确订阅直接挂到 updater 的 deps 上。
-export { getStorePathSignal } from '../reactivity/store';
+// 编译器产物用它把 atom 的精确订阅直接挂到 updater 的 deps 上。
+// atom 本身就是 Signal 形态，实现位于 `@lania/store` 的内部入口。
+export { getAtomDependency } from '@lania/store/internal';

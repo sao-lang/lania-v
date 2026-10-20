@@ -39,23 +39,22 @@ export {
 export type { Slot as DomSlot, SlotFrequency, SlotType } from './dom/slots';
 export * from './dom/style-value';
 export * from './dom/updaters';
+// 增强组件构造器注册表：runtime 的动态 slot 用它解析保留字符串，
+// `@lania-v/advanced` 在加载时把真实构造器注册进来。
+export { registerEnhancedConstructor } from './dom/slots/dynamic-slot';
 export * from './reactivity/owner';
 export * from './reactivity/resource';
 export * from './reactivity/scheduler';
 export * from './reactivity/selector';
-export {
-  // `getStorePathSignal` 只供编译器产物挂接依赖，不再对外暴露：
-  // 用户侧应写 `watch(() => store.path, cb)`，语义等价且更直观。
-  createStore,
-  produce,
-  type Store,
-  type StorePathSegment,
-  type StorePathUpdater,
-  type StoreSetter,
-  type StoreUpdater,
-} from './reactivity/store';
 export * from './reactivity/transition';
 export * from './render';
+
+// 增强组件（When/Each/KeepAlive/Transition...）已拆分到 @lania-v/advanced；
+// runtime 只保留它们的公共类型契约，避免类型层断裂。
+export type {
+  EnhancedRenderable,
+  EnhancedComponentDefinition,
+} from './component/renderable-types';
 export * from './dev/hmr';
 export type {
   JsxElement,
@@ -100,7 +99,10 @@ export function watch<T, Immediate extends boolean = false>(
   options?: WatchOptions & { immediate?: Immediate },
   scheduler?: import('./reactivity/scheduler').Scheduler
 ): WatchStopHandle;
-export function watch<T extends readonly unknown[], Immediate extends boolean = false>(
+export function watch<
+  T extends readonly unknown[],
+  Immediate extends boolean = false,
+>(
   sources: { [K in keyof T]: WatchSource<T[K]> },
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },

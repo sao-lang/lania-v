@@ -12,7 +12,7 @@ import {
   createLazyBoundaryHost,
   createSuspenseBoundaryHost,
   readContextBoundaryHost,
-} from '../lifecycle/boundary-host';
+} from '@lania-v/runtime/component/lifecycle';
 import {
   ENHANCED_CONTRACT_PROTOCOL,
   ENHANCED_CONTRACT_VERSION,
@@ -23,7 +23,7 @@ import {
   executeLazyBoundary,
   executeSuspenseBoundary,
   resolveErrorBoundaryFallback,
-} from '../lifecycle/boundary-registry';
+} from '@lania-v/runtime/component/lifecycle';
 import { defineEnhancedComponent } from './utils/factory';
 import {
   asRenderable,
@@ -92,17 +92,21 @@ export const LazyLoad = defineEnhancedComponent(
     const rendered = invokeRenderable(asRenderable(props.children));
     const boundaryHost = readContextBoundaryHost();
     const renderedTarget = getRenderableElements(rendered)[0];
-    return executeLazyBoundary({
+    return executeLazyBoundary<EnhancedRenderable>({
       payload: resolveLazyPayload(props),
-      host: createLazyBoundaryHost({
+      host: createLazyBoundaryHost<EnhancedRenderable>({
         boundary: boundaryHost,
         // 外部传 target 时优先复用；否则退回到首个实际渲染元素作为可见性观测目标。
         observeInvisibleTarget: props.target ?? undefined,
         observeVisibleTarget: props.target ?? renderedTarget ?? undefined,
         observeWhileVisible: true,
-        renderChild: () => rendered,
+        renderChild: () => rendered as EnhancedRenderable,
         // LazyLoad fallback 会额外插入 sentinel，供后续可见性切换重新接管。
-        renderFallback: (sentinel) => [sentinel, invokeRenderable(props.fallback)],
+        renderFallback: (sentinel) =>
+          [
+            sentinel,
+            invokeRenderable(props.fallback),
+          ] as unknown as EnhancedRenderable,
         onVisibleChange: props.onVisibleChange,
       }),
     });
@@ -113,11 +117,12 @@ export const ErrorBoundary = defineEnhancedComponent(
   'ErrorBoundary',
   (props: ErrorBoundaryProps): EnhancedRenderable => {
     const boundaryHost = readContextBoundaryHost();
-    return executeErrorBoundary({
+    return executeErrorBoundary<EnhancedRenderable>({
       payload: resolveErrorPayload(props),
-      host: createErrorBoundaryHost({
+      host: createErrorBoundaryHost<EnhancedRenderable>({
         boundary: boundaryHost,
-        renderChild: () => invokeRenderable(asRenderable(props.children)),
+        renderChild: () =>
+          invokeRenderable(asRenderable(props.children)) as EnhancedRenderable,
         // fallback 既支持静态节点，也支持依赖 error / reset 的函数式回退内容。
         renderFallback: (error, reset) =>
           invokeRenderable(
@@ -128,7 +133,7 @@ export const ErrorBoundary = defineEnhancedComponent(
                 reset,
               })
             )
-          ),
+          ) as EnhancedRenderable,
         onError: props.onError,
         onReset: props.onReset,
       }),
@@ -140,13 +145,15 @@ export const Suspense = defineEnhancedComponent(
   'Suspense',
   (props: SuspenseProps): EnhancedRenderable => {
     const boundaryHost = readContextBoundaryHost();
-    return executeSuspenseBoundary({
+    return executeSuspenseBoundary<EnhancedRenderable>({
       payload: resolveSuspensePayload(props),
-      host: createSuspenseBoundaryHost({
+      host: createSuspenseBoundaryHost<EnhancedRenderable>({
         boundary: boundaryHost,
         // 子内容与 fallback 都在这里被标准化，保证 registry 处理的是统一 renderable 结果。
-        renderChild: () => invokeRenderable(asRenderable(props.children)),
-        renderFallback: () => invokeRenderable(props.fallback),
+        renderChild: () =>
+          invokeRenderable(asRenderable(props.children)) as EnhancedRenderable,
+        renderFallback: () =>
+          invokeRenderable(props.fallback) as EnhancedRenderable,
         onPending: props.onPending,
         onResolve: props.onResolve,
         onReject: props.onReject,

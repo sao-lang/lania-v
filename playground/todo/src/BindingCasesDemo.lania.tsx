@@ -90,7 +90,11 @@ export default defineComponent(function BindingCasesDemo() {
               model={{ target: modelWidth, modifiers: { number: true } }}
             />
             <label className="empty">
-              <input model={{ target: modelReady, prop: 'checked' }} type="checkbox" /> ready
+              <input
+                model={{ target: modelReady, prop: 'checked' }}
+                type="checkbox"
+              />{' '}
+              ready
             </label>
           </div>
           <p className="empty">
@@ -102,7 +106,8 @@ export default defineComponent(function BindingCasesDemo() {
         <div className="item">
           <p className="summary">Case 2: html</p>
           <p className="empty">
-            使用 <code>html``</code> 显式构造原始 HTML，再通过 <code>html</code> 指令写入
+            使用 <code>html``</code> 显式构造原始 HTML，再通过 <code>html</code>{' '}
+            指令写入
             <code>innerHTML</code>。
           </p>
           <div className="row">
@@ -118,7 +123,9 @@ export default defineComponent(function BindingCasesDemo() {
             <button
               className="btn"
               onClick={() =>
-                htmlTone.set((value) => (value === 'violet' ? 'emerald' : 'violet'))
+                htmlTone.set((value) =>
+                  value === 'violet' ? 'emerald' : 'violet'
+                )
               }
             >
               tone: {htmlTone()}
@@ -144,16 +151,24 @@ export default defineComponent(function BindingCasesDemo() {
             这里把字符串、数组、对象组合成一个最终 className。
           </p>
           <div className="row">
-            <button className="btn" onClick={() => classCompact.set((value) => !value)}>
+            <button
+              className="btn"
+              onClick={() => classCompact.set((value) => !value)}
+            >
               compact: {String(classCompact())}
             </button>
-            <button className="btn" onClick={() => classReady.set((value) => !value)}>
+            <button
+              className="btn"
+              onClick={() => classReady.set((value) => !value)}
+            >
               ready: {String(classReady())}
             </button>
             <button
               className="btn"
               onClick={() =>
-                classTone.set((value) => (value === 'violet' ? 'emerald' : 'violet'))
+                classTone.set((value) =>
+                  value === 'violet' ? 'emerald' : 'violet'
+                )
               }
             >
               tone: {classTone()}
@@ -171,7 +186,8 @@ export default defineComponent(function BindingCasesDemo() {
           >
             <p className="summary">class preview</p>
             <p className="empty">
-              className = ['surface-light', 'binding-case-card', `binding-case-card--tone`,
+              className = ['surface-light', 'binding-case-card',
+              `binding-case-card--tone`,
               {'{'} compact, ready {'}'}]
             </p>
           </div>
@@ -183,19 +199,26 @@ export default defineComponent(function BindingCasesDemo() {
             这里把字符串、数组、对象组合成一个最终 style 值。
           </p>
           <div className="row">
-            <button className="btn" onClick={() => styleWidth.set((value) => value + 20)}>
+            <button
+              className="btn"
+              onClick={() => styleWidth.set((value) => value + 20)}
+            >
               width +20
             </button>
             <button
               className="btn"
-              onClick={() => stylePadding.set((value) => (value === 18 ? 12 : 18))}
+              onClick={() =>
+                stylePadding.set((value) => (value === 18 ? 12 : 18))
+              }
             >
               padding: {stylePadding()}
             </button>
             <button
               className="btn"
               onClick={() =>
-                styleTone.set((value) => (value === 'violet' ? 'emerald' : 'violet'))
+                styleTone.set((value) =>
+                  value === 'violet' ? 'emerald' : 'violet'
+                )
               }
             >
               tone: {styleTone()}
@@ -204,8 +227,8 @@ export default defineComponent(function BindingCasesDemo() {
           <div className="surface-light" style={stylePreview()}>
             <p className="summary">style preview</p>
             <p className="empty">
-              style = ['margin-top: 12px;', {'{'} width: '{styleWidth()}px', padding:
-              '{stylePadding()}px' {'}'}]
+              style = ['margin-top: 12px;', {'{'} width: '{styleWidth()}px',
+              padding: '{stylePadding()}px' {'}'}]
             </p>
           </div>
         </div>

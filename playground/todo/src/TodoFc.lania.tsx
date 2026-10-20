@@ -1,15 +1,12 @@
 // @ts-nocheck
-import {
-  createMemo,
-  createSignal,
-  defineComponent,
-} from '@lania-v/runtime';
+import { createMemo, createSignal, defineComponent } from '@lania-v/runtime';
 
 import type { TodoFilter, TodoItem } from './todo-shared';
 import { createTodoId } from './todo-shared';
 
 const TodoFc = defineComponent(function TodoFc() {
-  const normalizeText = (value: string): string => value.trim().replace(/\s+/g, ' ');
+  const normalizeText = (value: string): string =>
+    value.trim().replace(/\s+/g, ' ');
 
   const todos = createSignal<TodoItem[]>([
     { id: createTodoId(), text: 'FC: return TSX', completed: false },
@@ -32,7 +29,9 @@ const TodoFc = defineComponent(function TodoFc() {
   const addTodo = () => {
     const text = normalizeText(draft());
     if (!text) return;
-    todos.set((prev) => prev.concat({ id: createTodoId(), text, completed: false }));
+    todos.set((prev) =>
+      prev.concat({ id: createTodoId(), text, completed: false })
+    );
     draft.set('');
   };
 
@@ -73,7 +72,9 @@ const TodoFc = defineComponent(function TodoFc() {
             }
           }}
         />
-        <button className="btn" onClick={addTodo}>Add</button>
+        <button className="btn" onClick={addTodo}>
+          Add
+        </button>
       </div>
 
       <div className="filters">
@@ -120,7 +121,9 @@ const TodoFc = defineComponent(function TodoFc() {
                 onChange={() => toggleTodo(item.id)}
               />
               <span className={item.completed ? 'done' : ''}>{item.text}</span>
-              <button className="danger" onClick={() => removeTodo(item.id)}>Delete</button>
+              <button className="danger" onClick={() => removeTodo(item.id)}>
+                Delete
+              </button>
             </div>
           )}
         </Each>
@@ -128,7 +131,9 @@ const TodoFc = defineComponent(function TodoFc() {
 
       <footer className="footer">
         <span className="summary">{remainingCount()} item(s) left</span>
-        <button className="btn" onClick={clearCompleted}>Clear completed</button>
+        <button className="btn" onClick={clearCompleted}>
+          Clear completed
+        </button>
       </footer>
     </section>
   );

@@ -4,12 +4,12 @@
 
 ## 先定位
 
-| 现象 | 最可能的层 | 先看 |
-| --- | --- | --- |
-| Vite overlay 报错、页面打不开 | 编译期 | [编译期报错](#编译期报错) |
-| 页面能开，但点了没反应 / 数字不变 | 运行时 | [视图不更新](#视图不更新) |
-| 组件显示了但标签没被升级 | 注册 / 加载 | [组件没被注册](#组件没被注册) |
-| 首屏有内容，交互后异常或重复 | SSR / 水合 | [ssr-与水合问题](#ssr-与水合问题) |
+| 现象                              | 最可能的层  | 先看                              |
+| --------------------------------- | ----------- | --------------------------------- |
+| Vite overlay 报错、页面打不开     | 编译期      | [编译期报错](#编译期报错)         |
+| 页面能开，但点了没反应 / 数字不变 | 运行时      | [视图不更新](#视图不更新)         |
+| 组件显示了但标签没被升级          | 注册 / 加载 | [组件没被注册](#组件没被注册)     |
+| 首屏有内容，交互后异常或重复      | SSR / 水合  | [ssr-与水合问题](#ssr-与水合问题) |
 
 打开控制台，先确认有没有 `[lania-v]` 开头的日志。开启 `debug: true` 后，编译期还会输出 `[lania-v] compile: <Component>` 分组。
 
@@ -91,7 +91,9 @@ return (<><p>a</p><p>b</p></>);
 不支持包名 / 路径别名的类型、`Pick<T, K>`、泛型实例化。遇到时把 props 类型就地写清楚：
 
 ```tsx
-function Card(props: { title: string; count: number }) { /* ... */ }
+function Card(props: { title: string; count: number }) {
+  /* ... */
+}
 ```
 
 ### 读不懂的报错位置
@@ -118,17 +120,17 @@ Vite overlay 会给出文件名、行、列与源码帧。如果行列看起来�
 ### 2. 读在响应式作用域之外
 
 ```tsx
-const value = count();          // ❌ 只读一次，之后不再更新
+const value = count(); // ❌ 只读一次，之后不再更新
 return <p>{value}</p>;
 
-const value = createMemo(() => count());  // ✅
+const value = createMemo(() => count()); // ✅
 return <p>{value()}</p>;
 ```
 
 ### 3. 解构了 Signal
 
 ```ts
-const { value } = someSignal;   // ❌ Signal 不是普通对象
+const { value } = someSignal; // ❌ Signal 不是普通对象
 ```
 
 Signal 是一个函数，直接调用即可，不要解构内部结构。
@@ -136,16 +138,16 @@ Signal 是一个函数，直接调用即可，不要解构内部结构。
 ### 4. 改的是副本
 
 ```ts
-const [first] = items();        // ❌ 拿到的是快照
-items().push(item);             // ❌ 修改快照不会触发更新
-items.set([...items(), item]);  // ✅
+const [first] = items(); // ❌ 拿到的是快照
+items().push(item); // ❌ 修改快照不会触发更新
+items.set([...items(), item]); // ✅
 ```
 
-Store 场景不能用「改副本」或直接 `push`（Store 视图是只读的，属性赋值与数组变更方法都会报错），要走路径写入或 `produce()`：
+Atom 场景不能用「改副本」或直接 `push`（atom 视图是只读的，属性赋值与数组变更方法都会报错），要走路径写入或函数式更新：
 
 ```ts
-state.set('list', (list) => [...list, item]);                    // ✅ 路径 + updater
-produce(state, (draft) => ({ ...draft, list: [...draft.list, item] })); // ✅ 纯函数写法
+state.set('list', (list) => [...list, item]); // ✅ 路径 + updater
+state.set((prev) => ({ ...prev, list: [...prev.list, item] })); // ✅ 整体更新
 ```
 
 ### 5. 存在两份运行时
@@ -168,12 +170,12 @@ produce(state, (draft) => ({ ...draft, list: [...draft.list, item] })); // ✅ �
 
 ### 7. 事件没触发
 
-| 写法 | 说明 |
-| --- | --- |
-| `onClick={fn}` | 原生 DOM 事件 |
+| 写法                                                     | 说明               |
+| -------------------------------------------------------- | ------------------ |
+| `onClick={fn}`                                           | 原生 DOM 事件      |
 | `onClick={ { handler: fn, modifiers: { stop: true } } }` | 需要修饰符时的写法 |
-| `onSelect={fn}`（组件标签上） | 回调 prop |
-| 组件内部 `this.emit('select')` | Custom Event |
+| `onSelect={fn}`（组件标签上）                            | 回调 prop          |
+| 组件内部 `this.emit('select')`                           | Custom Event       |
 
 组件上写 `onSelect` 只是传入回调；需要 DOM 事件语义时，在子组件里 `emit()`，父组件监听 `onSelect`。
 
@@ -184,8 +186,8 @@ produce(state, (draft) => ({ ...draft, list: [...draft.list, item] })); // ✅ �
 默认导出是组件构造器：
 
 ```tsx
-import Counter from './Counter.lania.tsx';      // ✅
-import { Counter } from './Counter.lania.tsx';  // ❌ 通常没有具名导出
+import Counter from './Counter.lania.tsx'; // ✅
+import { Counter } from './Counter.lania.tsx'; // ❌ 通常没有具名导出
 ```
 
 ### 标签名冲突
@@ -211,7 +213,9 @@ import { Counter } from './Counter.lania.tsx';  // ❌ 通常没有具名导出
 import { css } from '@lania-v/runtime';
 
 Counter.styles = css`
-  :host { display: block; }
+  :host {
+    display: block;
+  }
 `;
 ```
 
@@ -221,12 +225,12 @@ DSD / SSR 与客户端都会注入样式，运行时用 `registerAppliedStyleTex
 
 ## HMR 问题
 
-| 现象 | 原因 | 处理 |
-| --- | --- | --- |
-| 改模板后整页刷新 | 模块没有被 accept | 确认开发态注入了 `import.meta.hot.accept()` |
-| 状态丢失 | `hotReload: false`，或新增了 setup 字段 | 保持 `hotReload: true`；新增状态后刷新一次 |
-| 改组件名后状态丢失 | 标签名变了，等于换了一个组件 | 组件名保持稳定 |
-| 改样式不更新 | 样式对象是模块级常量 | 确认 `Component.styles` 在模块求值时重新赋值 |
+| 现象               | 原因                                    | 处理                                         |
+| ------------------ | --------------------------------------- | -------------------------------------------- |
+| 改模板后整页刷新   | 模块没有被 accept                       | 确认开发态注入了 `import.meta.hot.accept()`  |
+| 状态丢失           | `hotReload: false`，或新增了 setup 字段 | 保持 `hotReload: true`；新增状态后刷新一次   |
+| 改组件名后状态丢失 | 标签名变了，等于换了一个组件            | 组件名保持稳定                               |
+| 改样式不更新       | 样式对象是模块级常量                    | 确认 `Component.styles` 在模块求值时重新赋值 |
 
 ## SSR 与水合问题
 
@@ -253,13 +257,13 @@ DSD / SSR 与客户端都会注入样式，运行时用 `registerAppliedStyleTex
 
 ## 性能问题
 
-| 症状 | 可能原因 | 处理 |
-| --- | --- | --- |
-| 列表更新时整块闪动 | 用了三元 / `&&` 而不是 `<Each>` | 换用增强组件，配稳定 key |
-| 输入卡顿 | 每次输入触发大范围更新 | 用 `model` 的 `lazy`，或把重计算放进 `createMemo` |
-| 首屏很大 | 组件全量静态导入 | 用 `lazy()` / 动态 `import()` |
-| 事件监听过多 | 每个节点独立监听 | `enableEventDelegation(root)` |
-| 大量警告拖慢开发 | 调试事件全开 | 生产构建关闭 `__DEV__` |
+| 症状               | 可能原因                        | 处理                                              |
+| ------------------ | ------------------------------- | ------------------------------------------------- |
+| 列表更新时整块闪动 | 用了三元 / `&&` 而不是 `<Each>` | 换用增强组件，配稳定 key                          |
+| 输入卡顿           | 每次输入触发大范围更新          | 用 `model` 的 `lazy`，或把重计算放进 `createMemo` |
+| 首屏很大           | 组件全量静态导入                | 用 `lazy()` / 动态 `import()`                     |
+| 事件监听过多       | 每个节点独立监听                | `enableEventDelegation(root)`                     |
+| 大量警告拖慢开发   | 调试事件全开                    | 生产构建关闭 `__DEV__`                            |
 
 ## 可用的诊断手段
 

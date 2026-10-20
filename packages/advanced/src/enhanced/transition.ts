@@ -12,9 +12,9 @@ import {
   ENHANCED_CONTRACT_VERSION,
   type TransitionPayload,
 } from '@lania-v/shared';
-import { renderGroup } from '../transition/group-registry';
-import { renderTransition } from '../transition/host';
-import { getTransitionState } from '../transition/registry';
+import { renderGroup } from '@lania-v/runtime/component/transition';
+import { renderTransition } from '@lania-v/runtime/component/transition';
+import { getTransitionState } from '@lania-v/runtime/component/transition';
 import { defineEnhancedComponent } from './utils/factory';
 import { readCompatUpdateHost } from './utils/compat';
 import {
@@ -63,7 +63,9 @@ const createTransitionPayload = (
   };
 };
 
-const resolveTransitionPayload = (props: TransitionProps): TransitionPayload => {
+const resolveTransitionPayload = (
+  props: TransitionProps
+): TransitionPayload => {
   return (
     props.payload ??
     createTransitionPayload('Transition', {
@@ -120,7 +122,9 @@ const pruneLeavingNodes = (
     return rendered;
   }
 
-  const leavingNodes = new Set(collectRenderableNodes(leavingSnapshot as EnhancedRenderable));
+  const leavingNodes = new Set(
+    collectRenderableNodes(leavingSnapshot as EnhancedRenderable)
+  );
   if (leavingNodes.size === 0) {
     return rendered;
   }
@@ -133,7 +137,9 @@ const pruneLeavingNodes = (
     return null;
   }
 
-  return remaining.length === 1 ? remaining[0]! : remaining;
+  return (
+    remaining.length === 1 ? remaining[0]! : remaining
+  ) as EnhancedRenderable;
 };
 
 export const Transition: EnhancedComponentDefinition<
@@ -143,10 +149,12 @@ export const Transition: EnhancedComponentDefinition<
 > = defineEnhancedComponent(
   'Transition',
   (props: TransitionProps): EnhancedRenderable => {
-    const rendered = invokeRenderable(asRenderable(props.children));
+    const rendered = invokeRenderable(
+      asRenderable(props.children)
+    ) as EnhancedRenderable;
     const previous = getTransitionState(resolveTransitionStateKey(props));
-    const pruned = previous?.leaving
-      ? pruneLeavingNodes(rendered, previous.snapshot)
+    const pruned: EnhancedRenderable = previous?.leaving
+      ? (pruneLeavingNodes(rendered, previous.snapshot) as EnhancedRenderable)
       : rendered;
     const host = readCompatUpdateHost();
     const { result } = renderTransition<EnhancedRenderable>({
@@ -171,7 +179,9 @@ export const TransitionGroup = defineEnhancedComponent(
       getElements: getRenderableElements,
       // group 每次都重新读取 children，保证 keyed diff 基于最新列表执行。
       renderEntries: () =>
-        toRenderableArray(invokeRenderable(asRenderable(props.children))),
+        toRenderableArray(
+          invokeRenderable(asRenderable(props.children))
+        ) as EnhancedRenderable[],
       explicitKeys: props.keys,
     });
     return result;

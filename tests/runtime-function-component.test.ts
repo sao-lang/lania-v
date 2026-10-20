@@ -16,7 +16,7 @@ import {
   Transition as TransitionComponent,
   TransitionGroup as TransitionGroupComponent,
   When,
-} from '@lania-v/runtime';
+} from '../packages/advanced/src/index';
 import {
   bindHandlers,
   bindProps,
@@ -28,7 +28,6 @@ import {
   lazy,
   useContext,
 } from '@lania-v/runtime';
-import { createResource } from '@lania-v/runtime';
 import {
   createDeferred,
   createEffect,
@@ -39,7 +38,6 @@ import {
   watch,
 } from '@lania-v/runtime';
 import { isTracking, trackSignals } from '@lania-v/runtime/advanced';
-import { createStore } from '@lania-v/runtime';
 import {
   createErrorBoundaryHost,
   createLazyBoundaryHost,
@@ -66,7 +64,7 @@ import {
   LazyLoad as LazyLoadInternalComponent,
   Suspense as SuspenseInternalComponent,
   TransitionGroup as TransitionGroupInternalComponent,
-} from '../packages/runtime/src/component/enhanced-components';
+} from '../packages/advanced/src/index';
 import { resolveLazyOptions } from '../packages/runtime/src/component/lifecycle/boundary-registry';
 import {
   bootstrapSnapshotRuntime,
@@ -103,7 +101,11 @@ type LegacyKeepAliveTestProps = {
   include?: readonly string[] | RegExp | null;
   exclude?: readonly string[] | RegExp | null;
   max?: number;
-  onActivate?: (value: EnhancedRenderable, key: string, reused: boolean) => void;
+  onActivate?: (
+    value: EnhancedRenderable,
+    key: string,
+    reused: boolean
+  ) => void;
   onDeactivate?: (value: EnhancedRenderable, key: string) => void;
   onCache?: (value: EnhancedRenderable, key: string) => void;
   onEvict?: (value: EnhancedRenderable, key: string) => void;
@@ -120,7 +122,9 @@ type BoundaryLazyLoadTestProps = {
 
 type BoundaryErrorTestProps = {
   payload: BoundaryPayload;
-  fallback?: EnhancedRenderable | ((error: unknown, reset: () => void) => EnhancedRenderable);
+  fallback?:
+    | EnhancedRenderable
+    | ((error: unknown, reset: () => void) => EnhancedRenderable);
   onError?: (error: unknown) => void;
   onReset?: () => void;
   children?: unknown;
@@ -165,7 +169,9 @@ type LegacyTransitionGroupTestProps = {
   children?: unknown;
 };
 
-const createKeepAlivePayload = (options: Omit<LegacyKeepAliveTestProps, 'children' | 'payload'>): CachePayload => {
+const createKeepAlivePayload = (
+  options: Omit<LegacyKeepAliveTestProps, 'children' | 'payload'>
+): CachePayload => {
   return {
     protocol: ENHANCED_CONTRACT_PROTOCOL,
     version: ENHANCED_CONTRACT_VERSION,
@@ -207,12 +213,14 @@ const createBoundaryPayload = (
   };
 };
 
-const createLazyLoadPayload = (options: {
-  key?: PropertyKey | null;
-  rootMargin?: string;
-  once?: boolean;
-  observe?: boolean;
-} = {}): BoundaryPayload => {
+const createLazyLoadPayload = (
+  options: {
+    key?: PropertyKey | null;
+    rootMargin?: string;
+    once?: boolean;
+    observe?: boolean;
+  } = {}
+): BoundaryPayload => {
   return createBoundaryPayload('LazyLoad', {
     lazyKey: options.key,
     rootMargin: options.rootMargin,
@@ -221,17 +229,21 @@ const createLazyLoadPayload = (options: {
   });
 };
 
-const createErrorBoundaryPayload = (options: {
-  key?: PropertyKey | null;
-} = {}): BoundaryPayload => {
+const createErrorBoundaryPayload = (
+  options: {
+    key?: PropertyKey | null;
+  } = {}
+): BoundaryPayload => {
   return createBoundaryPayload('ErrorBoundary', {
     boundaryKey: options.key,
   });
 };
 
-const createSuspensePayload = (options: {
-  key?: PropertyKey | null;
-} = {}): BoundaryPayload => {
+const createSuspensePayload = (
+  options: {
+    key?: PropertyKey | null;
+  } = {}
+): BoundaryPayload => {
   return createBoundaryPayload('Suspense', {
     suspenseKey: options.key,
   });
@@ -258,9 +270,10 @@ const createTransitionPayload = (
       key: options.key,
       keyProp: component === 'TransitionGroup' ? 'groupKey' : 'transitionKey',
       tag: options.tag,
-      phases: component === 'TransitionGroup'
-        ? ['appear', 'enter', 'move', 'leave']
-        : ['appear', 'enter', 'leave'],
+      phases:
+        component === 'TransitionGroup'
+          ? ['appear', 'enter', 'move', 'leave']
+          : ['appear', 'enter', 'leave'],
       hooks: options.hooks,
     },
   };
@@ -337,39 +350,43 @@ const SuspenseInternal = (props: BoundarySuspenseTestProps) => {
 
 const Transition = (props: LegacyTransitionTestProps) => {
   return TransitionComponent({
-    payload: props.payload ?? createTransitionPayload('Transition', {
-      name: props.name,
-      key: props.transitionKey,
-      hooks: {
-        enter: props.enter,
-        leave: props.leave,
-        appear: props.appear,
-        onEnter: props.onEnter,
-        onLeave: props.onLeave,
-        onAppear: props.onAppear,
-      },
-    }),
+    payload:
+      props.payload ??
+      createTransitionPayload('Transition', {
+        name: props.name,
+        key: props.transitionKey,
+        hooks: {
+          enter: props.enter,
+          leave: props.leave,
+          appear: props.appear,
+          onEnter: props.onEnter,
+          onLeave: props.onLeave,
+          onAppear: props.onAppear,
+        },
+      }),
     children: props.children,
   });
 };
 
 const TransitionGroup = (props: LegacyTransitionGroupTestProps) => {
   return TransitionGroupComponent({
-    payload: props.payload ?? createTransitionPayload('TransitionGroup', {
-      name: props.name,
-      key: props.groupKey,
-      tag: props.tag,
-      hooks: {
-        move: props.move,
-        leave: props.leave,
-        enter: props.enter,
-        appear: props.appear,
-        onMove: props.onMove,
-        onLeave: props.onLeave,
-        onEnter: props.onEnter,
-        onAppear: props.onAppear,
-      },
-    }),
+    payload:
+      props.payload ??
+      createTransitionPayload('TransitionGroup', {
+        name: props.name,
+        key: props.groupKey,
+        tag: props.tag,
+        hooks: {
+          move: props.move,
+          leave: props.leave,
+          enter: props.enter,
+          appear: props.appear,
+          onMove: props.onMove,
+          onLeave: props.onLeave,
+          onEnter: props.onEnter,
+          onAppear: props.onAppear,
+        },
+      }),
     keys: props.keys,
     children: props.children,
   });
@@ -377,21 +394,23 @@ const TransitionGroup = (props: LegacyTransitionGroupTestProps) => {
 
 const TransitionGroupInternal = (props: LegacyTransitionGroupTestProps) => {
   return TransitionGroupInternalComponent({
-    payload: props.payload ?? createTransitionPayload('TransitionGroup', {
-      name: props.name,
-      key: props.groupKey,
-      tag: props.tag,
-      hooks: {
-        move: props.move,
-        leave: props.leave,
-        enter: props.enter,
-        appear: props.appear,
-        onMove: props.onMove,
-        onLeave: props.onLeave,
-        onEnter: props.onEnter,
-        onAppear: props.onAppear,
-      },
-    }),
+    payload:
+      props.payload ??
+      createTransitionPayload('TransitionGroup', {
+        name: props.name,
+        key: props.groupKey,
+        tag: props.tag,
+        hooks: {
+          move: props.move,
+          leave: props.leave,
+          enter: props.enter,
+          appear: props.appear,
+          onMove: props.onMove,
+          onLeave: props.onLeave,
+          onEnter: props.onEnter,
+          onAppear: props.onAppear,
+        },
+      }),
     keys: props.keys,
     children: props.children,
   });
@@ -418,8 +437,12 @@ describe('function component runtime helpers', () => {
 
   it('fails loudly when compile-only lifecycle markers reach the runtime directly', () => {
     expect(() => runtime.onMount(() => {})).toThrowError(/compile-time only/i);
-    expect(() => runtime.onCleanup(() => {})).toThrowError(/compile-time only/i);
-    expect(() => runtime.onUpdated(() => {})).toThrowError(/compile-time only/i);
+    expect(() => runtime.onCleanup(() => {})).toThrowError(
+      /compile-time only/i
+    );
+    expect(() => runtime.onUpdated(() => {})).toThrowError(
+      /compile-time only/i
+    );
   });
 
   it('keeps host bridge and testing helpers off the runtime root entry', () => {
@@ -434,7 +457,9 @@ describe('function component runtime helpers', () => {
   });
 
   it('returns the original function from defineComponent', () => {
-    const component = defineComponent((props: { count: number }) => props.count);
+    const component = defineComponent(
+      (props: { count: number }) => props.count
+    );
 
     expect(component({ count: 3 })).toBe(3);
   });
@@ -521,7 +546,9 @@ describe('function component runtime helpers', () => {
 
   it('reports a clear error when bind helpers run outside a component context', () => {
     expect(() => bindProps()).toThrowError(/while a component is being set up/);
-    expect(() => bindHandlers()).toThrowError(/while a component is being set up/);
+    expect(() => bindHandlers()).toThrowError(
+      /while a component is being set up/
+    );
   });
 
   it('reads default and named slots through bindSlots', () => {
@@ -594,7 +621,8 @@ describe('function component runtime helpers', () => {
     const stateKey = nextRuntimeBoundaryStateKey('transition-publish');
     const runtime = bootstrapRuntime<Node>({
       stateKey,
-      getElements: (snapshot) => (snapshot instanceof Element ? [snapshot] : []),
+      getElements: (snapshot) =>
+        snapshot instanceof Element ? [snapshot] : [],
     });
     const node = document.createElement('div');
 
@@ -609,7 +637,10 @@ describe('function component runtime helpers', () => {
     });
 
     expect(Object.keys(visiblePublishResult)).toEqual(['value']);
-    expect(Object.keys(previousPublishResult).sort()).toEqual(['kind', 'value']);
+    expect(Object.keys(previousPublishResult).sort()).toEqual([
+      'kind',
+      'value',
+    ]);
     expect(previousPublishResult.kind).toBe('hidden');
     expect('kind' in visiblePublishResult).toBe(false);
   });
@@ -619,7 +650,8 @@ describe('function component runtime helpers', () => {
     const runtime = bootstrapSnapshotRuntime<Node>({
       stateKey,
       leaveEnabled: false,
-      getElements: (snapshot) => (snapshot instanceof Element ? [snapshot] : []),
+      getElements: (snapshot) =>
+        snapshot instanceof Element ? [snapshot] : [],
     });
     const previousNode = document.createElement('li');
     previousNode.dataset.key = 'a';
@@ -658,7 +690,10 @@ describe('function component runtime helpers', () => {
     expect(debugSummary.commitIntent).toBe('visible');
     expect(debugSummary.nextKeyCount).toBe(1);
     expect(Object.keys(visiblePublishResult)).toEqual(['value']);
-    expect(Object.keys(previousPublishResult).sort()).toEqual(['kind', 'value']);
+    expect(Object.keys(previousPublishResult).sort()).toEqual([
+      'kind',
+      'value',
+    ]);
     expect('commitIntent' in visiblePublishResult).toBe(false);
     expect('commitIntent' in previousPublishResult).toBe(false);
   });
@@ -818,8 +853,20 @@ describe('function component runtime helpers', () => {
       static tagName = 'x-auto-register';
     }
 
-    const styleA = { cssText: ':host { color: red; }', kind: 'css-result', toString() { return this.cssText; } } as const;
-    const styleB = { cssText: ':host { color: blue; }', kind: 'css-result', toString() { return this.cssText; } } as const;
+    const styleA = {
+      cssText: ':host { color: red; }',
+      kind: 'css-result',
+      toString() {
+        return this.cssText;
+      },
+    } as const;
+    const styleB = {
+      cssText: ':host { color: blue; }',
+      kind: 'css-result',
+      toString() {
+        return this.cssText;
+      },
+    } as const;
 
     const firstElement = createComponentElement(XAutoRegister, {
       styles: styleA,
@@ -831,7 +878,9 @@ describe('function component runtime helpers', () => {
     expect(firstElement).toBeInstanceOf(XAutoRegister);
     expect(secondElement.tagName.toLowerCase()).toBe('x-auto-register');
     expect(customElements.get('x-auto-register')).toBe(XAutoRegister);
-    expect((XAutoRegister as typeof XAutoRegister & { styles?: unknown }).styles).toBe(styleB);
+    expect(
+      (XAutoRegister as typeof XAutoRegister & { styles?: unknown }).styles
+    ).toBe(styleB);
   });
 
   it('renders component elements through createRoot without a dedicated mount helper', () => {
@@ -865,7 +914,9 @@ describe('function component runtime helpers', () => {
     expect(mounted).toBeInstanceOf(XMountedCard);
     expect(container.firstElementChild).toBe(mounted);
     expect(container.textContent).toBe('title:demo');
-    expect(createComponentElement(XMountedCard).tagName.toLowerCase()).toBe('x-mounted-card');
+    expect(createComponentElement(XMountedCard).tagName.toLowerCase()).toBe(
+      'x-mounted-card'
+    );
     container.remove();
   });
 
@@ -907,9 +958,20 @@ describe('function component runtime helpers', () => {
   });
 
   it('evaluates enhanced component helpers with their first-pass runtime semantics', () => {
-    expect(When({ when: true, children: 'ready', fallback: 'empty' })).toBe('ready');
-    expect(When({ when: false, children: 'ready', fallback: 'empty' })).toBe('empty');
-    expect(When({ when: true, mode: 'remount', children: 'ready', fallback: 'empty' })).toBe('ready');
+    expect(When({ when: true, children: 'ready', fallback: 'empty' })).toBe(
+      'ready'
+    );
+    expect(When({ when: false, children: 'ready', fallback: 'empty' })).toBe(
+      'empty'
+    );
+    expect(
+      When({
+        when: true,
+        mode: 'remount',
+        children: 'ready',
+        fallback: 'empty',
+      })
+    ).toBe('ready');
     expect(
       Each({
         items: ['A', 'B'],
@@ -1276,9 +1338,13 @@ describe('function component runtime helpers', () => {
       });
 
       expect(lazyHost.renderChild()).toBe('child');
-      expect(lazyHost.renderFallback(document.createElement('span'))).toBe('fallback');
+      expect(lazyHost.renderFallback(document.createElement('span'))).toBe(
+        'fallback'
+      );
       expect(lazyHost.observeWhileVisible).toBe(true);
-      expect(errorHost.renderFallback(new Error('boom'), () => undefined)).toBe('failed');
+      expect(errorHost.renderFallback(new Error('boom'), () => undefined)).toBe(
+        'failed'
+      );
       expect(suspenseHost.renderFallback()).toBe('loading');
 
       lazyHost.replay();
@@ -1393,12 +1459,13 @@ describe('function component runtime helpers', () => {
       private readonly index: number;
 
       constructor(callback: IntersectionObserverCallback) {
-        this.index = observerRecords.push({
-          callback,
-          targets: [],
-          disconnects: 0,
-          unobserved: [],
-        }) - 1;
+        this.index =
+          observerRecords.push({
+            callback,
+            targets: [],
+            disconnects: 0,
+            unobserved: [],
+          }) - 1;
       }
 
       observe(target: Element) {
@@ -1517,10 +1584,11 @@ describe('function component runtime helpers', () => {
       private readonly index: number;
 
       constructor(callback: IntersectionObserverCallback) {
-        this.index = observerRecords.push({
-          callback,
-          targets: [],
-        }) - 1;
+        this.index =
+          observerRecords.push({
+            callback,
+            targets: [],
+          }) - 1;
       }
 
       observe(target: Element) {
@@ -1590,10 +1658,11 @@ describe('function component runtime helpers', () => {
       private readonly index: number;
 
       constructor(callback: IntersectionObserverCallback) {
-        this.index = observerRecords.push({
-          callback,
-          targets: [],
-        }) - 1;
+        this.index =
+          observerRecords.push({
+            callback,
+            targets: [],
+          }) - 1;
       }
 
       observe(target: Element) {
@@ -1745,7 +1814,8 @@ describe('function component runtime helpers', () => {
       max: 2,
       children: first,
       onCache: (_value, key) => events.push(`cache:${key}`),
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
       onDeactivate: (_value, key) => events.push(`deactivate:${key}`),
       onEvict: (_value, key) => events.push(`evict:${key}`),
     });
@@ -1756,7 +1826,8 @@ describe('function component runtime helpers', () => {
       max: 2,
       children: second,
       onCache: (_value, key) => events.push(`cache:${key}`),
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
       onDeactivate: (_value, key) => events.push(`deactivate:${key}`),
       onEvict: (_value, key) => events.push(`evict:${key}`),
     });
@@ -1767,7 +1838,8 @@ describe('function component runtime helpers', () => {
       max: 2,
       children: document.createElement('section'),
       onCache: (_value, key) => events.push(`cache:${key}`),
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
       onDeactivate: (_value, key) => events.push(`deactivate:${key}`),
       onEvict: (_value, key) => events.push(`evict:${key}`),
     });
@@ -1778,7 +1850,8 @@ describe('function component runtime helpers', () => {
       max: 2,
       children: third,
       onCache: (_value, key) => events.push(`cache:${key}`),
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
       onDeactivate: (_value, key) => events.push(`deactivate:${key}`),
       onEvict: (_value, key) => events.push(`evict:${key}`),
     });
@@ -1839,7 +1912,9 @@ describe('function component runtime helpers', () => {
     });
     expect(Array.isArray(a1)).toBe(true);
     renderIntoHost(a1);
-    expect(host.querySelectorAll('[data-keepalive-pane^="a-"]')).toHaveLength(2);
+    expect(host.querySelectorAll('[data-keepalive-pane^="a-"]')).toHaveLength(
+      2
+    );
 
     const b1 = KeepAlive({
       scope: 'multi-pane',
@@ -1852,7 +1927,10 @@ describe('function component runtime helpers', () => {
     const a2 = KeepAlive({
       scope: 'multi-pane',
       cacheKey: 'page-a',
-      children: [document.createElement('em'), document.createElement('strong')],
+      children: [
+        document.createElement('em'),
+        document.createElement('strong'),
+      ],
     });
     expect(Array.isArray(a2)).toBe(true);
     renderIntoHost(a2);
@@ -2000,7 +2078,8 @@ describe('function component runtime helpers', () => {
     const firstRender = KeepAliveComponent({
       scope: 'fc-direct-keepalive',
       cacheKey: 'page-a',
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
       children: first,
     });
     const secondRender = KeepAliveComponent({
@@ -2356,7 +2435,9 @@ describe('function component runtime helpers', () => {
     const updatedPane = host.querySelector('[data-keepalive-pane="same-key"]');
     expect(updatedPane).not.toBeNull();
     expect(updatedPane?.textContent).toBe('Second');
-    expect(host.querySelectorAll('[data-keepalive-pane="same-key"]')).toHaveLength(1);
+    expect(
+      host.querySelectorAll('[data-keepalive-pane="same-key"]')
+    ).toHaveLength(1);
     expect(updatedPane).not.toBe(pane);
   });
 
@@ -2387,7 +2468,8 @@ describe('function component runtime helpers', () => {
         section.textContent = 'A';
         return section;
       })(),
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
     });
     mount(first);
 
@@ -2399,7 +2481,8 @@ describe('function component runtime helpers', () => {
         section.textContent = 'A2';
         return section;
       })(),
-      onActivate: (_value, key, reused) => events.push(`activate:${key}:${reused}`),
+      onActivate: (_value, key, reused) =>
+        events.push(`activate:${key}:${reused}`),
     });
     mount(second);
 
@@ -2453,7 +2536,9 @@ describe('function component runtime helpers', () => {
     expect(secondRender).not.toBeNull();
     expect(host.textContent).toBe('');
     expect(contextualParent.textContent).toBe('Second');
-    expect(contextualParent.querySelectorAll('[data-keepalive-pane="dom-host"]')).toHaveLength(1);
+    expect(
+      contextualParent.querySelectorAll('[data-keepalive-pane="dom-host"]')
+    ).toHaveLength(1);
   });
 
   it('preserves nested When branch state across KeepAlive key switches', () => {
@@ -2503,7 +2588,9 @@ describe('function component runtime helpers', () => {
       });
 
     mountIntoHost(renderPage('page-a'));
-    const firstInput = host.querySelector('[data-page="page-a"]') as HTMLInputElement | null;
+    const firstInput = host.querySelector(
+      '[data-page="page-a"]'
+    ) as HTMLInputElement | null;
     expect(firstInput).not.toBeNull();
     expect(host.querySelector('[data-page="page-b"]')).toBeNull();
 
@@ -2515,11 +2602,15 @@ describe('function component runtime helpers', () => {
     currentPage = 'page-b';
     mountIntoHost(renderPage('page-b'));
     expect(host.querySelector('[data-page="page-a"]')).toBeNull();
-    expect(host.querySelector('[data-page="page-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-page="page-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     currentPage = 'page-a';
     mountIntoHost(renderPage('page-a'));
-    const restoredInput = host.querySelector('[data-page="page-a"]') as HTMLInputElement | null;
+    const restoredInput = host.querySelector(
+      '[data-page="page-a"]'
+    ) as HTMLInputElement | null;
     expect(restoredInput).toBe(firstInput);
     expect(restoredInput?.value).toBe('draft');
     expect(host.querySelector('[data-page="page-b"]')).toBeNull();
@@ -2552,8 +2643,10 @@ describe('function component runtime helpers', () => {
         keyProp: 'transitionKey' as const,
         key: 'keepalive-combo',
         hooks: {
-          onAppear: (_element: Element, context: { phase: string }) => phases.push(context.phase),
-          onEnter: (_element: Element, context: { phase: string }) => phases.push(context.phase),
+          onAppear: (_element: Element, context: { phase: string }) =>
+            phases.push(context.phase),
+          onEnter: (_element: Element, context: { phase: string }) =>
+            phases.push(context.phase),
           onLeave: async (_element: Element, context: { phase: string }) => {
             phases.push(context.phase);
             await Promise.resolve();
@@ -2615,7 +2708,9 @@ describe('function component runtime helpers', () => {
       })
     );
     expect(host.querySelector('[data-page="page-a"]')).toBeNull();
-    expect(host.querySelector('[data-page="page-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-page="page-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     mountIntoHost(renderPageA('Page A updated'));
     const restoredPane = host.querySelector('[data-page="page-a"]');
@@ -2635,10 +2730,11 @@ describe('function component runtime helpers', () => {
       private readonly index: number;
 
       constructor(callback: IntersectionObserverCallback) {
-        this.index = observerRecords.push({
-          callback,
-          targets: [],
-        }) - 1;
+        this.index =
+          observerRecords.push({
+            callback,
+            targets: [],
+          }) - 1;
       }
 
       observe(target: Element) {
@@ -2710,7 +2806,9 @@ describe('function component runtime helpers', () => {
     );
 
     mountIntoHost(renderPageA());
-    const visibleInput = host.querySelector('[data-page="lazy-a"]') as HTMLInputElement | null;
+    const visibleInput = host.querySelector(
+      '[data-page="lazy-a"]'
+    ) as HTMLInputElement | null;
     expect(visibleInput).toBe(pageAInput);
 
     if (!visibleInput) {
@@ -2720,10 +2818,14 @@ describe('function component runtime helpers', () => {
     visibleInput.value = 'draft';
     mountIntoHost(renderPageB());
     expect(host.querySelector('[data-page="lazy-a"]')).toBeNull();
-    expect(host.querySelector('[data-page="lazy-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-page="lazy-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     mountIntoHost(renderPageA());
-    const restoredInput = host.querySelector('[data-page="lazy-a"]') as HTMLInputElement | null;
+    const restoredInput = host.querySelector(
+      '[data-page="lazy-a"]'
+    ) as HTMLInputElement | null;
     expect(restoredInput).toBe(pageAInput);
     expect(restoredInput?.value).toBe('draft');
     expect(host.textContent).toBe('');
@@ -2757,8 +2859,10 @@ describe('function component runtime helpers', () => {
             name: 'fade',
             key: 'demo',
             hooks: {
-              onAppear: (_element: Element, context: any) => phases.push(context.phase),
-              onEnter: (_element: Element, context: any) => phases.push(context.phase),
+              onAppear: (_element: Element, context: any) =>
+                phases.push(context.phase),
+              onEnter: (_element: Element, context: any) =>
+                phases.push(context.phase),
               onLeave: async (_element: Element, context: any) => {
                 phases.push(context.phase);
                 await Promise.resolve();
@@ -2779,8 +2883,10 @@ describe('function component runtime helpers', () => {
             name: 'fade',
             key: 'demo',
             hooks: {
-              onAppear: (_element: Element, context: any) => phases.push(context.phase),
-              onEnter: (_element: Element, context: any) => phases.push(context.phase),
+              onAppear: (_element: Element, context: any) =>
+                phases.push(context.phase),
+              onEnter: (_element: Element, context: any) =>
+                phases.push(context.phase),
               onLeave: async (_element: Element, context: any) => {
                 phases.push(context.phase);
                 await Promise.resolve();
@@ -2801,8 +2907,10 @@ describe('function component runtime helpers', () => {
             name: 'fade',
             key: 'demo',
             hooks: {
-              onAppear: (_element: Element, context: any) => phases.push(context.phase),
-              onEnter: (_element: Element, context: any) => phases.push(context.phase),
+              onAppear: (_element: Element, context: any) =>
+                phases.push(context.phase),
+              onEnter: (_element: Element, context: any) =>
+                phases.push(context.phase),
               onLeave: async (_element: Element, context: any) => {
                 phases.push(context.phase);
                 await Promise.resolve();
@@ -3014,14 +3122,18 @@ describe('function component runtime helpers', () => {
           name: 'list',
           key: 'todos',
           hooks: {
-            onAppear: (_element: Element, context: any) => phases.push(`appear:${String(context.key)}`),
-            onEnter: (_element: Element, context: any) => phases.push(`enter:${String(context.key)}`),
+            onAppear: (_element: Element, context: any) =>
+              phases.push(`appear:${String(context.key)}`),
+            onEnter: (_element: Element, context: any) =>
+              phases.push(`enter:${String(context.key)}`),
             onLeave: async (_element: Element, context: any) => {
               phases.push(`leave:${String(context.key)}`);
               await Promise.resolve();
             },
             onMove: (_element: Element, context: any) =>
-              phases.push(`move:${String(context.key)}:${context.previousIndex}->${context.index}`),
+              phases.push(
+                `move:${String(context.key)}:${context.previousIndex}->${context.index}`
+              ),
           },
         }),
         keys: ['a', 'b'],
@@ -3037,14 +3149,18 @@ describe('function component runtime helpers', () => {
           name: 'list',
           key: 'todos',
           hooks: {
-            onAppear: (_element: Element, context: any) => phases.push(`appear:${String(context.key)}`),
-            onEnter: (_element: Element, context: any) => phases.push(`enter:${String(context.key)}`),
+            onAppear: (_element: Element, context: any) =>
+              phases.push(`appear:${String(context.key)}`),
+            onEnter: (_element: Element, context: any) =>
+              phases.push(`enter:${String(context.key)}`),
             onLeave: async (_element: Element, context: any) => {
               phases.push(`leave:${String(context.key)}`);
               await Promise.resolve();
             },
             onMove: (_element: Element, context: any) =>
-              phases.push(`move:${String(context.key)}:${context.previousIndex}->${context.index}`),
+              phases.push(
+                `move:${String(context.key)}:${context.previousIndex}->${context.index}`
+              ),
           },
         }),
         keys: ['b', 'c'],
@@ -3052,7 +3168,11 @@ describe('function component runtime helpers', () => {
       })
     ) as HTMLElement[];
 
-    expect(leavingView.map((child) => child.dataset.key)).toEqual(['a', 'b', 'c']);
+    expect(leavingView.map((child) => child.dataset.key)).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
 
     await flushMicrotasks(3);
     await wait(0);
@@ -3063,14 +3183,18 @@ describe('function component runtime helpers', () => {
           name: 'list',
           key: 'todos',
           hooks: {
-            onAppear: (_element: Element, context: any) => phases.push(`appear:${String(context.key)}`),
-            onEnter: (_element: Element, context: any) => phases.push(`enter:${String(context.key)}`),
+            onAppear: (_element: Element, context: any) =>
+              phases.push(`appear:${String(context.key)}`),
+            onEnter: (_element: Element, context: any) =>
+              phases.push(`enter:${String(context.key)}`),
             onLeave: async (_element: Element, context: any) => {
               phases.push(`leave:${String(context.key)}`);
               await Promise.resolve();
             },
             onMove: (_element: Element, context: any) =>
-              phases.push(`move:${String(context.key)}:${context.previousIndex}->${context.index}`),
+              phases.push(
+                `move:${String(context.key)}:${context.previousIndex}->${context.index}`
+              ),
           },
         }),
         keys: ['b', 'c'],
@@ -3229,7 +3353,10 @@ describe('function component runtime helpers', () => {
       })
     ) as HTMLElement[];
 
-    expect(reenteredView.map((child) => child.dataset.key)).toEqual(['a2', 'b']);
+    expect(reenteredView.map((child) => child.dataset.key)).toEqual([
+      'a2',
+      'b',
+    ]);
 
     (resolveLeave as (() => void) | null)?.();
     await flushMicrotasks(4);
@@ -3363,7 +3490,9 @@ describe('function component runtime helpers', () => {
       })
     ) as HTMLElement[];
 
-    expect(retainedLeavingView.map((child) => child.dataset.key)).toEqual(['a']);
+    expect(retainedLeavingView.map((child) => child.dataset.key)).toEqual([
+      'a',
+    ]);
 
     (resolveLeave as (() => void) | null)?.();
     await flushMicrotasks(4);
@@ -3455,7 +3584,9 @@ describe('function reactive apis', () => {
     const count = createSignal(1);
     const name = createSignal('a');
     const singleEvents: Array<[number, number]> = [];
-    const multiEvents: Array<[readonly [number, string], readonly [number, string]]> = [];
+    const multiEvents: Array<
+      [readonly [number, string], readonly [number, string]]
+    > = [];
 
     watch(count, (current, previous) => {
       singleEvents.push([current, previous]);
@@ -3469,7 +3600,12 @@ describe('function reactive apis', () => {
     await flushMicrotasks(3);
 
     expect(singleEvents).toEqual([[3, 1]]);
-    expect(multiEvents).toEqual([[[3, 'b'], [1, 'a']]]);
+    expect(multiEvents).toEqual([
+      [
+        [3, 'b'],
+        [1, 'a'],
+      ],
+    ]);
   });
 
   it('defers value propagation with createDeferred', async () => {
@@ -3482,290 +3618,5 @@ describe('function reactive apis', () => {
 
     await wait(20);
     expect(deferred.value).toBe(5);
-  });
-
-  it('updates nested store paths immutably through createStore', async () => {
-    const store = createStore({
-      user: {
-        name: 'Ada',
-        age: 20,
-      },
-      todos: [{ title: 'write docs' }],
-    });
-    const values: string[] = [];
-
-    createEffect(() => {
-      values.push(`${store.user.name}:${store.user.age}`);
-    });
-
-    store.set('user', 'name', 'Grace');
-    store.set('user', 'age', (age: number) => Number(age) + 1);
-    await flushMicrotasks(3);
-
-    expect(store.user.name).toBe('Grace');
-    expect(store.user.age).toBe(21);
-    expect(store.todos[0].title).toBe('write docs');
-    expect(values).toEqual(['Ada:20', 'Grace:21']);
-  });
-
-  it('resolves dot paths in store.set', async () => {
-    const store = createStore({
-      user: { name: 'Ada', age: 20 },
-      todos: [{ title: 'write docs' }],
-    });
-
-    store.set('user.name', 'Grace');
-    store.set('user.age', (age: number) => age + 1);
-    store.set('todos.0.title', 'ship code');
-
-    expect(store.user.name).toBe('Grace');
-    expect(store.user.age).toBe(21);
-    expect(store.todos[0]?.title).toBe('ship code');
-  });
-
-  it('exposes signal-like set and peek on the store handle', async () => {
-    const store = createStore({
-      user: { name: 'Ada' },
-      count: 0,
-    });
-    const runs: string[] = [];
-
-    createEffect(() => {
-      runs.push(store.user.name);
-    });
-
-    expect(store.peek()).toEqual({ user: { name: 'Ada' }, count: 0 });
-    expect(runs).toEqual(['Ada']);
-
-    store.set({ user: { name: 'Grace' }, count: 1 });
-    await flushMicrotasks(3);
-
-    expect(store.peek().count).toBe(1);
-    expect(runs).toEqual(['Ada', 'Grace']);
-  });
-
-  it('tracks store dependencies by exact path instead of invalidating sibling reads', async () => {
-    const store = createStore({
-      user: {
-        name: 'Ada',
-        age: 20,
-      },
-    });
-    const nameRuns: string[] = [];
-    const ageRuns: number[] = [];
-
-    createEffect(() => {
-      nameRuns.push(store.user.name);
-    });
-    createEffect(() => {
-      ageRuns.push(store.user.age);
-    });
-
-    store.set('user', 'name', 'Grace');
-    await flushMicrotasks(3);
-
-    expect(nameRuns).toEqual(['Ada', 'Grace']);
-    expect(ageRuns).toEqual([20]);
-
-    store.set('user', 'age', 21);
-    await flushMicrotasks(3);
-
-    expect(nameRuns).toEqual(['Ada', 'Grace']);
-    expect(ageRuns).toEqual([20, 21]);
-  });
-
-  it('invalidates descendant paths when replacing a parent object', async () => {
-    const store = createStore({
-      user: {
-        name: 'Ada',
-        age: 20,
-      },
-    });
-    const values: string[] = [];
-
-    createEffect(() => {
-      values.push(`${store.user.name}:${store.user.age}`);
-    });
-
-    store.set('user', {
-      name: 'Grace',
-      age: 21,
-    });
-    await flushMicrotasks(3);
-
-    expect(values).toEqual(['Ada:20', 'Grace:21']);
-  });
-
-  it('tracks async resource state and refetches when dependencies change', async () => {
-    const id = createSignal(1);
-    const requests: number[] = [];
-    const [user, resource] = createResource(id, async () => {
-      const currentId = id.value;
-      requests.push(currentId);
-      await wait(5);
-      return `user-${currentId}`;
-    });
-
-    expect(resource.loading.value).toBe(true);
-    await wait(10);
-    await flushMicrotasks(3);
-
-    expect(user.value).toBe('user-1');
-    expect(resource.loading.value).toBe(false);
-    expect(resource.error.value).toBeUndefined();
-
-    id.set(2);
-    await wait(10);
-    await flushMicrotasks(3);
-
-    expect(user.value).toBe('user-2');
-    expect(requests).toEqual([1, 2]);
-
-    await resource.refetch();
-    await flushMicrotasks(3);
-    expect(requests).toEqual([1, 2, 2]);
-  });
-});
-
-  it('rejects direct property assignment on stores', () => {
-    const store = createStore({ user: { name: 'Ada' }, list: [1] });
-
-    // 写入只允许 set()：任何属性赋值都必须在运行时直接报错，而不是静默失效。
-    expect(() => {
-      (store as { user: { name: string } }).user = { name: 'Grace' };
-    }).toThrowError(/read-only/);
-    expect(() => {
-      (store.user as { name: string }).name = 'Grace';
-    }).toThrowError(/store\.set\("user\.name"/);
-    expect(() => {
-      (store as Record<string, unknown>).extra = 1;
-    }).toThrowError(/read-only/);
-    expect(() => {
-      delete (store.user as { name?: string }).name;
-    }).toThrowError(/read-only/);
-
-    expect(store.user.name).toBe('Ada');
-    expect(store.peek()).toEqual({ user: { name: 'Ada' }, list: [1] });
-  });
-
-  it('keeps deep reactivity on nested paths without a Proxy wrapper', async () => {
-    const store = createStore({ user: { profile: { city: 'Paris' } } });
-    const cities: string[] = [];
-
-    createEffect(() => {
-      cities.push(store.user.profile.city);
-    });
-
-    store.set('user.profile.city', 'Lyon');
-    await flushMicrotasks(3);
-
-    expect(cities).toEqual(['Paris', 'Lyon']);
-    // 视图按路径缓存，同一路径始终拿到同一对象。
-    expect(store.user).toBe(store.user);
-  });
-
-  it('replaces the whole state when store.set receives an object', async () => {
-    const store = createStore({ count: 0, page: 1, label: 'ready' });
-
-    // 对象参数是整体替换，未给出的字段会被丢弃；局部更新用路径写法。
-    store.set({ page: 2 });
-
-    expect(store.peek()).toEqual({ page: 2 });
-
-    store.set('count', 1);
-    expect(store.peek()).toEqual({ page: 2, count: 1 });
-  });
-
-  it('supports nested path writes with dot and array paths', async () => {
-    const store = createStore({ user: { profile: { city: 'Paris' } }, list: [1, 2] });
-    const cities: string[] = [];
-
-    createEffect(() => {
-      cities.push(store.user.profile.city);
-    });
-
-    store.set('user.profile.city', 'Lyon');
-    await flushMicrotasks(3);
-    expect(store.user.profile.city).toBe('Lyon');
-
-    store.set(['user', 'profile', 'city'], 'Nice');
-    await flushMicrotasks(3);
-    expect(store.user.profile.city).toBe('Nice');
-    expect(cities).toEqual(['Paris', 'Lyon', 'Nice']);
-
-    // 数组下标同样可写。
-    store.set('list.0', 99);
-    expect(store.list[0]).toBe(99);
-  });
-
-describe('store state api', () => {
-  it('exposes get / has / keys / entries snapshots', () => {
-    const store = createStore({ user: { name: 'Ada' }, list: [1] });
-
-    expect(store.get('user.name')).toBe('Ada');
-    expect(store.get(['user', 'name'])).toBe('Ada');
-    expect(store.has('user.name')).toBe(true);
-    expect(store.has('user.missing')).toBe(false);
-    expect(store.keys()).toEqual(['user', 'list']);
-    expect(store.entries()).toEqual([['user', { name: 'Ada' }], ['list', [1]]]);
-  });
-
-  it('supports update / delete / patch / reset', async () => {
-    const store = createStore({ user: { name: 'Ada', age: 20 }, extra: 1 });
-    const names: string[] = [];
-
-    createEffect(() => {
-      names.push(store.user.name);
-    });
-
-    store.update('user.age', (age) => Number(age) + 1);
-    await flushMicrotasks(3);
-    expect(store.user.age).toBe(21);
-
-    store.patch({ extra: 2 });
-    expect(store.extra).toBe(2);
-    // patch 只覆盖给出的字段，user 保持不变。
-    expect(store.user.name).toBe('Ada');
-
-    store.delete('user.age');
-    expect('age' in store.user).toBe(false);
-
-    store.reset();
-    expect(store.peek()).toEqual({ user: { name: 'Ada', age: 20 }, extra: 1 });
-    expect(names).toEqual(['Ada']);
-  });
-
-  it('notifies subscribers for whole state and single paths', async () => {
-    const store = createStore({ user: { name: 'Ada' }, count: 0 });
-    const all: number[] = [];
-    const perPath: unknown[] = [];
-
-    const stopAll = store.subscribe((current) => all.push(current.count));
-    const stopPath = store.subscribe('user.name', (next) => perPath.push(next));
-
-    store.set('user.name', 'Grace');
-    await flushMicrotasks(3);
-    store.set('count', 1);
-    await flushMicrotasks(3);
-
-    expect(perPath).toEqual(['Grace']);
-    expect(all).toEqual([1]);
-
-    stopAll();
-    stopPath();
-    store.set('count', 2);
-    await flushMicrotasks(3);
-    expect(all).toEqual([1]);
-  });
-
-  it('derives read-only memos from store paths', async () => {
-    const store = createStore({ user: { name: 'Ada' } });
-    const label = store.derive(() => store.user.name.toUpperCase());
-
-    expect(label.value).toBe('ADA');
-
-    store.set('user.name', 'Grace');
-    await flushMicrotasks(3);
-    expect(label.value).toBe('GRACE');
   });
 });

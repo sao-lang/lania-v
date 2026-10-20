@@ -1,7 +1,4 @@
-import {
-  createSignal,
-  defineComponent,
-} from '@lania-v/runtime';
+import { createSignal, defineComponent } from '@lania-v/runtime';
 
 export default defineComponent(function LocalStateCounterCard() {
   const localCount = createSignal(0);
@@ -11,7 +8,8 @@ export default defineComponent(function LocalStateCounterCard() {
     <div className="item" data-debug="local-state-counter-card">
       <p className="summary">组件内部状态（React/Vue 风格 remount）</p>
       <p className="empty">
-        先修改下面的 count / input，再切到别的 tab 后回来。因为状态定义在子组件内部，所以会回到初始值。
+        先修改下面的 count / input，再切到别的 tab
+        后回来。因为状态定义在子组件内部，所以会回到初始值。
       </p>
       <p>
         local count: <span>{localCount()}</span>

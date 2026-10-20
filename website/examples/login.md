@@ -17,15 +17,15 @@
 
 目录结构：
 
-| 文件 | 职责 |
-| --- | --- |
-| `src/api/config.ts` | 后端地址（环境变量兜底） |
-| `src/api/http.ts` | `AxiosWrapper` 实例：Bearer 注入、信封解包、错误归一化 |
-| `src/api/http-verbs.ts` | 极薄的 `get/post/put/delete` 包装 |
-| `src/api/auth-session.ts` | 登录态（内存 + `LocalStorageHelper` 加密持久化）与订阅 |
-| `src/api/auth-api.ts` | `register` / `login` / `forgotPassword` / `changePassword` / `fetchCurrentAccount` / `logout` |
-| `src/api/user-api.ts` | `listUsers` / `getUser` |
-| `src/views/ProfilePage.lania.tsx` | 登录后的账号信息 + 用户列表（搜索 / 分页）+ 修改密码 |
+| 文件                              | 职责                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| `src/api/config.ts`               | 后端地址（环境变量兜底）                                                                      |
+| `src/api/http.ts`                 | `AxiosWrapper` 实例：Bearer 注入、信封解包、错误归一化                                        |
+| `src/api/http-verbs.ts`           | 极薄的 `get/post/put/delete` 包装                                                             |
+| `src/api/auth-session.ts`         | 登录态（内存 + `LocalStorageHelper` 加密持久化）与订阅                                        |
+| `src/api/auth-api.ts`             | `register` / `login` / `forgotPassword` / `changePassword` / `fetchCurrentAccount` / `logout` |
+| `src/api/user-api.ts`             | `listUsers` / `getUser`                                                                       |
+| `src/views/ProfilePage.lania.tsx` | 登录后的账号信息 + 用户列表（搜索 / 分页）+ 修改密码                                          |
 
 ### 本地存储
 
@@ -42,20 +42,20 @@ LocalStorageHelper.set('lania-v.auth.session', session, {
 const restored = LocalStorageHelper.get<AuthSession>('lania-v.auth.session');
 ```
 
-| key | 内容 | 选项 |
-| --- | --- | --- |
-| `lania-v.auth.session` | token / username / role | 加密，7 天 |
-| `lania-v.login.remembered-account` | 记住的账号 | 30 天 |
-| `lania-v.login.signed-up-account` | 最近注册成功提示 | 10 分钟 |
+| key                                | 内容                    | 选项       |
+| ---------------------------------- | ----------------------- | ---------- |
+| `lania-v.auth.session`             | token / username / role | 加密，7 天 |
+| `lania-v.login.remembered-account` | 记住的账号              | 30 天      |
+| `lania-v.login.signed-up-account`  | 最近注册成功提示        | 10 分钟    |
 
 ### 忘记密码 / 修改密码
 
 `cmd/http-demo` 提供两个接口：
 
-| 接口 | 鉴权 | 说明 |
-| --- | --- | --- |
-| `POST /auth/forgot-password` | 公开 | `{ username, newPassword }`；账号不存在 404，成功后该账号旧会话全部失效 |
-| `POST /auth/change-password` | Bearer | `{ oldPassword, newPassword }`；原密码错误 400 |
+| 接口                         | 鉴权   | 说明                                                                    |
+| ---------------------------- | ------ | ----------------------------------------------------------------------- |
+| `POST /auth/forgot-password` | 公开   | `{ username, newPassword }`；账号不存在 404，成功后该账号旧会话全部失效 |
+| `POST /auth/change-password` | Bearer | `{ oldPassword, newPassword }`；原密码错误 400                          |
 
 前端在登录表单里有「忘记密码？」入口（新密码 + 二次确认），登录后在用户信息页有「修改密码」面板。
 
@@ -67,13 +67,18 @@ const restored = LocalStorageHelper.get<AuthSession>('lania-v.auth.session');
 
 ```tsx
 const client = new AxiosWrapper(
-  { baseURL: API_BASE_URL, timeout: 10_000, headers: { 'Content-Type': 'application/json' } },
+  {
+    baseURL: API_BASE_URL,
+    timeout: 10_000,
+    headers: { 'Content-Type': 'application/json' },
+  },
   {
     tokenProvider: () => getToken(),
     // 统一解包后端信封 { msg, code, data, success }
     responseHandler: (res: any) => {
       const envelope = res.data;
-      if (!envelope.success) throw new ApiError(envelope.msg, envelope.code, envelope.code);
+      if (!envelope.success)
+        throw new ApiError(envelope.msg, envelope.code, envelope.code);
       res.data = envelope.data;
       return res;
     },
@@ -92,8 +97,8 @@ import {
   defineComponent,
   onMount,
   useFormValue,
-  When,
 } from '@lania-v/runtime';
+import { When } from '@lania-v/advanced';
 
 type LoginStatus = 'idle' | 'submitting' | 'success';
 
@@ -112,7 +117,9 @@ export default defineComponent(function LoginPage() {
   const canSubmit = createMemo(
     () => !accountMissing.value && !passwordMissing.value && !submitting.value
   );
-  const accountInvalid = createMemo(() => accountTouched.value && accountMissing.value);
+  const accountInvalid = createMemo(
+    () => accountTouched.value && accountMissing.value
+  );
   const passwordInvalid = createMemo(
     () => passwordTouched.value && passwordMissing.value
   );
@@ -267,13 +274,13 @@ return (
 
 ### 绑定点
 
-| 表达式 | 更新目标 |
-| --- | --- |
-| `value={account.value}` | input property |
+| 表达式                                   | 更新目标        |
+| ---------------------------------------- | --------------- |
+| `value={account.value}`                  | input property  |
 | `className={accountInvalid.value ? ...}` | class attribute |
-| `disabled={!canSubmit.value}` | button property |
-| `{submitting.value ? ...}` | 文本 Slot |
-| `<When when={...}>` | 条件 Slot |
+| `disabled={!canSubmit.value}`            | button property |
+| `{submitting.value ? ...}`               | 文本 Slot       |
+| `<When when={...}>`                      | 条件 Slot       |
 
 每个表达式只订阅自己读取的 Signal / Memo。
 
@@ -373,7 +380,7 @@ Scheduler.flush-end
 
 ## 可以继续练习
 
-1. 用 `createStore` 替代多个 Signal；
+1. 用 `@lania/store` 的 `createAtom` 替代多个 Signal；
 2. 用 `useFormValidity` 把校验接入原生表单；
 3. 用 `Await` 模拟真实登录请求；
 4. 用 `ErrorBoundary` 捕获请求错误；

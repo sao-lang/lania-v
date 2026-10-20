@@ -9,14 +9,26 @@
 
 ```tsx
 import {
-  When, Then, Else,
-  Switch, Case, Default,
-  Each, Dynamic, Slot, Fragment, Teleport,
+  When,
+  Then,
+  Else,
+  Switch,
+  Case,
+  Default,
+  Each,
+  Dynamic,
+  Slot,
+  Fragment,
+  Teleport,
   KeepAlive,
-  Transition, TransitionGroup,
-  Suspense, ErrorBoundary, LazyLoad,
-  Await, Virtual,
-} from '@lania-v/runtime';
+  Transition,
+  TransitionGroup,
+  Suspense,
+  ErrorBoundary,
+  LazyLoad,
+  Await,
+  Virtual,
+} from '@lania-v/advanced';
 ```
 
 ## 公共类型
@@ -32,7 +44,11 @@ type EnhancedRenderable =
   | (() => EnhancedRenderable)
   | readonly EnhancedRenderable[];
 
-interface EnhancedComponentDefinition<TName extends string, TProps extends object, TResult = unknown> {
+interface EnhancedComponentDefinition<
+  TName extends string,
+  TProps extends object,
+  TResult = unknown,
+> {
   (props: TProps): TResult;
   readonly displayName: TName;
   readonly [ENHANCED_COMPONENT_KIND]: true;
@@ -70,12 +86,12 @@ interface WhenProps {
 }
 ```
 
-| Prop | 说明 |
-| --- | --- |
-| `when` | 条件 |
-| `fallback` | 条件为假时渲染 |
-| `mode` | `remount`（默认）销毁重建；`retain` 保留分支节点 |
-| `children` | 条件为真时渲染 |
+| Prop       | 说明                                             |
+| ---------- | ------------------------------------------------ |
+| `when`     | 条件                                             |
+| `fallback` | 条件为假时渲染                                   |
+| `mode`     | `remount`（默认）销毁重建；`retain` 保留分支节点 |
+| `children` | 条件为真时渲染                                   |
 
 ### `mode` 的差异
 
@@ -159,11 +175,7 @@ interface DefaultProps {
 渲染列表，并在 `items` 变化时做 keyed 协调。
 
 ```tsx
-<Each
-  items={todos()}
-  key={(item) => item.id}
-  fallback={<p>No todos</p>}
->
+<Each items={todos()} key={(item) => item.id} fallback={<p>No todos</p>}>
   {(item, index) => (
     <div>
       <span>{index + 1}.</span>
@@ -181,17 +193,16 @@ interface EachProps<T> {
   key?: (item: T, index: number) => PropertyKey;
   fallback?: EnhancedRenderable;
   children:
-    | ((item: T, index: number) => EnhancedRenderable)
-    | EnhancedRenderable;
+    ((item: T, index: number) => EnhancedRenderable) | EnhancedRenderable;
 }
 ```
 
-| Prop | 说明 |
-| --- | --- |
-| `items` | 列表数据；空 / `null` / `undefined` 渲染 fallback |
-| `key` | 唯一 key；提供时走 keyed 协调 |
-| `fallback` | 空列表内容 |
-| `children` | 函数时按 `(item, index)` 调用 |
+| Prop       | 说明                                              |
+| ---------- | ------------------------------------------------- |
+| `items`    | 列表数据；空 / `null` / `undefined` 渲染 fallback |
+| `key`      | 唯一 key；提供时走 keyed 协调                     |
+| `fallback` | 空列表内容                                        |
+| `children` | 函数时按 `(item, index)` 调用                     |
 
 ### keyed 与 unkeyed
 
@@ -211,9 +222,7 @@ interface EachProps<T> {
 **unkeyed**：
 
 ```tsx
-<Each items={rows()}>
-  {(row) => <Row row={row} />}
-</Each>
+<Each items={rows()}>{(row) => <Row row={row} />}</Each>
 ```
 
 - 按下标协调；
@@ -258,12 +267,12 @@ interface DynamicProps {
 }
 ```
 
-| Prop | 说明 |
-| --- | --- |
-| `is` | 标签名或组件 |
-| `component` | 组件引用 |
-| `props` | 传给组件的属性 |
-| `fallback` | 无法解析时渲染 |
+| Prop        | 说明           |
+| ----------- | -------------- |
+| `is`        | 标签名或组件   |
+| `component` | 组件引用       |
+| `props`     | 传给组件的属性 |
+| `fallback`  | 无法解析时渲染 |
 
 - `is` 与 `component` 二选一；
 - `props` 只在组件路径使用；
@@ -347,11 +356,11 @@ interface TeleportProps {
 }
 ```
 
-| `to` | 行为 |
-| --- | --- |
-| 选择器字符串 | `document.querySelector(to)` |
-| `Element` | 直接使用 |
-| `null` / `undefined` | 不渲染 |
+| `to`                 | 行为                         |
+| -------------------- | ---------------------------- |
+| 选择器字符串         | `document.querySelector(to)` |
+| `Element`            | 直接使用                     |
+| `null` / `undefined` | 不渲染                       |
 
 ### SSR / hydration
 
@@ -393,7 +402,11 @@ interface KeepAliveProps {
   include?: KeepAliveKeyPattern;
   exclude?: KeepAliveKeyPattern;
   max?: number;
-  onActivate?: (value: EnhancedRenderable, key: string, reused: boolean) => void;
+  onActivate?: (
+    value: EnhancedRenderable,
+    key: string,
+    reused: boolean
+  ) => void;
   onDeactivate?: (value: EnhancedRenderable, key: string) => void;
   onCache?: (value: EnhancedRenderable, key: string) => void;
   onEvict?: (value: EnhancedRenderable, key: string) => void;
@@ -403,13 +416,13 @@ interface KeepAliveProps {
 
 ### 语义
 
-| Prop | 说明 |
-| --- | --- |
-| `cacheKey` | 缓存键；为空时走普通渲染 |
-| `scope` | 隔离缓存域，默认 `component:default` |
-| `include` | 数组精确匹配 / 正则 `test` |
-| `exclude` | 优先于 include |
-| `max` | 最大缓存数，超出按 LRU 淘汰 |
+| Prop       | 说明                                 |
+| ---------- | ------------------------------------ |
+| `cacheKey` | 缓存键；为空时走普通渲染             |
+| `scope`    | 隔离缓存域，默认 `component:default` |
+| `include`  | 数组精确匹配 / 正则 `test`           |
+| `exclude`  | 优先于 include                       |
+| `max`      | 最大缓存数，超出按 LRU 淘汰          |
 
 ### 生命周期顺序
 
@@ -441,9 +454,15 @@ interface KeepAliveProps {
 ```tsx
 <Transition
   name="fade"
-  appear={(element) => element.animate([{ opacity: 0 }, { opacity: 1 }], 180).finished}
-  enter={(element) => element.animate([{ opacity: 0 }, { opacity: 1 }], 180).finished}
-  leave={(element) => element.animate([{ opacity: 1 }, { opacity: 0 }], 150).finished}
+  appear={(element) =>
+    element.animate([{ opacity: 0 }, { opacity: 1 }], 180).finished
+  }
+  enter={(element) =>
+    element.animate([{ opacity: 0 }, { opacity: 1 }], 180).finished
+  }
+  leave={(element) =>
+    element.animate([{ opacity: 1 }, { opacity: 0 }], 150).finished
+  }
 >
   <Panel />
 </Transition>
@@ -478,11 +497,11 @@ interface TransitionProps {
 
 ### 阶段
 
-| 阶段 | 触发 |
-| --- | --- |
-| `appear` | 首次出现 |
-| `enter` | 从不可见变为可见 |
-| `leave` | 从可见变为不可见 |
+| 阶段     | 触发             |
+| -------- | ---------------- |
+| `appear` | 首次出现         |
+| `enter`  | 从不可见变为可见 |
+| `leave`  | 从可见变为不可见 |
 
 ### hook 返回值
 
@@ -513,7 +532,9 @@ interface TransitionProps {
   tag="ul"
   keys={rows().map((row) => row.id)}
   move={(element) => element.animate([{ opacity: 0.6 }, { opacity: 1 }], 160)}
-  leave={(element) => element.animate([{ opacity: 1 }, { opacity: 0 }], 120).finished}
+  leave={(element) =>
+    element.animate([{ opacity: 1 }, { opacity: 0 }], 120).finished
+  }
 >
   <Each items={rows()} key={(row) => row.id}>
     {(row) => <li>{row.title}</li>}
@@ -804,16 +825,16 @@ import {
 } from '@lania-v/shared';
 ```
 
-| 字段 | 说明 |
-| --- | --- |
-| `name` | 组件名 |
-| `category` | `syntax` / `structure` / `structure-lifecycle` / `boundary` |
-| `irKind` | 编译后的 IR 类型 |
-| `runtimeHostKind` | `none` / `structural` / `boundary` |
-| `supportsSsr` | 是否支持 SSR |
-| `supportsHydration` | 是否支持 hydration |
-| `staticRenderMode` | `preserve` / `flatten` / `children-only` |
-| `metadataPropNames` | 参与编译元数据的 props |
+| 字段                | 说明                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `name`              | 组件名                                                      |
+| `category`          | `syntax` / `structure` / `structure-lifecycle` / `boundary` |
+| `irKind`            | 编译后的 IR 类型                                            |
+| `runtimeHostKind`   | `none` / `structural` / `boundary`                          |
+| `supportsSsr`       | 是否支持 SSR                                                |
+| `supportsHydration` | 是否支持 hydration                                          |
+| `staticRenderMode`  | `preserve` / `flatten` / `children-only`                    |
+| `metadataPropNames` | 参与编译元数据的 props                                      |
 
 查询：
 

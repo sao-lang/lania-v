@@ -8,7 +8,6 @@ export * from './owner';
 export * from './resource';
 export * from './scheduler';
 export * from './selector';
-export * from './store';
 export * from './transition';
 export {
   createComputedAccessor,

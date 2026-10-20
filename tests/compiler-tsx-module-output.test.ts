@@ -11,27 +11,40 @@ const compile = (source: string): string =>
  * `deps` 由编译期静态注入，是 updater 唯一的订阅来源：
  * 漏掉一条依赖，对应 DOM 属性就永远不会再更新。
  */
-const readUpdaterDependencies = (moduleCode: string, slotAttribute: string): string[] => {
+const readUpdaterDependencies = (
+  moduleCode: string,
+  slotAttribute: string
+): string[] => {
   const lines = moduleCode.split('\n');
 
   const slotDeclaration = lines.find(
-    (line) => line.includes('new AttrSlot(') && line.includes(`"${slotAttribute}"`)
+    (line) =>
+      line.includes('new AttrSlot(') && line.includes(`"${slotAttribute}"`)
   );
   expect(slotDeclaration).toBeDefined();
 
-  const slotName = slotDeclaration!.trim().replace(/^const\s+/, '').split(' = ')[0]!;
+  const slotName = slotDeclaration!
+    .trim()
+    .replace(/^const\s+/, '')
+    .split(' = ')[0]!;
 
   const updaterDeclaration = lines.find(
-    (line) => line.includes('new SimpleUpdater(') && line.includes(`, ${slotName},`)
+    (line) =>
+      line.includes('new SimpleUpdater(') && line.includes(`, ${slotName},`)
   );
   expect(updaterDeclaration).toBeDefined();
 
-  const updaterName = updaterDeclaration!.trim().replace(/^const\s+/, '').split(' = ')[0]!;
+  const updaterName = updaterDeclaration!
+    .trim()
+    .replace(/^const\s+/, '')
+    .split(' = ')[0]!;
 
   return lines
     .map((line) => line.trim())
     .filter((line) => line.startsWith(`${updaterName}.deps.add(`))
-    .map((line) => line.slice(`${updaterName}.deps.add(`.length, line.lastIndexOf(');')));
+    .map((line) =>
+      line.slice(`${updaterName}.deps.add(`.length, line.lastIndexOf(');'))
+    );
 };
 
 describe('compiler tsx module output', () => {
@@ -53,27 +66,30 @@ export default defineComponent(function OrderHost() {
     expect(moduleCode).toContain(declaration);
     expect(moduleCode).toContain(initializer);
     // 顺序反了会在构造期读取尚未赋值的字段，直接抛 TypeError。
-    expect(moduleCode.indexOf(declaration)).toBeLessThan(moduleCode.indexOf(initializer));
+    expect(moduleCode.indexOf(declaration)).toBeLessThan(
+      moduleCode.indexOf(initializer)
+    );
   });
 
-  it('tracks createStore path reads without tuple destructuring', () => {
+  it('treats @lania/store atoms as signal dependencies', () => {
     const moduleCode = compile(`
-import { createStore, defineComponent } from '@lania-v/runtime';
+import { createAtom } from '@lania/store';
+import { defineComponent } from '@lania-v/runtime';
 
-export default defineComponent(function StoreHost() {
-  const store = createStore({ user: { name: 'Ada' } });
+export default defineComponent(function AtomHost() {
+  const user = createAtom({ name: 'Ada' });
   return (
-    <button onClick={() => store.set('user.name', 'Grace')}>
-      {store.user.name}
+    <button onClick={() => user.set('name', 'Grace')}>
+      {user.value.name}
     </button>
   );
 });
 `);
 
-    expect(moduleCode).toContain('createStore({ user: { name: \'Ada\' } })');
-    expect(moduleCode).toContain("this.store.set('user.name', 'Grace')");
-    expect(moduleCode).toContain('getStorePathSignal(this.store, ["user","name"])');
-    expect(moduleCode).not.toContain('getStorePathSignal(this.store, ["set"])');
+    expect(moduleCode).toContain('@lania/store');
+    expect(moduleCode).toContain("this.user.set('name', 'Grace')");
+    // atom 是信号形态，直接作为依赖加入 updater，而不是走 store 路径解析。
+    expect(moduleCode).not.toContain('getAtomDependency(this.user');
   });
 
   it('tracks unary negation reads as updater dependencies', () => {
@@ -87,7 +103,9 @@ export default defineComponent(function NegationHost() {
 });
 `);
 
-    expect(readUpdaterDependencies(moduleCode, 'disabled')).toEqual(['this.ready']);
+    expect(readUpdaterDependencies(moduleCode, 'disabled')).toEqual([
+      'this.ready',
+    ]);
   });
 
   it('expands nested computed chains down to leaf signals', () => {
@@ -102,7 +120,9 @@ export default defineComponent(function NestedComputedHost() {
 });
 `);
 
-    expect(readUpdaterDependencies(moduleCode, 'class')).toEqual(['this.count']);
+    expect(readUpdaterDependencies(moduleCode, 'class')).toEqual([
+      'this.count',
+    ]);
   });
 
   it('rewrites signal and computed references in lifecycle callbacks', () => {
@@ -151,7 +171,9 @@ export default defineComponent(function ProviderHost() {
 });
 `);
 
-    expect(moduleCode).toContain('provideContext(this, ThemeContext, this.theme)');
+    expect(moduleCode).toContain(
+      'provideContext(this, ThemeContext, this.theme)'
+    );
     expect(moduleCode).not.toContain('provideContext(ThemeContext,');
   });
 
@@ -171,7 +193,9 @@ export default defineComponent(function ComputedParityHost() {
 `);
 
     // 模板里被内联的 computed，只要实例侧（生命周期 / effect / setup）还引用，就必须保留 memo 字段。
-    expect(moduleCode).toContain('protected positive = createComputedAccessor(() => this.count.value > 0);');
+    expect(moduleCode).toContain(
+      'protected positive = createComputedAccessor(() => this.count.value > 0);'
+    );
     expect(moduleCode).toContain(
       "protected label = createComputedAccessor(() => (this.positive.value ? 'on' : 'off'));"
     );
@@ -204,17 +228,25 @@ export default defineComponent(function ModifiersHost() {
     );
 
     // `.once` 属于原生监听选项，不能当作模板修饰符执行。
-    expect(moduleCode).toContain('new EventSlot(slot0Node, "click", 0, {"once":true})');
+    expect(moduleCode).toContain(
+      'new EventSlot(slot0Node, "click", 0, {"once":true})'
+    );
     expect(moduleCode).toContain('withEventModifiers(this.save, ["stop"])');
-    expect(moduleCode).toContain('withEventModifiers(this.save, ["prevent","prevent:self"])');
+    expect(moduleCode).toContain(
+      'withEventModifiers(this.save, ["prevent","prevent:self"])'
+    );
     expect(moduleCode).toContain(
       'withEventModifiers(this.save, ["button:left","prevent","prevent:immediate"])'
     );
     // `withEventHint` 在编译期被拆成“处理器 + 提示”，避免同一处理器被包装两层。
-    expect(moduleCode).toContain('withEventHint(this.save, "debounce", ["prevent"])');
+    expect(moduleCode).toContain(
+      'withEventHint(this.save, "debounce", ["prevent"])'
+    );
     expect(moduleCode).not.toContain("withEventHint(this.save, 'debounce')");
     // 后缀 `.debounce` 走同一条提示通道。
-    expect(moduleCode).toContain('new EventSlot(slot4Node, "input", 4, undefined)');
+    expect(moduleCode).toContain(
+      'new EventSlot(slot4Node, "input", 4, undefined)'
+    );
     expect(moduleCode).toContain('withEventHint(this.save, "debounce", [])');
   });
 });

@@ -26,7 +26,7 @@ import {
   type KeepAliveInstanceEntry,
   type KeepAliveNodeFactory,
   updateQueueableEntryNodes,
-} from '../lifecycle/keepalive-registry';
+} from '@lania-v/runtime/component/lifecycle';
 import { defineEnhancedComponent } from './utils/factory';
 import {
   asRenderable,
@@ -37,7 +37,8 @@ import {
 import type { EnhancedRenderable, KeepAliveProps } from './types';
 
 type RenderableKeepAliveInstance = KeepAliveInstance<EnhancedRenderable>;
-type RenderableKeepAliveEntry = KeepAliveInstanceEntry<RenderableKeepAliveInstance>;
+type RenderableKeepAliveEntry =
+  KeepAliveInstanceEntry<RenderableKeepAliveInstance>;
 
 const renderableRuntimeControllers = new Map<
   string,
@@ -56,7 +57,7 @@ const createRenderableFactory = (
   return createContextualFactory<EnhancedRenderable>({
     initialNodes,
     readValue(nodes) {
-      return createValueFromNodes(nodes);
+      return createValueFromNodes(nodes) as EnhancedRenderable;
     },
     detach(nodes) {
       // KeepAlive 只脱离当前 DOM，不销毁节点，后续命中缓存时还能重新挂回。
@@ -106,7 +107,7 @@ const getRenderableRuntimeController = (scope: string) => {
 };
 
 const resolveChildren = (children: unknown): EnhancedRenderable => {
-  return invokeRenderable(asRenderable(children));
+  return invokeRenderable(asRenderable(children)) as EnhancedRenderable;
 };
 
 const updateEntry = (
@@ -163,8 +164,8 @@ export const KeepAlive = defineEnhancedComponent(
     const initialValue = resolveChildren(props.children);
     const renderableFactory = cacheState.entry
       ? null
-      // 首次写入缓存时，基于当前渲染结果快照创建 entry 工厂。
-      : createRenderableFactory(collectRenderableNodes(initialValue));
+      : // 首次写入缓存时，基于当前渲染结果快照创建 entry 工厂。
+        createRenderableFactory(collectRenderableNodes(initialValue));
     const { entry } = activateCacheEntry({
       bucket,
       cacheState,
@@ -175,10 +176,7 @@ export const KeepAlive = defineEnhancedComponent(
       runtime: runtime.createActivationRuntime() ?? undefined,
       updateEntry: (currentEntry) => {
         // 命中缓存但子树发生变化时，只更新 entry 持有的节点集合，不重建缓存记录。
-        updateEntry(
-          currentEntry,
-          resolveChildren(props.children)
-        );
+        updateEntry(currentEntry, resolveChildren(props.children));
       },
       createEntry: renderableFactory
         ? () => renderableFactory.createEntry(activeKey)

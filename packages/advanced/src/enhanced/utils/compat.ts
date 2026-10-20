@@ -4,7 +4,7 @@
  * 这里把 `When`、`Each`、`Dynamic`、`Slot` 等声明式 props
  * 翻译成真实可挂载的 renderable，并在需要时读取当前运行时作用域。
  */
-import { getCurrentRuntimeScope, withRuntimeScope } from '../../host/function-component';
+import { getCurrentRuntimeScope, withRuntimeScope } from '@lania-v/runtime';
 import type {
   DynamicProps,
   EachProps,
@@ -12,28 +12,26 @@ import type {
   SlotProps,
   WhenProps,
 } from '../types';
-import {
-  appendRenderable,
-  asRenderable,
-  invokeRenderable,
-} from './renderable';
+import { appendRenderable, asRenderable, invokeRenderable } from './renderable';
 
 // 子内容可能是函数、数组或普通值，统一走 renderable 归一化。
 export const renderCompatChildren = (children: unknown): EnhancedRenderable => {
-  return invokeRenderable(asRenderable(children));
+  return invokeRenderable(asRenderable(children)) as EnhancedRenderable;
 };
 
 export const renderCompatWhen = (props: WhenProps): EnhancedRenderable => {
   return props.when
     ? renderCompatChildren(props.children)
-    : invokeRenderable(props.fallback);
+    : (invokeRenderable(props.fallback) as EnhancedRenderable);
 };
 
-export const renderCompatEach = (props: EachProps<unknown>): EnhancedRenderable => {
+export const renderCompatEach = (
+  props: EachProps<unknown>
+): EnhancedRenderable => {
   const items = props.items ?? [];
 
   if (items.length === 0) {
-    return invokeRenderable(props.fallback);
+    return invokeRenderable(props.fallback) as EnhancedRenderable;
   }
 
   if (typeof props.children === 'function') {
@@ -41,14 +39,18 @@ export const renderCompatEach = (props: EachProps<unknown>): EnhancedRenderable 
       item: unknown,
       index: number
     ) => EnhancedRenderable;
-    return items.map((item, index) => mapper(item, index));
+    return items.map((item, index) =>
+      mapper(item, index)
+    ) as unknown as EnhancedRenderable;
   }
 
-  return asRenderable(props.children);
+  return asRenderable(props.children) as EnhancedRenderable;
 };
 
 // `Dynamic` 需要先挑出目标类型，再把 children 与 props 合并成同一份入参。
-export const renderCompatDynamic = (props: DynamicProps): EnhancedRenderable => {
+export const renderCompatDynamic = (
+  props: DynamicProps
+): EnhancedRenderable => {
   const target = props.component ?? props.is;
   const hasExplicitChildren =
     props.children !== undefined &&
@@ -69,7 +71,7 @@ export const renderCompatDynamic = (props: DynamicProps): EnhancedRenderable => 
   };
 
   if (target == null) {
-    return invokeRenderable(props.fallback);
+    return invokeRenderable(props.fallback) as EnhancedRenderable;
   }
 
   // 字符串目标退化为原生元素创建，按 attribute 方式灌入动态属性。
@@ -101,11 +103,14 @@ export const renderCompatDynamic = (props: DynamicProps): EnhancedRenderable => 
       {
         slotContent: normalizedChildren,
       },
-      () => (target as (props: Record<string, unknown>) => EnhancedRenderable)(nextProps)
+      () =>
+        (target as (props: Record<string, unknown>) => EnhancedRenderable)(
+          nextProps
+        )
     );
   }
 
-  return invokeRenderable(props.fallback);
+  return invokeRenderable(props.fallback) as EnhancedRenderable;
 };
 
 const resolveScopedSlotContent = (content: unknown, name?: string): unknown => {
@@ -130,14 +135,21 @@ const invokeScopedSlot = (
 };
 
 export const renderCompatSlot = (props: SlotProps): EnhancedRenderable => {
-  const fallbackContent = (props.children ?? props.fallback) as EnhancedRenderable;
+  const fallbackContent = (props.children ??
+    props.fallback) as EnhancedRenderable;
   const scope = getCurrentRuntimeScope();
   const host = scope?.host;
-  const slottedContent = resolveScopedSlotContent(scope?.slotContent, props.name);
+  const slottedContent = resolveScopedSlotContent(
+    scope?.slotContent,
+    props.name
+  );
 
   // 函数型 slot 需要把 args 传回父组件，无法走原生 <slot> 投影。
   if (typeof slottedContent === 'function') {
-    return invokeScopedSlot(slottedContent as (...values: unknown[]) => unknown, props.args);
+    return invokeScopedSlot(
+      slottedContent as (...values: unknown[]) => unknown,
+      props.args
+    );
   }
 
   // Shadow DOM 宿主优先输出原生 slot 元素，让浏览器自己完成分发。
@@ -154,11 +166,11 @@ export const renderCompatSlot = (props: SlotProps): EnhancedRenderable => {
     return renderCompatChildren(slottedContent);
   }
 
-  return invokeRenderable(fallbackContent);
+  return invokeRenderable(fallbackContent) as EnhancedRenderable;
 };
 
-export const readCompatUpdateHost = (): { requestUpdate?: () => void } | undefined => {
+export const readCompatUpdateHost = ():
+  { requestUpdate?: () => void } | undefined => {
   return getCurrentRuntimeScope()?.host as
-    | { requestUpdate?: () => void }
-    | undefined;
+    { requestUpdate?: () => void } | undefined;
 };

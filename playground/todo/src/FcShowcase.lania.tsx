@@ -5,12 +5,18 @@ import {
   createMemo,
   createResource,
   createSignal,
-  createStore,
   readonly,
   untrack,
   useTransition,
   watch,
 } from '@lania-v/runtime/reactivity';
+import {
+  lazy,
+  onCleanup,
+  onMount,
+  onUpdated,
+  useContext,
+} from '@lania-v/runtime/component';
 import {
   Case,
   Default,
@@ -28,12 +34,7 @@ import {
   Transition,
   TransitionGroup,
   When,
-  lazy,
-  onCleanup,
-  onMount,
-  onUpdated,
-  useContext,
-} from '@lania-v/runtime/component';
+} from '@lania-v/advanced';
 import { createContext, provideContext } from '@lania-v/runtime/core';
 import {
   isTracking,
@@ -77,7 +78,8 @@ function TransitionDemoSection() {
     { id: 'c', label: 'C' },
   ]);
   const nextItemId = createSignal(3);
-  const itemKey = ((item: TransitionListItem, _index: number) => item.id) as never;
+  const itemKey = ((item: TransitionListItem, _index: number) =>
+    item.id) as never;
 
   const pushLog = (line: string) => {
     logs.set((prev) => [line, ...prev].slice(0, 8));
@@ -88,7 +90,10 @@ function TransitionDemoSection() {
     keyframes: Keyframe[],
     options: KeyframeAnimationOptions
   ): Animation | null => {
-    if (!(element instanceof HTMLElement) || typeof element.animate !== 'function') {
+    if (
+      !(element instanceof HTMLElement) ||
+      typeof element.animate !== 'function'
+    ) {
       return null;
     }
 
@@ -266,11 +271,17 @@ function TransitionDemoSection() {
         </div>
         <TransitionGroup
           keys={items().map((item) => item.id)}
-          onEnter={(element: Element, ctx: { key: PropertyKey; phase: string }) => {
+          onEnter={(
+            element: Element,
+            ctx: { key: PropertyKey; phase: string }
+          ) => {
             playEnterAnimation(element);
             pushLog(`enter:${String(ctx.key)}:${ctx.phase}`);
           }}
-          onLeave={(element: Element, ctx: { key: PropertyKey; phase: string }) => {
+          onLeave={(
+            element: Element,
+            ctx: { key: PropertyKey; phase: string }
+          ) => {
             playLeaveAnimation(element);
             pushLog(`leave:${String(ctx.key)}:${ctx.phase}`);
           }}
@@ -287,7 +298,11 @@ function TransitionDemoSection() {
             pushLog(`move:${String(ctx.key)}:${ctx.phase}`);
           }}
         >
-          <Each items={items()} key={itemKey} fallback={<p className="empty">empty</p>}>
+          <Each
+            items={items()}
+            key={itemKey}
+            fallback={<p className="empty">empty</p>}
+          >
             {(item: TransitionListItem): any => (
               <div
                 data-key={item.id}
@@ -331,11 +346,7 @@ function FcShowcase() {
     '(no provider)',
     'fc-showcase-demo-context'
   );
-  const lifecycleHookNames = [
-    'onMount',
-    'onCleanup',
-    'onUpdated',
-  ] as const;
+  const lifecycleHookNames = ['onMount', 'onCleanup', 'onUpdated'] as const;
   const withLifecycleHookSync = (fn: () => void) => fn();
   const getFcShowcaseLifecycleHistory = (): LifecycleHistory => {
     const host = globalThis as typeof globalThis & {
@@ -371,8 +382,7 @@ function FcShowcase() {
       snapshot.unmounts += 1;
     }
 
-    const hookCount =
-      kind === 'onMount' ? snapshot.mounts : snapshot.unmounts;
+    const hookCount = kind === 'onMount' ? snapshot.mounts : snapshot.unmounts;
     snapshot.logs = [
       `${kind} #${hookCount} @ ${new Date().toLocaleTimeString()}`,
       ...snapshot.logs,
@@ -416,7 +426,8 @@ function FcShowcase() {
   const batchEffectRuns = createSignal(0);
   const transitionUrgent = createSignal(0);
   const transitionDeferred = createSignal(0);
-  const { pending: transitionPendingState, start: startSchedulerTransition } = useTransition();
+  const { pending: transitionPendingState, start: startSchedulerTransition } =
+    useTransition();
   const transitionStateLog = createSignal<string[]>([]);
   const lifecycleMountCount = createSignal(0);
   const lifecycleUnmountCount = createSignal(0);
@@ -514,19 +525,19 @@ function FcShowcase() {
     });
   };
 
-  // 2) Store
-  const store = createStore({
+  // 2) Atom（@lania/store）
+  const store = createAtom({
     user: { name: 'lania', clicks: 0 },
     nested: { counter: 0 },
     list: [{ id: 'a' }, { id: 'b' }] as StoreListItem[],
   });
-  const storeUserName = createMemo(() => store.user.name);
-  const storeUserClicks = createMemo(() => store.user.clicks);
-  const storeNestedCounter = createMemo(() => store.nested.counter);
+  const storeUserName = createMemo(() => store.value.user.name);
+  const storeUserClicks = createMemo(() => store.value.user.clicks);
+  const storeNestedCounter = createMemo(() => store.value.nested.counter);
   const storeListIds = createMemo(() =>
     Array.from(
-      { length: store.list.length },
-      (_value, index) => store.list[index]?.id ?? `item-${index + 1}`
+      { length: store.value.list.length },
+      (_value, index) => store.value.list[index]?.id ?? `item-${index + 1}`
     )
   );
 
@@ -576,28 +587,26 @@ function FcShowcase() {
   const keepAliveKey = createSignal<'page-a' | 'page-b'>('page-a');
   const keepAliveLog = createSignal<string[]>([]);
   const enhancedTabSession = createSignal(0);
-  const keepAliveViews = createSignal(
-    {
-      pageA: (
-        <div data-key="page-a">
-          <p className="summary">Page A (cached)</p>
-          <p className="empty">
-            Type text here, switch to page-b, then switch back.
-          </p>
-          <input className="input" placeholder="type in Page A" />
-        </div>
-      ) as any,
-      pageB: (
-        <div data-key="page-b">
-          <p className="summary">Page B (cached)</p>
-          <p className="empty">
-            Type text here, switch to page-a, then switch back.
-          </p>
-          <input className="input" placeholder="type in Page B" />
-        </div>
-      ) as any,
-    }
-  );
+  const keepAliveViews = createSignal({
+    pageA: (
+      <div data-key="page-a">
+        <p className="summary">Page A (cached)</p>
+        <p className="empty">
+          Type text here, switch to page-b, then switch back.
+        </p>
+        <input className="input" placeholder="type in Page A" />
+      </div>
+    ) as any,
+    pageB: (
+      <div data-key="page-b">
+        <p className="summary">Page B (cached)</p>
+        <p className="empty">
+          Type text here, switch to page-a, then switch back.
+        </p>
+        <input className="input" placeholder="type in Page B" />
+      </div>
+    ) as any,
+  });
   const pushKeepAliveLog = (msg: string) => {
     queueMicrotask(() => {
       keepAliveLog.set((prev) =>
@@ -948,7 +957,9 @@ function FcShowcase() {
             </div>
 
             <div className="item">
-              <p className="summary">useTransition + startTransition（scheduler）</p>
+              <p className="summary">
+                useTransition + startTransition（scheduler）
+              </p>
               <p>
                 urgent: <span>{transitionUrgent()}</span> | deferred:{' '}
                 <span>{transitionDeferred()}</span>
@@ -976,14 +987,16 @@ function FcShowcase() {
 
         <When when={tab() === 'store'}>
           <div className="item">
-            <p className="summary">createStore 读写链路</p>
-            <p>store.user.name: {storeUserName()}</p>
-            <p>store.user.clicks: {storeUserClicks()}</p>
-            <p>store.nested.counter: {storeNestedCounter()}</p>
+            <p className="summary">@lania/store 原子读写链路</p>
+            <p>store.value.user.name: {storeUserName()}</p>
+            <p>store.value.user.clicks: {storeUserClicks()}</p>
+            <p>store.value.nested.counter: {storeNestedCounter()}</p>
             <div className="row">
               <button
                 className="btn"
-                onClick={() => store.set('user', 'clicks', (v: number) => v + 1)}
+                onClick={() =>
+                  store.set('user', 'clicks', (v: number) => v + 1)
+                }
               >
                 click +1
               </button>
@@ -997,7 +1010,9 @@ function FcShowcase() {
               </button>
               <button
                 className="btn"
-                onClick={() => store.set('user', 'name', (v: string) => `${v}!`)}
+                onClick={() =>
+                  store.set('user', 'name', (v: string) => `${v}!`)
+                }
               >
                 name +!
               </button>
@@ -1012,7 +1027,7 @@ function FcShowcase() {
                 append item
               </button>
             </div>
-            <p>store.list ids: {storeListIds().join(', ') || '-'}</p>
+            <p>store.value.list ids: {storeListIds().join(', ') || '-'}</p>
           </div>
         </When>
 
@@ -1106,7 +1121,8 @@ function FcShowcase() {
           <div className="item">
             <p className="summary">&lt;When mode="remount" /&gt;</p>
             <p className="empty">
-              在两个输入框里分别输入内容，然后 toggle hide/show。上面会保留原 DOM 输入值，下面会重新创建 DOM 并清空输入内容。
+              在两个输入框里分别输入内容，然后 toggle hide/show。上面会保留原
+              DOM 输入值，下面会重新创建 DOM 并清空输入内容。
             </p>
             <button
               className="btn"
@@ -1134,10 +1150,7 @@ function FcShowcase() {
                 >
                   <p className="summary">retain (default)</p>
                   <p className="empty">hide/show 后输入内容会保留</p>
-                  <input
-                    className="input"
-                    placeholder="type in retain block"
-                  />
+                  <input className="input" placeholder="type in retain block" />
                 </div>
               </When>
               <When when={whenModeDemoVisible()} mode="remount">
@@ -1162,30 +1175,25 @@ function FcShowcase() {
           </div>
 
           <div className="item">
-            <p className="summary">&lt;Switch&gt; + &lt;Case /&gt; + &lt;Default /&gt;</p>
+            <p className="summary">
+              &lt;Switch&gt; + &lt;Case /&gt; + &lt;Default /&gt;
+            </p>
             <p className="empty">
-              `Case` / `Default` 只能作为 `Switch` 的直接子节点使用；按顺序匹配第一个为 true 的 Case，否则走 Default。
+              `Case` / `Default` 只能作为 `Switch`
+              的直接子节点使用；按顺序匹配第一个为 true 的 Case，否则走
+              Default。
             </p>
             <div className="row">
-              <button
-                className="btn"
-                onClick={() => switchCase.set(1)}
-              >
+              <button className="btn" onClick={() => switchCase.set(1)}>
                 set 1
               </button>
-              <button
-                className="btn"
-                onClick={() => switchCase.set(2)}
-              >
+              <button className="btn" onClick={() => switchCase.set(2)}>
                 set 2
               </button>
               <button className="btn" onClick={() => switchCase.set(3)}>
                 set 3
               </button>
-              <button
-                className="btn"
-                onClick={() => switchCase.set(0)}
-              >
+              <button className="btn" onClick={() => switchCase.set(0)}>
                 set other
               </button>
             </div>
@@ -1206,7 +1214,8 @@ function FcShowcase() {
               </button>
             </div>
             <p className="empty">
-              tips: 在 A/B/Default 里输入内容，来回切分支再回来；retain 会保留输入值，remount 会清空。
+              tips: 在 A/B/Default 里输入内容，来回切分支再回来；retain
+              会保留输入值，remount 会清空。
             </p>
             <When when={switchMode() === 'retain'}>
               <Then>
@@ -1380,7 +1389,10 @@ function FcShowcase() {
               <button className="btn" onClick={() => dynamicTag.set('button')}>
                 button
               </button>
-              <button className="btn" onClick={() => dynamicTag.set('x-todo-fc')}>
+              <button
+                className="btn"
+                onClick={() => dynamicTag.set('x-todo-fc')}
+              >
                 x-todo-fc (string)
               </button>
               <button
@@ -1447,25 +1459,26 @@ function FcShowcase() {
               cacheKey={keepAliveKey()}
               max={2}
               onCache={(_value: unknown, key: string) =>
-                pushKeepAliveLog(`cache ${key}`)}
-              onActivate={(
-                _value: unknown,
-                key: string,
-                reused: boolean
-              ) =>
-                pushKeepAliveLog(
-                  `activate ${key} reused=${String(reused)}`
-                )}
+                pushKeepAliveLog(`cache ${key}`)
+              }
+              onActivate={(_value: unknown, key: string, reused: boolean) =>
+                pushKeepAliveLog(`activate ${key} reused=${String(reused)}`)
+              }
               onDeactivate={(_value: unknown, key: string) =>
-                pushKeepAliveLog(`deactivate ${key}`)}
+                pushKeepAliveLog(`deactivate ${key}`)
+              }
               onEvict={(_value: unknown, key: string) =>
-                pushKeepAliveLog(`evict ${key}`)}
+                pushKeepAliveLog(`evict ${key}`)
+              }
             >
               {keepAliveKey() === 'page-a'
                 ? keepAliveViews().pageA
                 : keepAliveViews().pageB}
             </KeepAlive>
-            <Each items={keepAliveLog()} fallback={renderEmpty('no keep-alive logs')}>
+            <Each
+              items={keepAliveLog()}
+              fallback={renderEmpty('no keep-alive logs')}
+            >
               {(line: string): any => <p className="empty">{line}</p>}
             </Each>
           </div>
@@ -1485,7 +1498,9 @@ function FcShowcase() {
 
         <When when={tab() === 'suspense'} mode="remount">
           <div className="item">
-            <p className="summary">&lt;Suspense /&gt; + lazy() + &lt;LazyLoad /&gt;</p>
+            <p className="summary">
+              &lt;Suspense /&gt; + lazy() + &lt;LazyLoad /&gt;
+            </p>
             <div className="row">
               <button className="btn" onClick={() => lazyName.set('lania')}>
                 name=lania
@@ -1493,10 +1508,7 @@ function FcShowcase() {
               <button className="btn" onClick={() => lazyName.set('runtime')}>
                 name=runtime
               </button>
-              <button
-                className="btn"
-                onClick={() => throwError.set((v) => !v)}
-              >
+              <button className="btn" onClick={() => throwError.set((v) => !v)}>
                 toggle error
               </button>
             </div>
@@ -1510,9 +1522,11 @@ function FcShowcase() {
                   <Then>
                     <LazyHello name={lazyName()} key={suspenseTabSession()} />
                   </Then>
-                  <Else>{(() => {
-                    throw new Error('manual suspense demo error');
-                  })()}</Else>
+                  <Else>
+                    {(() => {
+                      throw new Error('manual suspense demo error');
+                    })()}
+                  </Else>
                 </When>
               </Suspense>
             </ErrorBoundary>

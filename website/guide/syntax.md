@@ -6,14 +6,14 @@
 
 ## 文件与模块
 
-| 规则 | 说明 |
-| --- | --- |
-| 扩展名 | 必须是 `.lania.tsx`，由 Vite 插件按 `tsxInclude` 拦截 |
-| 组件声明 | 每个 `defineComponent(...)` 调用编译出一个继承 `ReactiveElement` 的类 |
+| 规则     | 说明                                                                      |
+| -------- | ------------------------------------------------------------------------- |
+| 扩展名   | 必须是 `.lania.tsx`，由 Vite 插件按 `tsxInclude` 拦截                     |
+| 组件声明 | 每个 `defineComponent(...)` 调用编译出一个继承 `ReactiveElement` 的类     |
 | 默认导出 | 默认导出就是该组件类；父组件用 `import Card from './Card.lania.tsx'` 引入 |
-| 返回值 | 组件函数必须返回**单个** JSX 元素或 fragment（`<>...</>`） |
-| 多个组件 | 一个文件可以定义多个组件，未导出组件的标签名按声明推断 |
-| 辅助函数 | 放在 `.ts` 文件里再 import；模块输出只保留被编译产物引用到的声明 |
+| 返回值   | 组件函数必须返回**单个** JSX 元素或 fragment（`<>...</>`）                |
+| 多个组件 | 一个文件可以定义多个组件，未导出组件的标签名按声明推断                    |
+| 辅助函数 | 放在 `.ts` 文件里再 import；模块输出只保留被编译产物引用到的声明          |
 
 多个根节点会被拒绝：
 
@@ -29,23 +29,27 @@ export default defineComponent(function Demo(props: DemoProps) {
   // ── setup 区：顶层语句会被收集为实例字段 ──
   const count = createSignal(0);
   const double = createMemo(() => count() * 2);
-  const label = 'count';        // 普通值 → 本地绑定
+  const label = 'count'; // 普通值 → 本地绑定
   onMount(() => console.log('mounted'));
 
   // ── 模板区：return 的 JSX 会被编译成模板 IR ──
-  return <p>{label}: {double()}</p>;
+  return (
+    <p>
+      {label}: {double()}
+    </p>
+  );
 });
 ```
 
 对应关系：
 
-| setup 区写法 | 编译结果 |
-| --- | --- |
-| `const count = createSignal(0)` | 实例字段 `this.count`（Signal） |
-| `const double = createMemo(...)` | 实例字段 `this.double`（Computed） |
-| `const label = 'count'` | 本地绑定（不会变成实例 Signal 字段） |
-| `onMount()` / `onUpdated()` / `onCleanup()` | 生命周期槽（compile-only 标记） |
-| `props` | 属性快照，每个 prop 的 getter 回读同名 Signal |
+| setup 区写法                                | 编译结果                                      |
+| ------------------------------------------- | --------------------------------------------- |
+| `const count = createSignal(0)`             | 实例字段 `this.count`（Signal）               |
+| `const double = createMemo(...)`            | 实例字段 `this.double`（Computed）            |
+| `const label = 'count'`                     | 本地绑定（不会变成实例 Signal 字段）          |
+| `onMount()` / `onUpdated()` / `onCleanup()` | 生命周期槽（compile-only 标记）               |
+| `props`                                     | 属性快照，每个 prop 的 getter 回读同名 Signal |
 
 setup 区的语句不会在每次更新时重跑；模板区的表达式才会随依赖变化重新求值。
 
@@ -66,21 +70,21 @@ setup 区的语句不会在每次更新时重跑；模板区的表达式才会�
 - 依赖为空且可求值的表达式会被优化成静态值。
 
 ```ts
-const state = createStore({ list: [{ name: 'a' }] });
+const state = createAtom({ list: [{ name: 'a' }] });
 
-state.list[0].name;     // 稳定路径，可精确订阅
-state.list[index].name; // 动态下标 → 截断到 list
+state.value.list[0].name; // 稳定路径，可精确订阅
+state.value.list[index].name; // 动态下标 → 截断到 list
 ```
 
 ### 结构表达式 vs 结构节点
 
-| 写法 | 编译结果 |
-| --- | --- |
-| `{cond ? <A /> : <B />}` | `ExpressionIR`：依赖变化时整体重算该位置 |
-| `{cond && <A />}` | `ExpressionIR` |
-| `{items().map((item) => <li>{item}</li>)}` | `ListIR`：走列表渲染路径 |
-| `<When when={cond()}>` | `IfIR`：分支被保留，切换时不重建无关分支 |
-| `<Each items={items()} key={...}>` | `ListIR`：带显式 key 与 `fallback` |
+| 写法                                       | 编译结果                                 |
+| ------------------------------------------ | ---------------------------------------- |
+| `{cond ? <A /> : <B />}`                   | `ExpressionIR`：依赖变化时整体重算该位置 |
+| `{cond && <A />}`                          | `ExpressionIR`                           |
+| `{items().map((item) => <li>{item}</li>)}` | `ListIR`：走列表渲染路径                 |
+| `<When when={cond()}>`                     | `IfIR`：分支被保留，切换时不重建无关分支 |
+| `<Each items={items()} key={...}>`         | `ListIR`：带显式 key 与 `fallback`       |
 
 结论：三种写法都能编译，但**需要保留分支内部状态、需要稳定 key、需要 fallback 时，用增强组件**。
 
@@ -154,15 +158,15 @@ const content = html`<strong>${title()}</strong>`;
 <input onKeyDown={{ handler: submit, modifiers: { enter: true } }} />
 ```
 
-| 修饰符 | 行为 |
-| --- | --- |
-| `stop` | `stopPropagation()` |
-| `prevent` | `preventDefault()` |
-| `self` | 仅当 `event.target === event.currentTarget` |
-| `enter` | 仅键盘 `Enter` |
-| `key:*` / `keys: ['a', 'b']` | 仅当 `event.key` 匹配 |
-| `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下 |
-| `left` / `middle` / `right` | 仅对应鼠标键 |
+| 修饰符                                   | 行为                                        |
+| ---------------------------------------- | ------------------------------------------- |
+| `stop`                                   | `stopPropagation()`                         |
+| `prevent`                                | `preventDefault()`                          |
+| `self`                                   | 仅当 `event.target === event.currentTarget` |
+| `enter`                                  | 仅键盘 `Enter`                              |
+| `key:*` / `keys: ['a', 'b']`             | 仅当 `event.key` 匹配                       |
+| `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下                            |
+| `left` / `middle` / `right`              | 仅对应鼠标键                                |
 
 对象写法里的修饰符与后缀写法等价：`modifiers: { enter: true }` 会降级为 `key:enter`，`keys` 接受字符串字面量数组。
 
@@ -177,12 +181,12 @@ const content = html`<strong>${title()}</strong>`;
 <input model={{ source: { get: () => draft(), set: (v) => draft.set(v) } }} />
 ```
 
-| 键 | 说明 |
-| --- | --- |
-| `target` | 直接绑定一个 Signal |
-| `source` | 绑定自定义读写对，适合非 Signal 状态 |
-| `prop` | `value`（默认）/ `checked` / `selected` |
-| `modifiers` | `trim` / `number` / `lazy` |
+| 键          | 说明                                    |
+| ----------- | --------------------------------------- |
+| `target`    | 直接绑定一个 Signal                     |
+| `source`    | 绑定自定义读写对，适合非 Signal 状态    |
+| `prop`      | `value`（默认）/ `checked` / `selected` |
+| `modifiers` | `trim` / `number` / `lazy`              |
 
 ### `ref`
 
@@ -213,15 +217,15 @@ import Card from './Card.lania.tsx';
 </Card>;
 ```
 
-| 写法 | 含义 |
-| --- | --- |
-| `title="hello"` | 作为 prop 写入组件实例的 Signal |
-| `count={count()}` | 动态 prop |
-| `onSelect={fn}` | 回调 prop（不是 `emit`） |
-| `ref={ref}` | 接收 `createExpose()` 的公开面 |
-| 子节点 | 成为宿主的 light DOM / childBindings，不自动进入 `props.children` |
-| `{...obj}` | spread **仅支持组件标签**，原生元素上会报错 |
-| `client:idle` 等 | Island 标记，不作为 prop 传递 |
+| 写法              | 含义                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| `title="hello"`   | 作为 prop 写入组件实例的 Signal                                   |
+| `count={count()}` | 动态 prop                                                         |
+| `onSelect={fn}`   | 回调 prop（不是 `emit`）                                          |
+| `ref={ref}`       | 接收 `createExpose()` 的公开面                                    |
+| 子节点            | 成为宿主的 light DOM / childBindings，不自动进入 `props.children` |
+| `{...obj}`        | spread **仅支持组件标签**，原生元素上会报错                       |
+| `client:idle` 等  | Island 标记，不作为 prop 传递                                     |
 
 原生元素上使用 spread 会被拒绝：
 
@@ -255,44 +259,44 @@ import Card from './Card.lania.tsx';
 
 `tsxTemplateSyntaxMode` 决定编译器接受的属性写法。默认是 `jsx-standard`。
 
-| 能力 | `jsx-standard`（默认） | `directive-extended` |
-| --- | --- | --- |
-| 双向绑定 | `model={ { target, modifiers } }` | `model={ { ... } }`、`model:value.trim={x}`、`model:checked={x}`、`bind:value={x}` |
-| 类名开关 | `class={ { active: cond } }` | `class={ { ... } }`、`class:active={cond}` |
-| 单条样式 | `style={ { width: ... } }` | `style={ { ... } }`、`style:width.px={n}` |
-| 自定义指令 | `use={ { name: value } }` | `use={ { ... } }`、`use:name={value}` |
-| 事件修饰符 | `onClick={ { handler, modifiers } }` | 同上，另有 `click.stop={fn}` |
-| 组件事件 | `onClose={fn}` | 另有 `on:close={fn}` |
-| 条件 | `<When>` | 另有 `if={cond}` |
+| 能力       | `jsx-standard`（默认）               | `directive-extended`                                                               |
+| ---------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
+| 双向绑定   | `model={ { target, modifiers } }`    | `model={ { ... } }`、`model:value.trim={x}`、`model:checked={x}`、`bind:value={x}` |
+| 类名开关   | `class={ { active: cond } }`         | `class={ { ... } }`、`class:active={cond}`                                         |
+| 单条样式   | `style={ { width: ... } }`           | `style={ { ... } }`、`style:width.px={n}`                                          |
+| 自定义指令 | `use={ { name: value } }`            | `use={ { ... } }`、`use:name={value}`                                              |
+| 事件修饰符 | `onClick={ { handler, modifiers } }` | 同上，另有 `click.stop={fn}`                                                       |
+| 组件事件   | `onClose={fn}`                       | 另有 `on:close={fn}`                                                               |
+| 条件       | `<When>`                             | 另有 `if={cond}`                                                                   |
 
 两种模式**不能混用在同一套配置里**：`jsx-standard` 会主动拦截上面所有旧式指令写法，并给出明确的编译错误。新项目建议保持默认。
 
 ## 编译期硬约束
 
-| 写法 | 结果 |
-| --- | --- |
-| 多个根节点 | 报错，需用 fragment 包裹 |
-| 原生元素上 spread | 报错，spread 只允许组件标签 |
-| `html` 与子节点并存 | 报错 |
-| `model` / `use` / 事件对象不是对象字面量 | 报错 |
-| 对象字面量里的 spread / 计算属性名 | 不支持 |
-| `jsx-standard` 下使用 `model:` / `class:` / `use:` 等 | 报错 |
-| 在未编译的普通 `.ts` 中调用 `onMount` 等 | compile-only 错误 |
-| 包名或路径别名导入的 props 类型 | 不做类型展开 |
-| `Pick<T, K>`、泛型实例化等需要类型检查的 props 类型 | 不支持 |
+| 写法                                                  | 结果                        |
+| ----------------------------------------------------- | --------------------------- |
+| 多个根节点                                            | 报错，需用 fragment 包裹    |
+| 原生元素上 spread                                     | 报错，spread 只允许组件标签 |
+| `html` 与子节点并存                                   | 报错                        |
+| `model` / `use` / 事件对象不是对象字面量              | 报错                        |
+| 对象字面量里的 spread / 计算属性名                    | 不支持                      |
+| `jsx-standard` 下使用 `model:` / `class:` / `use:` 等 | 报错                        |
+| 在未编译的普通 `.ts` 中调用 `onMount` 等              | compile-only 错误           |
+| 包名或路径别名导入的 props 类型                       | 不做类型展开                |
+| `Pick<T, K>`、泛型实例化等需要类型检查的 props 类型   | 不支持                      |
 
 ## 与 React JSX 的差异
 
-| 维度 | React | lania-v |
-| --- | --- | --- |
-| JSX 产物 | VNode / Fiber | 真实 DOM 节点、组件元素或增强组件结果 |
-| 组件函数 | 每次更新重新执行 | 只在挂载时执行一次，之后由 Updater 写 Slot |
-| 条件 / 列表 | 任意表达式 | 推荐增强组件；三元与 `&&` 会被当作表达式节点 |
-| 引用 Signal | — | 必须调用 `count()` 才订阅 |
-| 属性写法 | 标准 JSX | 标准 JSX + `class` / `style` / `model` / `use` / `html` 对象协议 |
-| `children` | `props.children` | 子节点是 light DOM；需要 `props.children` 请显式传 `children={...}` |
-| `ref` | DOM 或 forwardRef | DOM 元素，或组件的 `createExpose()` 公开面 |
-| 样式作用域 | 依赖 CSS 方案 | Shadow DOM + `Component.styles` |
+| 维度        | React             | lania-v                                                             |
+| ----------- | ----------------- | ------------------------------------------------------------------- |
+| JSX 产物    | VNode / Fiber     | 真实 DOM 节点、组件元素或增强组件结果                               |
+| 组件函数    | 每次更新重新执行  | 只在挂载时执行一次，之后由 Updater 写 Slot                          |
+| 条件 / 列表 | 任意表达式        | 推荐增强组件；三元与 `&&` 会被当作表达式节点                        |
+| 引用 Signal | —                 | 必须调用 `count()` 才订阅                                           |
+| 属性写法    | 标准 JSX          | 标准 JSX + `class` / `style` / `model` / `use` / `html` 对象协议    |
+| `children`  | `props.children`  | 子节点是 light DOM；需要 `props.children` 请显式传 `children={...}` |
+| `ref`       | DOM 或 forwardRef | DOM 元素，或组件的 `createExpose()` 公开面                          |
+| 样式作用域  | 依赖 CSS 方案     | Shadow DOM + `Component.styles`                                     |
 
 ## 速查卡
 

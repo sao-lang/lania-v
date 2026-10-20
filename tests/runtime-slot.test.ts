@@ -12,18 +12,14 @@ import {
   BoundarySlot,
   ClassSlot,
   DynamicSlot,
-  ErrorBoundary,
   DirectiveBindingSlot,
   IfSlot,
   ForSlot,
-  KeepAlive,
   KeepAliveSlot,
   SlotTable,
   StyleSlot,
   TeleportSlot,
   TextSlot,
-  TransitionGroup,
-  When,
   PropSlot,
   clearSlotPool,
   createStaticTemplate,
@@ -35,6 +31,12 @@ import {
   ssrRenderBlockSlot,
   ssrRenderEnhancedBoundary,
 } from '../packages/runtime/src/index';
+import {
+  ErrorBoundary,
+  KeepAlive,
+  TransitionGroup,
+  When,
+} from '../packages/advanced/src/index';
 import { withContextHost } from '../packages/runtime/src/component/host/function-component';
 import { resetRuntimeTestState } from '../packages/runtime/src/entry/testing';
 import { resolveBlockPayload } from '../packages/runtime/src/component/lifecycle/keepalive-registry';
@@ -102,7 +104,9 @@ beforeEach(() => {
 
 describe('TextSlot', () => {
   it('preserves empty text-node placeholders for inline dynamic text slots', () => {
-    const template = createStaticTemplate('<p>prefix__LANIA_SLOT_0__<span>__LANIA_SLOT_1__</span></p>');
+    const template = createStaticTemplate(
+      '<p>prefix__LANIA_SLOT_0__<span>__LANIA_SLOT_1__</span></p>'
+    );
     const fragment = template.clone();
     const paragraph = fragment.firstChild as HTMLParagraphElement | null;
 
@@ -122,7 +126,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<span></span>'), 99);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<span></span>'),
+      99
+    );
 
     expect(getSlotPoolStats().availableNodeBuffers).toBe(0);
     slot.write({
@@ -451,23 +459,31 @@ describe('TextSlot', () => {
       ],
     });
 
-    slot.write(createPayload([
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-    ]));
+    slot.write(
+      createPayload([
+        { id: 'a', label: 'A' },
+        { id: 'b', label: 'B' },
+      ])
+    );
 
     const children = [...host.childNodes];
     // 只有 ForSlot 自己的锚点注释，条目本身不再产生 start/end 注释。
-    expect(children.filter((node) => node.nodeType === Node.COMMENT_NODE)).toHaveLength(1);
-    expect(children.filter((node) => node instanceof HTMLLIElement)).toHaveLength(2);
+    expect(
+      children.filter((node) => node.nodeType === Node.COMMENT_NODE)
+    ).toHaveLength(1);
+    expect(
+      children.filter((node) => node instanceof HTMLLIElement)
+    ).toHaveLength(2);
 
     const firstItems = [...host.querySelectorAll('li')];
     expect(firstItems.map((node) => node.textContent)).toEqual(['A', 'B']);
 
-    slot.write(createPayload([
-      { id: 'b', label: 'B' },
-      { id: 'a', label: 'A' },
-    ]));
+    slot.write(
+      createPayload([
+        { id: 'b', label: 'B' },
+        { id: 'a', label: 'A' },
+      ])
+    );
 
     const reordered = [...host.querySelectorAll('li')];
     expect(reordered.map((node) => node.textContent)).toEqual(['B', 'A']);
@@ -480,7 +496,9 @@ describe('TextSlot', () => {
     const remaining = [...host.querySelectorAll('li')];
     expect(remaining).toHaveLength(1);
     expect(remaining[0]).toBe(firstItems[0]);
-    expect([...host.childNodes].filter((node) => node.nodeType === Node.COMMENT_NODE)).toHaveLength(1);
+    expect(
+      [...host.childNodes].filter((node) => node.nodeType === Node.COMMENT_NODE)
+    ).toHaveLength(1);
   });
 
   it('renders non-keyed slot payload items with nested text bindings', () => {
@@ -529,7 +547,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('if');
     host.appendChild(anchor);
-    const slot = new IfSlot(anchor, createStaticTemplate('<span>Visible</span>'), 5);
+    const slot = new IfSlot(
+      anchor,
+      createStaticTemplate('<span>Visible</span>'),
+      5
+    );
 
     slot.write(true);
     expect(host.textContent).toBe('Visible');
@@ -640,31 +662,31 @@ describe('TextSlot', () => {
           },
         },
         [
-        {
-          kind: 'if' as const,
-          slotIndex: 0,
-          path: [0],
-          template: createStaticTemplate(
-            '<div data-key="page-a"><input placeholder="type in Page A"></input></div>'
-          ),
-          evaluate: () => ({
-            __lania_if: 'block' as const,
-            when: currentPage === 'page-a',
-          }),
-        },
-        {
-          kind: 'if' as const,
-          slotIndex: 1,
-          path: [1],
-          template: createStaticTemplate(
-            '<div data-key="page-b"><input placeholder="type in Page B"></input></div>'
-          ),
-          evaluate: () => ({
-            __lania_if: 'block' as const,
-            when: currentPage === 'page-b',
-          }),
-        },
-      ]
+          {
+            kind: 'if' as const,
+            slotIndex: 0,
+            path: [0],
+            template: createStaticTemplate(
+              '<div data-key="page-a"><input placeholder="type in Page A"></input></div>'
+            ),
+            evaluate: () => ({
+              __lania_if: 'block' as const,
+              when: currentPage === 'page-a',
+            }),
+          },
+          {
+            kind: 'if' as const,
+            slotIndex: 1,
+            path: [1],
+            template: createStaticTemplate(
+              '<div data-key="page-b"><input placeholder="type in Page B"></input></div>'
+            ),
+            evaluate: () => ({
+              __lania_if: 'block' as const,
+              when: currentPage === 'page-b',
+            }),
+          },
+        ]
       );
 
     slot.write(createPayload('page-a'));
@@ -707,7 +729,9 @@ describe('TextSlot', () => {
 
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="keepalive-boundary-shell"><!--__LANIA_SLOT_0__--></section>'),
+      createStaticTemplate(
+        '<section data-pane="keepalive-boundary-shell"><!--__LANIA_SLOT_0__--></section>'
+      ),
       2010
     );
     const createPayload = (page: 'page-a' | 'page-b') =>
@@ -725,45 +749,48 @@ describe('TextSlot', () => {
           },
         },
         [
-        {
-          kind: 'boundary' as const,
-          slotIndex: 0,
-          path: [0, 0],
-          template:
-            page === 'page-a'
-              ? createStaticTemplate('<input data-pane="lazy-a"></input>')
-              : createStaticTemplate('<div data-pane="lazy-b">Page B</div>'),
-          fallbackTemplate:
-            page === 'page-a'
-              ? createStaticTemplate('<span data-pane="lazy-a-fallback">loading-a</span>')
-              : undefined,
-          evaluate: () => ({
-            __lania_boundary: 'block' as const,
-            payload: {
-              protocol: ENHANCED_CONTRACT_PROTOCOL,
-              version: ENHANCED_CONTRACT_VERSION,
-              payloadKind: 'boundary' as const,
-              component: 'LazyLoad' as const,
-              irKind: 'BoundaryIR' as const,
-              boundaryIndex: page === 'page-a' ? 10 : 11,
-              initialState: page === 'page-a' ? ('inactive' as const) : ('idle' as const),
-              childrenTemplate: {},
-              fallbackTemplate: page === 'page-a' ? {} : undefined,
-              metadata:
-                page === 'page-a'
-                  ? {
-                      lazyKey: 'slot-keepalive-lazy-page-a',
-                      once: true,
-                    }
-                  : {
-                      lazyKey: 'slot-keepalive-lazy-page-b',
-                      observe: false,
-                    },
-            },
-            bindings: [],
-          }),
-        },
-      ]
+          {
+            kind: 'boundary' as const,
+            slotIndex: 0,
+            path: [0, 0],
+            template:
+              page === 'page-a'
+                ? createStaticTemplate('<input data-pane="lazy-a"></input>')
+                : createStaticTemplate('<div data-pane="lazy-b">Page B</div>'),
+            fallbackTemplate:
+              page === 'page-a'
+                ? createStaticTemplate(
+                    '<span data-pane="lazy-a-fallback">loading-a</span>'
+                  )
+                : undefined,
+            evaluate: () => ({
+              __lania_boundary: 'block' as const,
+              payload: {
+                protocol: ENHANCED_CONTRACT_PROTOCOL,
+                version: ENHANCED_CONTRACT_VERSION,
+                payloadKind: 'boundary' as const,
+                component: 'LazyLoad' as const,
+                irKind: 'BoundaryIR' as const,
+                boundaryIndex: page === 'page-a' ? 10 : 11,
+                initialState:
+                  page === 'page-a' ? ('inactive' as const) : ('idle' as const),
+                childrenTemplate: {},
+                fallbackTemplate: page === 'page-a' ? {} : undefined,
+                metadata:
+                  page === 'page-a'
+                    ? {
+                        lazyKey: 'slot-keepalive-lazy-page-a',
+                        once: true,
+                      }
+                    : {
+                        lazyKey: 'slot-keepalive-lazy-page-b',
+                        observe: false,
+                      },
+              },
+              bindings: [],
+            }),
+          },
+        ]
       );
 
     slot.write(createPayload('page-a'));
@@ -775,7 +802,9 @@ describe('TextSlot', () => {
       {} as IntersectionObserver
     );
 
-    const visibleInput = host.querySelector('[data-pane="lazy-a"]') as HTMLInputElement | null;
+    const visibleInput = host.querySelector(
+      '[data-pane="lazy-a"]'
+    ) as HTMLInputElement | null;
     expect(visibleInput).not.toBeNull();
     if (!visibleInput) {
       throw new Error('expected visible KeepAliveSlot LazyLoad input');
@@ -785,10 +814,14 @@ describe('TextSlot', () => {
 
     slot.write(createPayload('page-b'));
     expect(host.querySelector('[data-pane="lazy-a"]')).toBeNull();
-    expect(host.querySelector('[data-pane="lazy-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-pane="lazy-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     slot.write(createPayload('page-a'));
-    const restoredInput = host.querySelector('[data-pane="lazy-a"]') as HTMLInputElement | null;
+    const restoredInput = host.querySelector(
+      '[data-pane="lazy-a"]'
+    ) as HTMLInputElement | null;
     expect(restoredInput).toBe(visibleInput);
     expect(restoredInput?.value).toBe('draft');
     expect(host.querySelector('[data-pane="lazy-a-fallback"]')).toBeNull();
@@ -833,57 +866,61 @@ describe('TextSlot', () => {
           },
         },
         [
-        {
-          kind: 'boundary' as const,
-          slotIndex: 0,
-          path: [0, 0],
-          template:
-            page === 'page-a'
-              ? createStaticTemplate('<input data-pane="suspense-a"></input>')
-              : createStaticTemplate('<div data-pane="suspense-b">Page B</div>'),
-          fallbackTemplate:
-            page === 'page-a'
-              ? createStaticTemplate('<span data-pane="suspense-a-fallback">loading-a</span>')
-              : undefined,
-          evaluate: () => ({
-            __lania_boundary: 'block' as const,
-            payload: {
-              protocol: ENHANCED_CONTRACT_PROTOCOL,
-              version: ENHANCED_CONTRACT_VERSION,
-              payloadKind: 'boundary' as const,
-              component: 'Suspense' as const,
-              irKind: 'BoundaryIR' as const,
-              boundaryIndex: page === 'page-a' ? 12 : 13,
-              initialState: 'idle' as const,
-              childrenTemplate: {},
-              fallbackTemplate: page === 'page-a' ? {} : undefined,
-              metadata: {
-                suspenseKey:
-                  page === 'page-a'
-                    ? 'slot-keepalive-suspense-page-a'
-                    : 'slot-keepalive-suspense-page-b',
-              },
-            },
-            bindings:
+          {
+            kind: 'boundary' as const,
+            slotIndex: 0,
+            path: [0, 0],
+            template:
               page === 'page-a'
-                ? ([
-                    {
-                      kind: 'prop' as const,
-                      slotIndex: 0,
-                      path: [0],
-                      name: 'value',
-                      evaluate: () => {
-                        if (!resolved) {
-                          throw pending;
-                        }
-                        return 'ready';
+                ? createStaticTemplate('<input data-pane="suspense-a"></input>')
+                : createStaticTemplate(
+                    '<div data-pane="suspense-b">Page B</div>'
+                  ),
+            fallbackTemplate:
+              page === 'page-a'
+                ? createStaticTemplate(
+                    '<span data-pane="suspense-a-fallback">loading-a</span>'
+                  )
+                : undefined,
+            evaluate: () => ({
+              __lania_boundary: 'block' as const,
+              payload: {
+                protocol: ENHANCED_CONTRACT_PROTOCOL,
+                version: ENHANCED_CONTRACT_VERSION,
+                payloadKind: 'boundary' as const,
+                component: 'Suspense' as const,
+                irKind: 'BoundaryIR' as const,
+                boundaryIndex: page === 'page-a' ? 12 : 13,
+                initialState: 'idle' as const,
+                childrenTemplate: {},
+                fallbackTemplate: page === 'page-a' ? {} : undefined,
+                metadata: {
+                  suspenseKey:
+                    page === 'page-a'
+                      ? 'slot-keepalive-suspense-page-a'
+                      : 'slot-keepalive-suspense-page-b',
+                },
+              },
+              bindings:
+                page === 'page-a'
+                  ? ([
+                      {
+                        kind: 'prop' as const,
+                        slotIndex: 0,
+                        path: [0],
+                        name: 'value',
+                        evaluate: () => {
+                          if (!resolved) {
+                            throw pending;
+                          }
+                          return 'ready';
+                        },
                       },
-                    },
-                  ] as const)
-                : ([] as const),
-          }),
-        },
-      ]
+                    ] as const)
+                  : ([] as const),
+            }),
+          },
+        ]
       );
 
     slot.write(createPayload('page-a'));
@@ -894,20 +931,28 @@ describe('TextSlot', () => {
     await pending;
     await flushMicrotasks(3);
 
-    const input = host.querySelector('[data-pane="suspense-a"]') as HTMLInputElement | null;
+    const input = host.querySelector(
+      '[data-pane="suspense-a"]'
+    ) as HTMLInputElement | null;
     expect(input).not.toBeNull();
     if (!input) {
-      throw new Error('expected KeepAliveSlot Suspense child input after resolution');
+      throw new Error(
+        'expected KeepAliveSlot Suspense child input after resolution'
+      );
     }
     expect(input.value).toBe('ready');
     input.dataset.memo = 'draft';
 
     slot.write(createPayload('page-b'));
     expect(host.querySelector('[data-pane="suspense-a"]')).toBeNull();
-    expect(host.querySelector('[data-pane="suspense-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-pane="suspense-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     slot.write(createPayload('page-a'));
-    const restoredInput = host.querySelector('[data-pane="suspense-a"]') as HTMLInputElement | null;
+    const restoredInput = host.querySelector(
+      '[data-pane="suspense-a"]'
+    ) as HTMLInputElement | null;
     expect(restoredInput).toBe(input);
     expect(restoredInput?.dataset.memo).toBe('draft');
     expect(host.querySelector('[data-pane="suspense-a-fallback"]')).toBeNull();
@@ -919,7 +964,11 @@ describe('TextSlot', () => {
     host.appendChild(anchor);
 
     const slotEvents: string[] = [];
-    const slot = new KeepAliveSlot(anchor, createStaticTemplate('<span>slot</span>'), 2001);
+    const slot = new KeepAliveSlot(
+      anchor,
+      createStaticTemplate('<span>slot</span>'),
+      2001
+    );
     const createSlotPayload = (cacheKey: 'page-a' | 'page-b') =>
       createKeepAliveBlockPayload(
         {
@@ -927,8 +976,11 @@ describe('TextSlot', () => {
           cacheKey,
           max: 10,
           metadata: {
-            onActivate: (_value: readonly Node[], key: string, reused: boolean) =>
-              slotEvents.push(`slot:${key}:${reused}`),
+            onActivate: (
+              _value: readonly Node[],
+              key: string,
+              reused: boolean
+            ) => slotEvents.push(`slot:${key}:${reused}`),
             onDeactivate: () => {},
             onCache: () => {},
             onEvict: () => {},
@@ -1003,7 +1055,9 @@ describe('TextSlot', () => {
 
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="contract">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="contract">__LANIA_SLOT_0__</section>'
+      ),
       74
     );
 
@@ -1041,7 +1095,9 @@ describe('TextSlot', () => {
       ],
     });
 
-    expect(host.querySelector('[data-pane="contract"]')?.textContent).toBe('Contract payload');
+    expect(host.querySelector('[data-pane="contract"]')?.textContent).toBe(
+      'Contract payload'
+    );
   });
 
   it('treats KeepAlive block payload contract cache and metadata as separate formal sources', () => {
@@ -1090,7 +1146,9 @@ describe('TextSlot', () => {
     expect(resolved?.runtimeOptions.exclude).toEqual(['contract-exclude']);
     expect(resolved?.runtimeOptions.max).toBe(3);
     expect(resolved?.runtimeOptions.onActivate).toBe(onActivateFromMetadata);
-    expect(resolved?.runtimeOptions.onDeactivate).toBe(onDeactivateFromMetadata);
+    expect(resolved?.runtimeOptions.onDeactivate).toBe(
+      onDeactivateFromMetadata
+    );
     expect(resolved?.runtimeOptions.onCache).toBe(onCacheFromMetadata);
     expect(resolved?.runtimeOptions.onEvict).toBe(onEvictFromMetadata);
   });
@@ -1112,7 +1170,9 @@ describe('TextSlot', () => {
     const onActivateFromMetadata = vi.fn();
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="precedence">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="precedence">__LANIA_SLOT_0__</section>'
+      ),
       78
     );
 
@@ -1148,9 +1208,15 @@ describe('TextSlot', () => {
       ],
     });
 
-    expect(host.querySelector('[data-pane="precedence"]')?.textContent).toBe('Contract wins');
+    expect(host.querySelector('[data-pane="precedence"]')?.textContent).toBe(
+      'Contract wins'
+    );
     expect(onActivateFromMetadata).toHaveBeenCalledTimes(1);
-    expect(onActivateFromMetadata).toHaveBeenCalledWith(expect.any(Array), 'contract-key', false);
+    expect(onActivateFromMetadata).toHaveBeenCalledWith(
+      expect.any(Array),
+      'contract-key',
+      false
+    );
   });
 
   it('accepts payload-only KeepAlive blocks with contract metadata hooks', () => {
@@ -1161,32 +1227,45 @@ describe('TextSlot', () => {
     const onActivate = vi.fn();
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="legacy-fallback">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="legacy-fallback">__LANIA_SLOT_0__</section>'
+      ),
       80
     );
 
-    slot.write(createKeepAliveBlockPayload({
-      slotIndex: 80,
-      cacheKey: 'payload-only-key',
-      scope: 'payload-only-scope',
-      include: ['payload-only-key'],
-      max: 1,
-      metadata: {
-        onActivate,
-      },
-      html: '<section data-pane="legacy-fallback">__LANIA_SLOT_0__</section>',
-    }, [
+    slot.write(
+      createKeepAliveBlockPayload(
         {
-          kind: 'text' as const,
-          slotIndex: 0,
-          path: [0, 0],
-          evaluate: () => 'Legacy fallback',
+          slotIndex: 80,
+          cacheKey: 'payload-only-key',
+          scope: 'payload-only-scope',
+          include: ['payload-only-key'],
+          max: 1,
+          metadata: {
+            onActivate,
+          },
+          html: '<section data-pane="legacy-fallback">__LANIA_SLOT_0__</section>',
         },
-      ]));
+        [
+          {
+            kind: 'text' as const,
+            slotIndex: 0,
+            path: [0, 0],
+            evaluate: () => 'Legacy fallback',
+          },
+        ]
+      )
+    );
 
-    expect(host.querySelector('[data-pane="legacy-fallback"]')?.textContent).toBe('Legacy fallback');
+    expect(
+      host.querySelector('[data-pane="legacy-fallback"]')?.textContent
+    ).toBe('Legacy fallback');
     expect(onActivate).toHaveBeenCalledTimes(1);
-    expect(onActivate).toHaveBeenCalledWith(expect.any(Array), 'payload-only-key', false);
+    expect(onActivate).toHaveBeenCalledWith(
+      expect.any(Array),
+      'payload-only-key',
+      false
+    );
   });
 
   it('does not invent KeepAlive hook fallbacks when contract metadata omits them', () => {
@@ -1196,7 +1275,9 @@ describe('TextSlot', () => {
 
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="contract-cache-only">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="contract-cache-only">__LANIA_SLOT_0__</section>'
+      ),
       98
     );
 
@@ -1229,10 +1310,12 @@ describe('TextSlot', () => {
       ],
     });
 
-    expect(host.querySelector('[data-pane="contract-cache-only"]')?.textContent).toBe(
-      'Contract cache only'
-    );
-    expect(host.querySelector('[data-pane="contract-cache-only"]')).not.toBeNull();
+    expect(
+      host.querySelector('[data-pane="contract-cache-only"]')?.textContent
+    ).toBe('Contract cache only');
+    expect(
+      host.querySelector('[data-pane="contract-cache-only"]')
+    ).not.toBeNull();
   });
 
   it('keeps compiler-style payload-only KeepAlive blocks independent from legacy flat fields', () => {
@@ -1244,7 +1327,9 @@ describe('TextSlot', () => {
     let label = 'Compiler payload';
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="payload-only">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="payload-only">__LANIA_SLOT_0__</section>'
+      ),
       97
     );
     const createPayload = () => ({
@@ -1280,11 +1365,15 @@ describe('TextSlot', () => {
     });
 
     slot.write(createPayload());
-    expect(host.querySelector('[data-pane="payload-only"]')?.textContent).toBe('Compiler payload');
+    expect(host.querySelector('[data-pane="payload-only"]')?.textContent).toBe(
+      'Compiler payload'
+    );
 
     label = 'Compiler payload updated';
     slot.write(createPayload());
-    expect(host.querySelector('[data-pane="payload-only"]')?.textContent).toBe('Compiler payload updated');
+    expect(host.querySelector('[data-pane="payload-only"]')?.textContent).toBe(
+      'Compiler payload updated'
+    );
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(onActivate).toHaveBeenCalledWith(
       expect.any(Array),
@@ -1300,18 +1389,24 @@ describe('TextSlot', () => {
 
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="empty-bindings">Stable</section>'),
+      createStaticTemplate(
+        '<section data-pane="empty-bindings">Stable</section>'
+      ),
       79
     );
 
-    slot.write(createKeepAliveBlockPayload({
-      slotIndex: 79,
-      cacheKey: 'empty-bindings',
-      scope: 'runtime-slot-keepalive-empty-bindings',
-      html: '<section data-pane="empty-bindings">Stable</section>',
-    }));
+    slot.write(
+      createKeepAliveBlockPayload({
+        slotIndex: 79,
+        cacheKey: 'empty-bindings',
+        scope: 'runtime-slot-keepalive-empty-bindings',
+        html: '<section data-pane="empty-bindings">Stable</section>',
+      })
+    );
 
-    expect(host.querySelector('[data-pane="empty-bindings"]')?.textContent).toBe('Stable');
+    expect(
+      host.querySelector('[data-pane="empty-bindings"]')?.textContent
+    ).toBe('Stable');
   });
 
   it('rehydrates KeepAlive slot content and reuses the hydrated nodes after cache switches', () => {
@@ -1329,7 +1424,9 @@ describe('TextSlot', () => {
     const anchor = resolveSlotAnchor(mounted, 0, [0, 0]);
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="hydrated">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="hydrated">__LANIA_SLOT_0__</section>'
+      ),
       99
     );
 
@@ -1370,7 +1467,9 @@ describe('TextSlot', () => {
 
     expect(host.querySelectorAll('[data-pane="hydrated"]')).toHaveLength(1);
     expect(host.querySelector('[data-pane="hydrated"]')).toBe(hydratedPane);
-    expect(host.querySelector('[data-pane="hydrated"]')?.textContent).toBe('Page A updated');
+    expect(host.querySelector('[data-pane="hydrated"]')?.textContent).toBe(
+      'Page A updated'
+    );
 
     slot.write({
       __lania_keepalive: 'block' as const,
@@ -1434,7 +1533,9 @@ describe('TextSlot', () => {
 
     expect(host.querySelectorAll('[data-pane="hydrated"]')).toHaveLength(1);
     expect(host.querySelector('[data-pane="hydrated"]')).toBe(hydratedPane);
-    expect(host.querySelector('[data-pane="hydrated"]')?.textContent).toBe('Page A updated');
+    expect(host.querySelector('[data-pane="hydrated"]')?.textContent).toBe(
+      'Page A updated'
+    );
   });
 
   it('rehydrates KeepAlive slot branches with nested When content and restores the hydrated branch after key switches', () => {
@@ -1466,53 +1567,67 @@ describe('TextSlot', () => {
           html: '__LANIA_SLOT_0____LANIA_SLOT_1__',
         },
         [
-        {
-          kind: 'if' as const,
-          slotIndex: 0,
-          path: [0],
-          template: createStaticTemplate(
-            '<div data-key="page-a"><input data-pane="hydrated-when"></input></div>'
-          ),
-          evaluate: () => ({
-            __lania_if: 'block' as const,
-            when: currentPage === 'page-a',
-          }),
-        },
-        {
-          kind: 'if' as const,
-          slotIndex: 1,
-          path: [1],
-          template: createStaticTemplate('<div data-key="page-b">Page B</div>'),
-          evaluate: () => ({
-            __lania_if: 'block' as const,
-            when: currentPage === 'page-b',
-          }),
-        },
-      ]
+          {
+            kind: 'if' as const,
+            slotIndex: 0,
+            path: [0],
+            template: createStaticTemplate(
+              '<div data-key="page-a"><input data-pane="hydrated-when"></input></div>'
+            ),
+            evaluate: () => ({
+              __lania_if: 'block' as const,
+              when: currentPage === 'page-a',
+            }),
+          },
+          {
+            kind: 'if' as const,
+            slotIndex: 1,
+            path: [1],
+            template: createStaticTemplate(
+              '<div data-key="page-b">Page B</div>'
+            ),
+            evaluate: () => ({
+              __lania_if: 'block' as const,
+              when: currentPage === 'page-b',
+            }),
+          },
+        ]
       );
 
     if (hasHydrationSlot(mounted, 0)) {
       slot.hydrate(readHydrationSlotNodes(mounted, 0));
     }
 
-    const hydratedInput = host.querySelector('[data-pane="hydrated-when"]') as HTMLInputElement | null;
+    const hydratedInput = host.querySelector(
+      '[data-pane="hydrated-when"]'
+    ) as HTMLInputElement | null;
     expect(hydratedInput?.value).toBe('draft');
     expect(host.querySelector('[data-key="page-b"]')).toBeNull();
 
     slot.write(createPayload('page-a'));
-    expect(host.querySelector('[data-pane="hydrated-when"]')).toBe(hydratedInput);
-    expect((host.querySelector('[data-pane="hydrated-when"]') as HTMLInputElement | null)?.value).toBe(
-      'draft'
+    expect(host.querySelector('[data-pane="hydrated-when"]')).toBe(
+      hydratedInput
     );
+    expect(
+      (
+        host.querySelector(
+          '[data-pane="hydrated-when"]'
+        ) as HTMLInputElement | null
+      )?.value
+    ).toBe('draft');
 
     currentPage = 'page-b';
     slot.write(createPayload('page-b'));
     expect(host.querySelector('[data-pane="hydrated-when"]')).toBeNull();
-    expect(host.querySelector('[data-key="page-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-key="page-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     currentPage = 'page-a';
     slot.write(createPayload('page-a'));
-    const restoredInput = host.querySelector('[data-pane="hydrated-when"]') as HTMLInputElement | null;
+    const restoredInput = host.querySelector(
+      '[data-pane="hydrated-when"]'
+    ) as HTMLInputElement | null;
     expect(restoredInput).toBe(hydratedInput);
     expect(restoredInput?.value).toBe('draft');
     expect(host.querySelector('[data-key="page-b"]')).toBeNull();
@@ -1538,12 +1653,18 @@ describe('TextSlot', () => {
     try {
       const slot = new KeepAliveSlot(
         anchor,
-        createStaticTemplate('<section data-pane="ka-tg"><!--__LANIA_SLOT_0__--></section>'),
+        createStaticTemplate(
+          '<section data-pane="ka-tg"><!--__LANIA_SLOT_0__--></section>'
+        ),
         101
       );
 
-      const dynamicChildTemplate = createStaticTemplate('<!--__LANIA_SLOT_0__-->');
-      const itemTemplate = createStaticTemplate('<li data-key="" data-page="">__LANIA_SLOT_0__</li>');
+      const dynamicChildTemplate = createStaticTemplate(
+        '<!--__LANIA_SLOT_0__-->'
+      );
+      const itemTemplate = createStaticTemplate(
+        '<li data-key="" data-page="">__LANIA_SLOT_0__</li>'
+      );
 
       let currentPage: 'page-a' | 'page-b' = 'page-a';
       let items: Array<{ id: string; label: string }> = [
@@ -1553,83 +1674,88 @@ describe('TextSlot', () => {
 
       const writePage = (cacheKey: 'page-a' | 'page-b') => {
         withContextHost(runtimeHost, () => {
-          slot.write(createKeepAliveBlockPayload({
-            slotIndex: 101,
-            cacheKey,
-            scope: 'runtime-slot-keepalive-transition-group-each',
-            max: 2,
-            metadata: {
-              onActivate: () => {},
-              onDeactivate: () => {},
-              onCache: () => {},
-              onEvict: () => {},
-            },
-          }, [
+          slot.write(
+            createKeepAliveBlockPayload(
               {
-                kind: 'dynamic' as const,
-                slotIndex: 0,
-                path: [0, 0],
-                template: dynamicChildTemplate,
-                evaluate: () => ({
-                  __lania_dynamic: 'block' as const,
-                  component: TransitionGroup,
-                  props: {
-                    groupKey: cacheKey,
-                    keys: items.map((item) => item.id),
-                    payload: {
-                      protocol: ENHANCED_CONTRACT_PROTOCOL,
-                      version: ENHANCED_CONTRACT_VERSION,
-                      payloadKind: 'transition' as const,
-                      component: 'TransitionGroup' as const,
-                      irKind: 'TransitionIR' as const,
-                      transitionIndex: 0,
-                      transition: {
-                        name: 'list',
-                        phases: ['appear', 'enter', 'move', 'leave'] as const,
-                        keyProp: 'groupKey' as const,
-                        key: cacheKey,
-                        hooks: {},
+                slotIndex: 101,
+                cacheKey,
+                scope: 'runtime-slot-keepalive-transition-group-each',
+                max: 2,
+                metadata: {
+                  onActivate: () => {},
+                  onDeactivate: () => {},
+                  onCache: () => {},
+                  onEvict: () => {},
+                },
+              },
+              [
+                {
+                  kind: 'dynamic' as const,
+                  slotIndex: 0,
+                  path: [0, 0],
+                  template: dynamicChildTemplate,
+                  evaluate: () => ({
+                    __lania_dynamic: 'block' as const,
+                    component: TransitionGroup,
+                    props: {
+                      groupKey: cacheKey,
+                      keys: items.map((item) => item.id),
+                      payload: {
+                        protocol: ENHANCED_CONTRACT_PROTOCOL,
+                        version: ENHANCED_CONTRACT_VERSION,
+                        payloadKind: 'transition' as const,
+                        component: 'TransitionGroup' as const,
+                        irKind: 'TransitionIR' as const,
+                        transitionIndex: 0,
+                        transition: {
+                          name: 'list',
+                          phases: ['appear', 'enter', 'move', 'leave'] as const,
+                          keyProp: 'groupKey' as const,
+                          key: cacheKey,
+                          hooks: {},
+                        },
                       },
                     },
-                  },
-                  childBindings: [
-                    {
-                      kind: 'for' as const,
-                      slotIndex: 0,
-                      path: [0],
-                      evaluate: () => ({
-                        __lania_for: 'keyed-slots' as const,
-                        items,
-                        key: (item: { id: string }) => item.id,
-                        template: itemTemplate,
-                        bindings: [
-                          {
-                            kind: 'attr' as const,
-                            slotIndex: 0,
-                            path: [0],
-                            name: 'data-key',
-                            evaluate: (item: { id: string }) => item.id,
-                          },
-                          {
-                            kind: 'attr' as const,
-                            slotIndex: 2,
-                            path: [0],
-                            name: 'data-page',
-                            evaluate: () => currentPage,
-                          },
-                          {
-                            kind: 'text' as const,
-                            slotIndex: 1,
-                            path: [0, 0],
-                            evaluate: (item: { label: string }) => item.label,
-                          },
-                        ],
-                      }),
-                    },
-                  ],
-                }),
-              },
-            ]));
+                    childBindings: [
+                      {
+                        kind: 'for' as const,
+                        slotIndex: 0,
+                        path: [0],
+                        evaluate: () => ({
+                          __lania_for: 'keyed-slots' as const,
+                          items,
+                          key: (item: { id: string }) => item.id,
+                          template: itemTemplate,
+                          bindings: [
+                            {
+                              kind: 'attr' as const,
+                              slotIndex: 0,
+                              path: [0],
+                              name: 'data-key',
+                              evaluate: (item: { id: string }) => item.id,
+                            },
+                            {
+                              kind: 'attr' as const,
+                              slotIndex: 2,
+                              path: [0],
+                              name: 'data-page',
+                              evaluate: () => currentPage,
+                            },
+                            {
+                              kind: 'text' as const,
+                              slotIndex: 1,
+                              path: [0, 0],
+                              evaluate: (item: { label: string }) => item.label,
+                            },
+                          ],
+                        }),
+                      },
+                    ],
+                  }),
+                },
+              ]
+            )
+          );
         });
       };
 
@@ -1641,8 +1767,13 @@ describe('TextSlot', () => {
       writePage('page-a');
       await flushMicrotasks(3);
 
-      const firstAItems = Array.from(host.querySelectorAll('li')) as HTMLLIElement[];
-      expect(firstAItems.map((node) => node.getAttribute('data-key'))).toEqual(['a', 'b']);
+      const firstAItems = Array.from(
+        host.querySelectorAll('li')
+      ) as HTMLLIElement[];
+      expect(firstAItems.map((node) => node.getAttribute('data-key'))).toEqual([
+        'a',
+        'b',
+      ]);
       expect(host.querySelectorAll('li[data-page="page-a"]')).toHaveLength(2);
 
       currentPage = 'page-b';
@@ -1653,8 +1784,13 @@ describe('TextSlot', () => {
       writePage('page-b');
       await flushMicrotasks(3);
 
-      const pageBItems = Array.from(host.querySelectorAll('li')) as HTMLLIElement[];
-      expect(pageBItems.map((node) => node.getAttribute('data-key'))).toEqual(['c', 'd']);
+      const pageBItems = Array.from(
+        host.querySelectorAll('li')
+      ) as HTMLLIElement[];
+      expect(pageBItems.map((node) => node.getAttribute('data-key'))).toEqual([
+        'c',
+        'd',
+      ]);
       expect(host.querySelectorAll('li[data-page="page-b"]')).toHaveLength(2);
       expect(host.querySelector('li[data-page="page-a"]')).toBeNull();
 
@@ -1666,8 +1802,12 @@ describe('TextSlot', () => {
       writePage('page-a');
       await flushMicrotasks(3);
 
-      const restoredAItems = Array.from(host.querySelectorAll('li')) as HTMLLIElement[];
-      expect(restoredAItems.map((node) => node.getAttribute('data-key'))).toEqual(['a', 'b']);
+      const restoredAItems = Array.from(
+        host.querySelectorAll('li')
+      ) as HTMLLIElement[];
+      expect(
+        restoredAItems.map((node) => node.getAttribute('data-key'))
+      ).toEqual(['a', 'b']);
       expect(restoredAItems[0]).toBe(firstAItems[0]);
       expect(restoredAItems[1]).toBe(firstAItems[1]);
       expect(host.querySelectorAll('li[data-page="page-a"]')).toHaveLength(2);
@@ -1685,7 +1825,9 @@ describe('TextSlot', () => {
     let label = 'First';
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="same-key">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="same-key">__LANIA_SLOT_0__</section>'
+      ),
       75
     );
     const createPayload = () =>
@@ -1697,13 +1839,13 @@ describe('TextSlot', () => {
           max: 2,
         },
         [
-        {
-          kind: 'text' as const,
-          slotIndex: 0,
-          path: [0, 0],
-          evaluate: () => label,
-        },
-      ]
+          {
+            kind: 'text' as const,
+            slotIndex: 0,
+            path: [0, 0],
+            evaluate: () => label,
+          },
+        ]
       );
 
     slot.write(createPayload());
@@ -1723,7 +1865,9 @@ describe('TextSlot', () => {
     label = 'Third';
     slot.write(createPayload());
     expect(host.querySelectorAll('[data-pane="same-key"]')).toHaveLength(1);
-    expect(host.querySelector('[data-pane="same-key"]')?.textContent).toBe('Third');
+    expect(host.querySelector('[data-pane="same-key"]')?.textContent).toBe(
+      'Third'
+    );
   });
 
   it('renders fresh uncached content when KeepAlive payload is not cacheable', () => {
@@ -1734,7 +1878,9 @@ describe('TextSlot', () => {
     let label = 'Blocked A';
     const slot = new KeepAliveSlot(
       anchor,
-      createStaticTemplate('<section data-pane="uncached">__LANIA_SLOT_0__</section>'),
+      createStaticTemplate(
+        '<section data-pane="uncached">__LANIA_SLOT_0__</section>'
+      ),
       76
     );
     const createPayload = () =>
@@ -1746,13 +1892,13 @@ describe('TextSlot', () => {
           include: ['pane-b'],
         },
         [
-        {
-          kind: 'text' as const,
-          slotIndex: 0,
-          path: [0, 0],
-          evaluate: () => label,
-        },
-      ]
+          {
+            kind: 'text' as const,
+            slotIndex: 0,
+            path: [0, 0],
+            evaluate: () => label,
+          },
+        ]
       );
 
     slot.write(createPayload());
@@ -1789,13 +1935,13 @@ describe('TextSlot', () => {
           include: ['pane-b'],
         },
         [
-        {
-          kind: 'ref' as const,
-          slotIndex: 0,
-          path: [0],
-          evaluate: () => activeRef,
-        },
-      ]
+          {
+            kind: 'ref' as const,
+            slotIndex: 0,
+            path: [0],
+            evaluate: () => activeRef,
+          },
+        ]
       );
 
     slot.write(createPayload());
@@ -1825,21 +1971,26 @@ describe('TextSlot', () => {
       77
     );
 
-    slot.write(createKeepAliveBlockPayload({
-      slotIndex: 77,
-      cacheKey: 'pane-a',
-      scope: 'runtime-slot-keepalive-destroy',
-      metadata: {
-        onDeactivate,
-      },
-    }, [
+    slot.write(
+      createKeepAliveBlockPayload(
         {
-          kind: 'ref' as const,
-          slotIndex: 0,
-          path: [0],
-          evaluate: () => ref,
+          slotIndex: 77,
+          cacheKey: 'pane-a',
+          scope: 'runtime-slot-keepalive-destroy',
+          metadata: {
+            onDeactivate,
+          },
         },
-      ]));
+        [
+          {
+            kind: 'ref' as const,
+            slotIndex: 0,
+            path: [0],
+            evaluate: () => ref,
+          },
+        ]
+      )
+    );
 
     const button = host.querySelector('[data-pane="destroy"]');
     await flushMicrotasks();
@@ -1866,7 +2017,12 @@ describe('TextSlot', () => {
       createStaticTemplate('<span>Hidden</span>')
     );
 
-    slot.write({ __lania_if: 'block' as const, when: true, truthyBindings: [], falsyBindings: [] } as any);
+    slot.write({
+      __lania_if: 'block' as const,
+      when: true,
+      truthyBindings: [],
+      falsyBindings: [],
+    } as any);
     const input = host.querySelector('input') as HTMLInputElement | null;
     expect(input).not.toBeNull();
 
@@ -1875,10 +2031,22 @@ describe('TextSlot', () => {
     }
 
     input.value = 'draft';
-    slot.write({ __lania_if: 'block' as const, when: false, truthyBindings: [], falsyBindings: [] } as any);
-    slot.write({ __lania_if: 'block' as const, when: true, truthyBindings: [], falsyBindings: [] } as any);
+    slot.write({
+      __lania_if: 'block' as const,
+      when: false,
+      truthyBindings: [],
+      falsyBindings: [],
+    } as any);
+    slot.write({
+      __lania_if: 'block' as const,
+      when: true,
+      truthyBindings: [],
+      falsyBindings: [],
+    } as any);
 
-    const remountedInput = host.querySelector('input') as HTMLInputElement | null;
+    const remountedInput = host.querySelector(
+      'input'
+    ) as HTMLInputElement | null;
     expect(remountedInput).not.toBe(input);
     expect(remountedInput?.value).toBe('');
   });
@@ -1894,13 +2062,13 @@ describe('TextSlot', () => {
       createStaticTemplate('<span>Hidden</span>')
     );
 
-    slot.write(({
+    slot.write({
       __lania_if: 'block' as const,
       when: true,
       mode: 'retain' as const,
       truthyBindings: [],
       falsyBindings: [],
-    }) as any);
+    } as any);
     const input = host.querySelector('input') as HTMLInputElement | null;
     expect(input).not.toBeNull();
 
@@ -1909,22 +2077,24 @@ describe('TextSlot', () => {
     }
 
     input.value = 'draft';
-    slot.write(({
+    slot.write({
       __lania_if: 'block' as const,
       when: false,
       mode: 'retain' as const,
       truthyBindings: [],
       falsyBindings: [],
-    }) as any);
-    slot.write(({
+    } as any);
+    slot.write({
       __lania_if: 'block' as const,
       when: true,
       mode: 'retain' as const,
       truthyBindings: [],
       falsyBindings: [],
-    }) as any);
+    } as any);
 
-    const remountedInput = host.querySelector('input') as HTMLInputElement | null;
+    const remountedInput = host.querySelector(
+      'input'
+    ) as HTMLInputElement | null;
     expect(remountedInput).toBe(input);
     expect(remountedInput?.value).toBe('draft');
   });
@@ -1937,9 +2107,17 @@ describe('TextSlot', () => {
     host.appendChild(anchor);
     document.body.appendChild(portal);
 
-    const slot = new TeleportSlot(anchor, createStaticTemplate('<span>Modal</span>'), 8);
+    const slot = new TeleportSlot(
+      anchor,
+      createStaticTemplate('<span>Modal</span>'),
+      8
+    );
 
-    slot.write({ __lania_teleport: 'block', target: '#portal-root', bindings: [] });
+    slot.write({
+      __lania_teleport: 'block',
+      target: '#portal-root',
+      bindings: [],
+    });
     expect(portal.textContent).toBe('Modal');
     expect(host.textContent).toBe('');
 
@@ -1958,13 +2136,25 @@ describe('TextSlot', () => {
     host.appendChild(anchor);
     document.body.append(portalA, portalB);
 
-    const slot = new TeleportSlot(anchor, createStaticTemplate('<span>Modal</span>'), 81);
+    const slot = new TeleportSlot(
+      anchor,
+      createStaticTemplate('<span>Modal</span>'),
+      81
+    );
 
-    slot.write({ __lania_teleport: 'block', target: '#portal-a', bindings: [] });
+    slot.write({
+      __lania_teleport: 'block',
+      target: '#portal-a',
+      bindings: [],
+    });
     const teleported = portalA.querySelector('span');
     expect(teleported?.textContent).toBe('Modal');
 
-    slot.write({ __lania_teleport: 'block', target: '#portal-b', bindings: [] });
+    slot.write({
+      __lania_teleport: 'block',
+      target: '#portal-b',
+      bindings: [],
+    });
     expect(portalA.querySelector('span')).toBeNull();
     expect(portalB.querySelector('span')).toBe(teleported);
 
@@ -1977,7 +2167,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<span>Child</span>'), 9);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<span>Child</span>'),
+      9
+    );
 
     slot.write({
       component: 'section',
@@ -2000,7 +2194,9 @@ describe('TextSlot', () => {
       },
     });
     expect(host.querySelector('section')).toBeNull();
-    expect(host.querySelector('article')?.getAttribute('data-title')).toBe('fn');
+    expect(host.querySelector('article')?.getAttribute('data-title')).toBe(
+      'fn'
+    );
     expect(host.textContent).toBe('Child');
 
     slot.destroy();
@@ -2011,7 +2207,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<span>Child</span>'), 91);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<span>Child</span>'),
+      91
+    );
 
     slot.write({
       __lania_dynamic: 'block',
@@ -2038,7 +2238,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<input></input>'), 93);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<input></input>'),
+      93
+    );
     const renderCard = (props: { title?: string; children?: Node[] }) => {
       const article = document.createElement('article');
       article.setAttribute('title', props.title ?? '');
@@ -2071,7 +2275,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic-boundary');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<!--__LANIA_SLOT_0__-->'), 931);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<!--__LANIA_SLOT_0__-->'),
+      931
+    );
     const runtimeHost = {
       dispatchEvent() {
         return true;
@@ -2120,7 +2328,11 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic-keepalive');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<!--__LANIA_SLOT_0__-->'), 932);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<!--__LANIA_SLOT_0__-->'),
+      932
+    );
     const runtimeHost = {
       dispatchEvent() {
         return true;
@@ -2182,7 +2394,9 @@ describe('TextSlot', () => {
     writeKeepAlive('page-a');
     await flushMicrotasks(2);
 
-    const firstInput = host.querySelector('[data-page="page-a"] input') as HTMLInputElement | null;
+    const firstInput = host.querySelector(
+      '[data-page="page-a"] input'
+    ) as HTMLInputElement | null;
     expect(firstInput).not.toBeNull();
     if (!firstInput) {
       throw new Error('expected page-a input to mount');
@@ -2193,13 +2407,17 @@ describe('TextSlot', () => {
     writeKeepAlive('page-b');
     await flushMicrotasks(2);
     expect(host.querySelector('[data-page="page-a"]')).toBeNull();
-    expect(host.querySelector('[data-page="page-b"]')?.textContent).toBe('Page B');
+    expect(host.querySelector('[data-page="page-b"]')?.textContent).toBe(
+      'Page B'
+    );
 
     currentPage = 'page-a';
     writeKeepAlive('page-a');
     await flushMicrotasks(2);
 
-    const restoredInput = host.querySelector('[data-page="page-a"] input') as HTMLInputElement | null;
+    const restoredInput = host.querySelector(
+      '[data-page="page-a"] input'
+    ) as HTMLInputElement | null;
     expect(restoredInput).toBe(firstInput);
     expect(restoredInput?.value).toBe('draft');
     expect(host.querySelector('[data-page="page-b"]')).toBeNull();
@@ -2209,8 +2427,14 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic-transition-group');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<!--__LANIA_SLOT_0__-->'), 94);
-    const itemTemplate = createStaticTemplate('<li data-key="">__LANIA_SLOT_0__</li>');
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<!--__LANIA_SLOT_0__-->'),
+      94
+    );
+    const itemTemplate = createStaticTemplate(
+      '<li data-key="">__LANIA_SLOT_0__</li>'
+    );
     const phases: string[] = [];
     const previousRaf = globalThis.requestAnimationFrame;
     const runtimeHost = {
@@ -2249,14 +2473,18 @@ describe('TextSlot', () => {
                 key: 'todos',
                 tag: 'ul',
                 hooks: {
-                  onAppear: (_element, context) => phases.push(`appear:${String(context.key)}`),
-                  onEnter: (_element, context) => phases.push(`enter:${String(context.key)}`),
+                  onAppear: (_element, context) =>
+                    phases.push(`appear:${String(context.key)}`),
+                  onEnter: (_element, context) =>
+                    phases.push(`enter:${String(context.key)}`),
                   onLeave: async (_element, context) => {
                     phases.push(`leave:${String(context.key)}`);
                     await Promise.resolve();
                   },
                   onMove: (_element, context) =>
-                    phases.push(`move:${String(context.key)}:${context.previousIndex}->${context.index}`),
+                    phases.push(
+                      `move:${String(context.key)}:${context.previousIndex}->${context.index}`
+                    ),
                 },
               },
             },
@@ -2298,10 +2526,11 @@ describe('TextSlot', () => {
 
     const container = host.querySelector('ul');
     expect(container).not.toBeNull();
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([
-      'a',
-      'b',
-    ]);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual(['a', 'b']);
 
     items = [
       { id: 'b', label: 'B' },
@@ -2309,20 +2538,21 @@ describe('TextSlot', () => {
     ];
     writeGroup();
 
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([
-      'b',
-      'c',
-      'a',
-    ]);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual(['b', 'c', 'a']);
 
     await flushMicrotasks(3);
     await wait(0);
     writeGroup();
 
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([
-      'b',
-      'c',
-    ]);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual(['b', 'c']);
     expect(phases).toEqual([
       'appear:a',
       'appear:b',
@@ -2337,8 +2567,14 @@ describe('TextSlot', () => {
     const host = document.createElement('div');
     const anchor = document.createComment('dynamic-transition-group-empty');
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<!--__LANIA_SLOT_0__-->'), 96);
-    const itemTemplate = createStaticTemplate('<li data-key="">__LANIA_SLOT_0__</li>');
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<!--__LANIA_SLOT_0__-->'),
+      96
+    );
+    const itemTemplate = createStaticTemplate(
+      '<li data-key="">__LANIA_SLOT_0__</li>'
+    );
     const previousRaf = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
       callback(0);
@@ -2418,13 +2654,19 @@ describe('TextSlot', () => {
 
     writeGroup();
     await flushMicrotasks(3);
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([
-      'a',
-    ]);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual(['a']);
 
     items = [];
     writeGroup();
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([]);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual([]);
     expect(host.querySelector('ul')).not.toBeNull();
 
     writeGroup();
@@ -2443,10 +2685,18 @@ describe('TextSlot', () => {
 
   it('reactivates a handed-off TransitionGroup keyed block without duplicating stale leaving nodes', async () => {
     const host = document.createElement('div');
-    const anchor = document.createComment('dynamic-transition-group-reactivate');
+    const anchor = document.createComment(
+      'dynamic-transition-group-reactivate'
+    );
     host.appendChild(anchor);
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<!--__LANIA_SLOT_0__-->'), 95);
-    const itemTemplate = createStaticTemplate('<li data-key="">__LANIA_SLOT_0__</li>');
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<!--__LANIA_SLOT_0__-->'),
+      95
+    );
+    const itemTemplate = createStaticTemplate(
+      '<li data-key="">__LANIA_SLOT_0__</li>'
+    );
     const previousRaf = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
       callback(0);
@@ -2529,10 +2779,11 @@ describe('TextSlot', () => {
 
     items = [{ id: 'b', label: 'B' }];
     writeGroup();
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([
-      'b',
-      'a',
-    ]);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual(['b', 'a']);
 
     items = [
       { id: 'a', label: 'A2' },
@@ -2541,11 +2792,14 @@ describe('TextSlot', () => {
     writeGroup();
     await flushMicrotasks(3);
 
-    expect([...host.querySelectorAll('li')].map((node) => node.getAttribute('data-key'))).toEqual([
-      'a',
-      'b',
-    ]);
-    expect([...host.querySelectorAll('li')].map((node) => node.textContent)).toEqual(['A2', 'B']);
+    expect(
+      [...host.querySelectorAll('li')].map((node) =>
+        node.getAttribute('data-key')
+      )
+    ).toEqual(['a', 'b']);
+    expect(
+      [...host.querySelectorAll('li')].map((node) => node.textContent)
+    ).toEqual(['A2', 'B']);
     globalThis.requestAnimationFrame = previousRaf;
   });
 
@@ -2583,7 +2837,11 @@ describe('TextSlot', () => {
     host.appendChild(anchor);
     const clicked = vi.fn();
     const ref = { current: null as HTMLElement | null };
-    const slot = new DynamicSlot(anchor, createStaticTemplate('<span>Action</span>'), 10);
+    const slot = new DynamicSlot(
+      anchor,
+      createStaticTemplate('<span>Action</span>'),
+      10
+    );
 
     slot.write({
       component: 'button',
@@ -2621,7 +2879,9 @@ describe('TextSlot', () => {
 
     const button = host.querySelector('button') as HTMLButtonElement | null;
     expect(button).not.toBeNull();
-    button?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    button?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true })
+    );
     await flushMicrotasks();
     expect(clicked).toHaveBeenCalledTimes(1);
     expect(button?.classList.contains('active')).toBe(true);

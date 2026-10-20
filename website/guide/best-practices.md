@@ -48,27 +48,27 @@ export default defineComponent(function Card(props: CardProps) {
 
 ## 状态放置
 
-| 状态 | 放在哪里 |
-| --- | --- |
-| 只影响当前组件 | 组件内 `createSignal()` |
-| 多个组件共享 | 提升到共同父组件，通过 props / context 传递 |
-| 复杂嵌套对象 | `createStore()` |
-| 异步数据 | `createResource()` |
-| 列表选中态 | `createSelector()` |
-| 跨页面缓存 | `KeepAlive` 或外部 store |
+| 状态           | 放在哪里                                    |
+| -------------- | ------------------------------------------- |
+| 只影响当前组件 | 组件内 `createSignal()`                     |
+| 多个组件共享   | 提升到共同父组件，通过 props / context 传递 |
+| 复杂嵌套对象   | `createAtom()`（`@lania/store`）            |
+| 异步数据       | `createResource()`                          |
+| 列表选中态     | `createSelector()`                          |
+| 跨页面缓存     | `KeepAlive` 或外部 store                    |
 
-### 不要把所有状态都放进 Store
+### 不要把所有状态都放进 Atom
 
 ```ts
 // 不必要
-const state = createStore({ count: 0, visible: true });
+const state = createAtom({ count: 0, visible: true });
 
 // 更直接
 const count = createSignal(0);
 const visible = createSignal(true);
 ```
 
-Store 的优势是“按路径订阅”，不是“统一管理所有状态”。
+Atom 的优势是“按字段路径精确订阅 + 可组合派生”，不是“统一管理所有状态”。
 
 ### 派生值用 `createMemo`
 
@@ -250,12 +250,12 @@ style={{ width: width() }}          // 会输出 width: 300;，无效
 
 ### 合理选择优先级
 
-| 内容 | 优先级 |
-| --- | --- |
-| 首屏关键交互 | `eager` |
-| 首屏可见但非关键 | `visible` |
-| 折叠区域 / 下方内容 | `idle` |
-| 点击后才需要 | `interaction` |
+| 内容                | 优先级        |
+| ------------------- | ------------- |
+| 首屏关键交互        | `eager`       |
+| 首屏可见但非关键    | `visible`     |
+| 折叠区域 / 下方内容 | `idle`        |
+| 点击后才需要        | `interaction` |
 
 ## 调试
 
@@ -291,9 +291,7 @@ style={{ width: width() }}          // 会输出 width: 300;，无效
 
 ```tsx
 // 每次 item 渲染都会读取 total
-<Each items={items()}>
-  {(item) => <Row total={total()} />}
-</Each>
+<Each items={items()}>{(item) => <Row total={total()} />}</Each>
 ```
 
 如果 `total` 只影响父级，提升到父级读取一次。

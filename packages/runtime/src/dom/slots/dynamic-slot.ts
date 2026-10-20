@@ -10,14 +10,7 @@
  *
  * 这个文件最重要的不是“怎么创建节点”，而是“什么情况下可以复用已有节点或已有控制器”。
  */
-import {
-  Await as AwaitComponent,
-  isEnhancedDef,
-  Slot as SlotComponent,
-  Transition,
-  TransitionGroup,
-  Virtual as VirtualComponent,
-} from '../../component/enhanced-components';
+import { isEnhancedDef } from '../../component/enhanced-marker';
 import { withEventHint, withEventModifiers } from '../../component/events';
 import {
   createGroupState,
@@ -75,23 +68,23 @@ type DynamicSlotValue = {
   childBindings?: readonly TemplateBindingPayload[];
 };
 
-// 编译产物里某些保留字符串会在运行时映射到真实增强组件构造器。
+// 编译产物里某些保留字符串会映射到增强组件，但对应实现位于 `@lania-v/advanced`。
+// runtime 不能反向依赖 advanced，因此这里把映射交给宿主侧注册。
+const enhancedConstructors = new Map<string, unknown>();
+
+/** 由 `@lania-v/advanced` 在加载时注册增强组件构造器（Slot / Transition / Await...）。 */
+export const registerEnhancedConstructor = (
+  name: string,
+  component: unknown
+): void => {
+  enhancedConstructors.set(name, component);
+};
+
 const resolveDynamicTarget = (target: unknown): unknown => {
-  if (target === 'Slot') {
-    return SlotComponent;
+  if (typeof target === 'string' && enhancedConstructors.has(target)) {
+    return enhancedConstructors.get(target);
   }
-  if (target === 'Transition') {
-    return Transition;
-  }
-  if (target === 'TransitionGroup') {
-    return TransitionGroup;
-  }
-  if (target === 'Await') {
-    return AwaitComponent;
-  }
-  if (target === 'Virtual') {
-    return VirtualComponent;
-  }
+
   return target;
 };
 
@@ -191,13 +184,19 @@ const bootstrapHydratedTransitionGroupDomHostState = (options: {
   hydratedNodes: readonly Node[];
 }): readonly Node[] | undefined => {
   const { props, hydratedNodes } = options;
-  if (hydratedNodes.length !== 1 || !(hydratedNodes[0] instanceof HTMLElement)) {
+  if (
+    hydratedNodes.length !== 1 ||
+    !(hydratedNodes[0] instanceof HTMLElement)
+  ) {
     return undefined;
   }
 
   const container = hydratedNodes[0];
   const transitionTag = readGroupDomTag(props);
-  if (!transitionTag || container.tagName.toLowerCase() !== transitionTag.toLowerCase()) {
+  if (
+    !transitionTag ||
+    container.tagName.toLowerCase() !== transitionTag.toLowerCase()
+  ) {
     return undefined;
   }
 
@@ -211,7 +210,11 @@ const bootstrapHydratedTransitionGroupDomHostState = (options: {
   );
 
   const previous = getTransitionGroupState<unknown>(stateKey);
-  if (!previous || previous.container !== container || previous.tag !== transitionTag) {
+  if (
+    !previous ||
+    previous.container !== container ||
+    previous.tag !== transitionTag
+  ) {
     setTransitionGroupState(
       stateKey,
       createGroupState({
@@ -298,7 +301,10 @@ class DynamicElementBindingController {
         writeComponentProp(
           this.element,
           name,
-          Object.prototype.hasOwnProperty.call(FAST_DOM_PROPERTY_RESET_VALUES, name)
+          Object.prototype.hasOwnProperty.call(
+            FAST_DOM_PROPERTY_RESET_VALUES,
+            name
+          )
             ? FAST_DOM_PROPERTY_RESET_VALUES[name]
             : undefined
         );
@@ -336,7 +342,10 @@ class DynamicElementBindingController {
                 hints[0]!,
                 binding.modifiers
               )
-            : withEventModifiers(binding.handler as (event: Event) => unknown, binding.modifiers);
+            : withEventModifiers(
+                binding.handler as (event: Event) => unknown,
+                binding.modifiers
+              );
       slot.write(handler);
     });
     this.eventSlots.forEach((slot, key) => {
@@ -358,7 +367,11 @@ class DynamicElementBindingController {
       nextDirectiveKeys.add(key);
       let slot = this.directiveSlots.get(key);
       if (!slot) {
-        slot = createDirectiveSlotForBinding(this.element as HTMLElement, binding, bindingIndex);
+        slot = createDirectiveSlotForBinding(
+          this.element as HTMLElement,
+          binding,
+          bindingIndex
+        );
         this.directiveSlots.set(key, slot);
       }
 
@@ -378,9 +391,11 @@ class DynamicElementBindingController {
       }
     });
 
-    const refBinding = directiveBindings.find((binding) => binding.kind === 'ref') ?? null;
+    const refBinding =
+      directiveBindings.find((binding) => binding.kind === 'ref') ?? null;
     if (refBinding) {
-      const refValue = (refBinding.value as RefBinding<unknown> | null | undefined) ?? null;
+      const refValue =
+        (refBinding.value as RefBinding<unknown> | null | undefined) ?? null;
       this.currentRef = refValue;
 
       if (refValue) {
@@ -415,7 +430,10 @@ class DynamicElementBindingController {
         writeComponentProp(
           this.element,
           name,
-          Object.prototype.hasOwnProperty.call(FAST_DOM_PROPERTY_RESET_VALUES, name)
+          Object.prototype.hasOwnProperty.call(
+            FAST_DOM_PROPERTY_RESET_VALUES,
+            name
+          )
             ? FAST_DOM_PROPERTY_RESET_VALUES[name]
             : undefined
         );
@@ -434,7 +452,8 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
   private mountedNodes: Node[] | null = acquireSlotNodeBuffer();
   private currentChildInstance: MountedBindingInstance | null = null;
   private currentComponent: unknown;
-  private currentElementController: DynamicElementBindingController | null = null;
+  private currentElementController: DynamicElementBindingController | null =
+    null;
   private currentElementRoot: Element | HTMLElement | null = null;
 
   constructor(
@@ -462,11 +481,12 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
       const hydratedNodes =
         hydratedNodesOverride !== undefined
           ? [...hydratedNodesOverride]
-          : (this.mountedNodes?.filter((node) => node.parentNode !== null) ?? []);
+          : (this.mountedNodes?.filter((node) => node.parentNode !== null) ??
+            []);
       this.currentChildInstance =
         hydratedNodes.length > 0
-          // 有可复用节点时优先走 hydrated binding，避免把 SSR 子树整棵重建。
-          ? mountHydratedBinding(hydratedNodes, this.childTemplate, bindings)
+          ? // 有可复用节点时优先走 hydrated binding，避免把 SSR 子树整棵重建。
+            mountHydratedBinding(hydratedNodes, this.childTemplate, bindings)
           : mountTemplateBinding(this.childTemplate, bindings);
       return this.currentChildInstance;
     }
@@ -481,7 +501,9 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
     childBindings: readonly TemplateBindingPayload[]
   ): Node[] {
     // 原生元素或可实例化的自定义元素最终都会统一走“元素根 + 子模板 + 控制器”路径。
-    this.currentElementController = new DynamicElementBindingController(element);
+    this.currentElementController = new DynamicElementBindingController(
+      element
+    );
     this.currentElementController.write(props);
     const childInstance = this.ensureChildInstance(childBindings);
     appendDynamicChildren(element, childInstance.nodes);
@@ -492,12 +514,18 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
   private resolveMountedNodes(value: DynamicSlotValue): Node[] {
     const props = value.props ?? {};
     const target = resolveDynamicTarget(value.component);
-    const childBindings = value.__lania_dynamic === 'block' ? (value.childBindings ?? []) : [];
-    const hydratedNodes = this.mountedNodes?.filter((node) => node.parentNode !== null) ?? [];
+    const childBindings =
+      value.__lania_dynamic === 'block' ? (value.childBindings ?? []) : [];
+    const hydratedNodes =
+      this.mountedNodes?.filter((node) => node.parentNode !== null) ?? [];
 
     if (typeof target === 'string' && target.trim().length > 0) {
       // 字符串目标视为原生标签名。
-      return this.mountElementRoot(document.createElement(target), props, childBindings);
+      return this.mountElementRoot(
+        document.createElement(target),
+        props,
+        childBindings
+      );
     }
 
     if (target instanceof Element) {
@@ -557,7 +585,7 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
         scopedSlotChild === undefined ? childBindings : [];
       const needsStructuralAnchors =
         isEnhanced &&
-        ((target as { displayName?: string }).displayName === 'TransitionGroup');
+        (target as { displayName?: string }).displayName === 'TransitionGroup';
       const hydratedTransitionGroupChildNodes =
         needsStructuralAnchors &&
         this.currentChildInstance === null &&
@@ -569,16 +597,16 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
           : undefined;
       const needsTransitionBranchNodes =
         isEnhanced &&
-        ((target as { displayName?: string }).displayName === 'Transition');
+        (target as { displayName?: string }).displayName === 'Transition';
       const needsChildInstance =
         scopedSlotChild === undefined &&
         (isEnhanced ||
           effectiveChildBindings.length > 0 ||
           effectiveProps.children === undefined);
       const childInstance = needsChildInstance
-        ? (needsStructuralAnchors
+        ? needsStructuralAnchors
           ? this.currentChildInstance
-          : this.ensureChildInstance(effectiveChildBindings))
+          : this.ensureChildInstance(effectiveChildBindings)
         : null;
       const resolveStructuralChildren = () =>
         this.ensureChildInstance(
@@ -591,11 +619,11 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
           : needsStructuralAnchors && needsChildInstance
             ? resolveStructuralChildren
             : childInstance
-              ? (needsStructuralAnchors
-                // TransitionGroup dom-host 模式需要保留原始结构锚点
-                // （注释节点、模板边界节点等），而不只是“当前看得见的节点”。
-                // 否则一旦 slot 锚点脱离，dom-host redirect 就无法重新建立。
-                ? childInstance.nodes
+              ? needsStructuralAnchors
+                ? // TransitionGroup dom-host 模式需要保留原始结构锚点
+                  // （注释节点、模板边界节点等），而不只是“当前看得见的节点”。
+                  // 否则一旦 slot 锚点脱离，dom-host redirect 就无法重新建立。
+                  childInstance.nodes
                 : needsTransitionBranchNodes
                   ? readTransitionChildNodes(childInstance)
                   : isEnhanced
@@ -604,7 +632,7 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
                         childInstance,
                         effectiveProps.children
                       )
-                    : readMountedNodes(childInstance))
+                    : readMountedNodes(childInstance)
               : effectiveProps.children;
       const invokeTarget = () =>
         withRuntimeScope(
@@ -628,7 +656,9 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
       }
       if (!isEnhanced && result.length === 1 && result[0] instanceof Element) {
         this.currentElementRoot = result[0];
-        this.currentElementController = new DynamicElementBindingController(result[0]);
+        this.currentElementController = new DynamicElementBindingController(
+          result[0]
+        );
         this.currentElementController.write(effectiveProps);
       }
       return result;
@@ -644,15 +674,23 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
     }
 
     if (typeof target === 'string') {
-      return this.currentComponent === target && this.currentElementRoot instanceof HTMLElement;
+      return (
+        this.currentComponent === target &&
+        this.currentElementRoot instanceof HTMLElement
+      );
     }
 
     if (target instanceof Element) {
-      return this.currentComponent === target && this.currentElementRoot === target;
+      return (
+        this.currentComponent === target && this.currentElementRoot === target
+      );
     }
 
     if (isComponentElementConstructor(target)) {
-      return this.currentComponent === target && this.currentElementRoot instanceof target;
+      return (
+        this.currentComponent === target &&
+        this.currentElementRoot instanceof target
+      );
     }
 
     if (typeof target === 'function') {
@@ -685,8 +723,12 @@ export class DynamicSlot implements Slot<DynamicSlotValue | null | undefined> {
           };
 
     const childBindings =
-      normalizedValue.__lania_dynamic === 'block' ? (normalizedValue.childBindings ?? []) : [];
-    const isStructuralTransitionGroup = isTransitionGroupTarget(normalizedValue.component);
+      normalizedValue.__lania_dynamic === 'block'
+        ? (normalizedValue.childBindings ?? [])
+        : [];
+    const isStructuralTransitionGroup = isTransitionGroupTarget(
+      normalizedValue.component
+    );
 
     if (
       typeof normalizedValue.component === 'function' &&

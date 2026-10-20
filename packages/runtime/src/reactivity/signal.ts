@@ -150,7 +150,6 @@ const createPathView = (
         return undefined;
       }
 
-      runtime.trackPath(path);
       const raw = readPathValue(runtime.readRoot(), path);
 
       if (Array.isArray(raw) && property === 'length') {
@@ -159,8 +158,13 @@ const createPathView = (
       }
 
       if (raw === null || typeof raw !== 'object' || !(property in (raw as object))) {
+        // 属性不存在时不建立路径订阅：`Object.keys` / 展开 / 描述符探测本身
+        // 不应把整棵子树变成依赖，否则兄弟字段变化会误触发重算。
         return undefined;
       }
+
+      // 只订阅被真正访问到的属性路径，保持与 `get` 一致的精确度。
+      runtime.trackPath([...path, property as string]);
 
       return {
         configurable: true,
@@ -441,6 +445,8 @@ export type Signal<T> = {
   debugId: number;
   // Sets a raw value even if it's a function/class constructor.
   setValue: (value: T) => T;
+  /** 写入整棵新树，但按指定路径做精确通知（供外层状态封装使用）。 */
+  setValueWithPath: (value: T, changedPath: readonly (string | number)[]) => T;
 };
 
 /** 编译产物里的 computed 字段：可读取、可 peek，但不带 setter。 */
@@ -528,8 +534,12 @@ export const createSignal = <T>(
     return created;
   };
 
-  const notifyPath = (path: readonly (string | number)[]): void => {
-    const changed = path.map(String);
+  const notifyPath = (
+    changedPath: readonly (string | number)[],
+    previousValue: unknown,
+    nextValue: unknown
+  ): void => {
+    const changed = changedPath.map(String);
     const isPrefix = (short: readonly string[], long: readonly string[]): boolean =>
       short.length <= long.length && short.every((segment, index) => segment === long[index]);
 
@@ -543,6 +553,39 @@ export const createSignal = <T>(
         isPrefix(registered, changed) ||
         isPrefix(changed, registered)
       ) {
+        // 祖先路径（如根视图）只是“容器整体变了”，若该路径读到的值没变，
+        // 就不该唤醒只关心兄弟字段的订阅者，这里按值再裁剪一次。
+        if (
+          registered.length < changedPath.length &&
+          isPrefix(registered, changed) &&
+          Object.is(
+            readPathValue(previousValue, registered),
+            readPathValue(nextValue, registered)
+          )
+        ) {
+          continue;
+        }
+
+        signal.set((value) => value + 1);
+      }
+    }
+  };
+
+  const notifyPathVersion = (path: readonly (string | number)[]): void => {
+    // 路径级写入只唤醒「该路径自身」与「其后代」，祖先由 notifyPath 统一处理。
+    const normalized = path.map(String);
+    const isPrefix = (short: readonly string[], long: readonly string[]): boolean =>
+      short.length <= long.length && short.every((segment, index) => segment === long[index]);
+
+    for (const [key, signal] of pathVersions) {
+      if (key.length === 0) {
+        // 根版本用于“整体替换”，路径写入不应唤醒它。
+        continue;
+      }
+
+      const registered = key.split('\u0000');
+
+      if (isPrefix(normalized, registered)) {
         signal.set((value) => value + 1);
       }
     }
@@ -565,7 +608,7 @@ export const createSignal = <T>(
 
   const trackValue = (): T => {
     if (currentValue !== null && typeof currentValue === 'object') {
-      // 对象/数组：只按路径订阅（根读取订阅根路径），保证兄弟字段互不干扰。
+      // 对象/数组：按路径订阅（根读取订阅根路径），保证兄弟字段互不干扰。
       return createPathView(viewRuntime, []) as T;
     }
 
@@ -597,7 +640,11 @@ export const createSignal = <T>(
     }
 
     // 路径写入只通知受影响的路径；整体替换通知所有路径。
-    notifyPath(changedPath);
+    if (changedPath.length === 0) {
+      notifyPath([], previousValue, nextValue);
+    } else {
+      notifyPathVersion(changedPath);
+    }
 
     // set 只“通知”，具体执行时机交给 scheduler（避免深层嵌套 set 造成同步抖动）
     for (const updater of updaters) {
@@ -647,6 +694,9 @@ export const createSignal = <T>(
       return trackValue();
     },
     set: setSignal,
+    // 供 @lania/store 之类的外层封装使用：写入整棵新树，但按指定路径精确通知。
+    setValueWithPath: (nextValue: T, changedPath: readonly (string | number)[]) =>
+      commit(nextValue, changedPath),
     peek: () => toReadonlyValue(currentValue),
     updaters,
     debugId: nextSignalDebugId++,

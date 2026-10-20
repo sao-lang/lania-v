@@ -6,8 +6,8 @@ import {
   createRef,
   createSignal,
   defineComponent,
-  Each,
 } from '@lania-v/runtime';
+import { Each } from '@lania-v/advanced';
 
 type BindingPanelExpose = {
   focusInput(): void;
@@ -31,7 +31,9 @@ type BindingPanelProps = {
   children?: unknown;
 };
 
-const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelProps) {
+const BindingPanel = defineComponent(function BindingPanel(
+  props: BindingPanelProps
+) {
   const p = bindProps<BindingPanelProps>();
   const h = bindHandlers<BindingPanelProps>();
   const slots = bindSlots();
@@ -65,41 +67,43 @@ const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelPr
     >
       <div>
         <p className="summary">bindProps()</p>
-        <p className="empty">
-          keys: {Object.keys(p).join(', ') || '(empty)'}
-        </p>
+        <p className="empty">keys: {Object.keys(p).join(', ') || '(empty)'}</p>
       </div>
 
       <div>
         <p className="summary">bindHandlers()</p>
-        <p className="empty">
-          keys: {Object.keys(h).join(', ') || '(empty)'}
-        </p>
+        <p className="empty">keys: {Object.keys(h).join(', ') || '(empty)'}</p>
       </div>
 
       <header>
-        {slots.render(
-          'header',
-          <div>
-            <p className="summary">header fallback</p>
-            <h4 style={{ margin: '6px 0 0' }}>{p.title}</h4>
-          </div>
-        ) as any}
+        {
+          slots.render(
+            'header',
+            <div>
+              <p className="summary">header fallback</p>
+              <h4 style={{ margin: '6px 0 0' }}>{p.title}</h4>
+            </div>
+          ) as any
+        }
       </header>
 
       <div className="row">
         <span className="summary">title: {p.title}</span>
         <span className="summary">count: {p.count}</span>
-        <span className="summary">collapsed: {String(Boolean(p.collapsed))}</span>
+        <span className="summary">
+          collapsed: {String(Boolean(p.collapsed))}
+        </span>
         <span className="summary">status: {p.status ?? '-'}</span>
       </div>
 
       <div>
         <p className="summary">bindSlots().renderDefault()</p>
         <div>
-          {slots.renderDefault(
-            <p className="empty">default slot fallback</p>
-          ) as any}
+          {
+            slots.renderDefault(
+              <p className="empty">default slot fallback</p>
+            ) as any
+          }
         </div>
       </div>
 
@@ -122,7 +126,10 @@ const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelPr
         <button className="btn" onClick={() => h.onToggle?.()}>
           call onToggle
         </button>
-        <button className="btn" onClick={() => h.onSubmit?.(`panel-${p.count}`)}>
+        <button
+          className="btn"
+          onClick={() => h.onSubmit?.(`panel-${p.count}`)}
+        >
           call onSubmit
         </button>
       </div>
@@ -199,18 +206,12 @@ export default defineComponent(function FcBindingApiDemo() {
           <p className="empty">
             这里是默认插槽内容。可以直接看到 `bindSlots()` 如何读取默认槽。
           </p>
-          <p className="empty">
-            当前状态: collapsed = {String(collapsed())}
-          </p>
+          <p className="empty">当前状态: collapsed = {String(collapsed())}</p>
         </div>
       ),
       ...(footerEnabled()
         ? {
-            footer: (
-              <p className="empty">
-                named slot: footer is enabled
-              </p>
-            ),
+            footer: <p className="empty">named slot: footer is enabled</p>,
           }
         : {}),
     };
@@ -221,7 +222,8 @@ export default defineComponent(function FcBindingApiDemo() {
       <header>
         <h3>FC Binding APIs Demo</h3>
         <p className="summary">
-          完整演示 `bindProps()`、`bindHandlers()`、`bindSlots()`、`createExpose()`
+          完整演示
+          `bindProps()`、`bindHandlers()`、`bindSlots()`、`createExpose()`
           的组合用法。
         </p>
       </header>
@@ -256,16 +258,10 @@ export default defineComponent(function FcBindingApiDemo() {
             </button>
           </div>
           <div className="row">
-            <button
-              className="btn"
-              onClick={() => panelRef?.focusInput()}
-            >
+            <button className="btn" onClick={() => panelRef?.focusInput()}>
               ref.focusInput()
             </button>
-            <button
-              className="btn"
-              onClick={() => panelRef?.clearInput()}
-            >
+            <button className="btn" onClick={() => panelRef?.clearInput()}>
               ref.clearInput()
             </button>
             <button
@@ -302,16 +298,10 @@ export default defineComponent(function FcBindingApiDemo() {
         <div className="item">
           <p className="summary">InputExpose 示例</p>
           <div className="row">
-            <button
-              className="btn"
-              onClick={() => inputExposeRef?.focus()}
-            >
+            <button className="btn" onClick={() => inputExposeRef?.focus()}>
               inputRef.focus()
             </button>
-            <button
-              className="btn"
-              onClick={() => inputExposeRef?.clear()}
-            >
+            <button className="btn" onClick={() => inputExposeRef?.clear()}>
               inputRef.clear()
             </button>
           </div>
@@ -320,7 +310,10 @@ export default defineComponent(function FcBindingApiDemo() {
 
         <div className="item">
           <p className="summary">submit logs</p>
-          <Each items={submitLog()} fallback={<p className="empty">no logs yet</p>}>
+          <Each
+            items={submitLog()}
+            fallback={<p className="empty">no logs yet</p>}
+          >
             {(line: string): any => <p className="empty">{line}</p>}
           </Each>
         </div>

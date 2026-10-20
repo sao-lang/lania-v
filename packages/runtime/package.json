@@ -71,6 +71,14 @@
     "./testing": {
       "types": "./dist/entry/testing.d.ts",
       "import": "./dist/entry/testing.js"
+    },
+    "./component/transition": {
+      "types": "./dist/component/transition/index.d.ts",
+      "import": "./dist/component/transition/index.js"
+    },
+    "./component/lifecycle": {
+      "types": "./dist/component/lifecycle/index.d.ts",
+      "import": "./dist/component/lifecycle/index.js"
     }
   },
   "sideEffects": [

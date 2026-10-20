@@ -43,7 +43,7 @@ count.value; // 0
 这样做有两个直接好处：
 
 1. 读取动作可以被依赖收集系统感知（getter 每次访问都会收集依赖）；
-2. Signal 与其他状态 API 形态统一：`createStore` 用 `state.xxx`，signal 用 `sig.value`，写入都是 `set`。
+2. Signal 与 atom 形态统一：atom 用 `atom.value`，signal 用 `sig.value`，写入都是 `set`。
 
 ```ts
 function useDouble(source: ReadonlySignal<number>) {
@@ -57,12 +57,12 @@ const double = useDouble(count);
 
 #### 读取语义
 
-| 写法 | 是否收集依赖 | 说明 |
-| --- | --- | --- |
-| `count()` | 是 | 在 Effect / Memo / Updater 中被记录 |
-| `count.peek()` | 否 | 只读当前值，适合“看一眼但不订阅” |
-| `count.updaters` | 否 | 直接访问订阅集合，通常只给运行时内部使用 |
-| `count.debugId` | 否 | 开发调试 ID |
+| 写法             | 是否收集依赖 | 说明                                     |
+| ---------------- | ------------ | ---------------------------------------- |
+| `count()`        | 是           | 在 Effect / Memo / Updater 中被记录      |
+| `count.peek()`   | 否           | 只读当前值，适合“看一眼但不订阅”         |
+| `count.updaters` | 否           | 直接访问订阅集合，通常只给运行时内部使用 |
+| `count.debugId`  | 否           | 开发调试 ID                              |
 
 `peek()` 的典型场景是读取初始值：
 
@@ -94,7 +94,9 @@ count.set(Number.NaN); // 相等，不会触发更新
 因为 `set()` 会把函数当作 updater，所以存储函数值需要显式使用 `setValue()`：
 
 ```ts
-const formatter = createSignal<(value: number) => string>((value) => String(value));
+const formatter = createSignal<(value: number) => string>((value) =>
+  String(value)
+);
 
 formatter.setValue((value) => `${value}%`); // 存函数
 formatter()(42); // '42%'
@@ -132,14 +134,14 @@ type Signal<T> = (() => T) & {
 type SignalSetter<T> = (value: T | ((prev: T) => T)) => T;
 ```
 
-| 成员 | 说明 |
-| --- | --- |
-| `()` | 读取并收集依赖 |
-| `set(value)` | 写入值或 updater，返回新值 |
-| `setValue(value)` | 原样存储函数 / 类 |
-| `peek()` | 读取但不收集依赖 |
-| `updaters` | 当前订阅者集合（`Job`） |
-| `debugId` | 自增调试 ID |
+| 成员              | 说明                       |
+| ----------------- | -------------------------- |
+| `()`              | 读取并收集依赖             |
+| `set(value)`      | 写入值或 updater，返回新值 |
+| `setValue(value)` | 原样存储函数 / 类          |
+| `peek()`          | 读取但不收集依赖           |
+| `updaters`        | 当前订阅者集合（`Job`）    |
+| `debugId`         | 自增调试 ID                |
 
 ### `ReadonlySignal<T>`
 
@@ -164,7 +166,7 @@ readonly<T>(signal: SignalSource<T>): ReadonlySignal<T>
 const count = createSignal(0);
 const publicCount = readonly(count);
 
-publicCount();      // 0
+publicCount(); // 0
 publicCount.peek(); // 0
 // publicCount.set(1); // 类型错误
 ```
@@ -241,11 +243,11 @@ double = createComputedAccessor(() => this.count() * 2);
 
 差异：
 
-| `createMemo` | `createComputedAccessor` |
-| --- | --- |
-| 缓存结果 | 每次调用重新计算 |
-| 有内部 Signal | 没有内部 Signal |
-| 依赖变化时重算 | 不参与调度 |
+| `createMemo`          | `createComputedAccessor`                 |
+| --------------------- | ---------------------------------------- |
+| 缓存结果              | 每次调用重新计算                         |
+| 有内部 Signal         | 没有内部 Signal                          |
+| 依赖变化时重算        | 不参与调度                               |
 | 返回 `ReadonlySignal` | 返回 `ComputedAccessor`（`.value` 读取） |
 
 模板中的依赖由编译器静态注入，因此不需要句柄自己缓存。
@@ -262,7 +264,7 @@ type ComputedAccessor<T> = (() => T) & { peek: () => T };
 
 ```ts
 const accessor = createComputedAccessor(() => count() * 2);
-accessor();      // 重新计算
+accessor(); // 重新计算
 accessor.peek(); // 重新计算
 ```
 
@@ -369,41 +371,52 @@ const stop = watch(count, (current, previous) => {
   console.log(`${previous} -> ${current}`);
 });
 
-// getter：自动追踪内部读到的 signal 与 store 路径
-watch(() => form.status, (current, previous) => {
-  console.log(previous, '->', current);
-});
+// getter：自动追踪内部读到的 signal 与 atom 路径
+watch(
+  () => form.status,
+  (current, previous) => {
+    console.log(previous, '->', current);
+  }
+);
 ```
 
 第三参是选项，第四参才是调度器：
 
 ```ts
-watch(count, (current, previous) => {
-  console.log(current, previous);
-}, { immediate: true });
+watch(
+  count,
+  (current, previous) => {
+    console.log(current, previous);
+  },
+  { immediate: true }
+);
 
-watch(() => ({ status: form.status, account: form.account }), (current, previous) => {
-  console.log(current, previous);
-}, { deep: true });
+watch(
+  () => ({ status: form.status, account: form.account }),
+  (current, previous) => {
+    console.log(current, previous);
+  },
+  { deep: true }
+);
 ```
 
 选项行为：
 
-| 选项 | 行为 |
-| --- | --- |
-| `immediate` | 创建时同步执行一次回调，首次 `previous` 为 `undefined` |
-| `deep` | 按值比较新旧快照，内容没变时不回调；`previous` 是上一次快照的深拷贝 |
+| 选项        | 行为                                                                |
+| ----------- | ------------------------------------------------------------------- |
+| `immediate` | 创建时同步执行一次回调，首次 `previous` 为 `undefined`              |
+| `deep`      | 按值比较新旧快照，内容没变时不回调；`previous` 是上一次快照的深拷贝 |
 
 getter 源默认按值比较（`Object.is` + 浅层结构比较），所以 `form.status` 写入相同值不会触发回调。`deep` 的比较范围限于普通对象与数组，DOM 节点、类实例按引用比较。
 
 与 `createEffect()` 的区别：
 
-| `createEffect` | `watch` |
-| --- | --- |
+| `createEffect` | `watch`                                        |
+| -------------- | ---------------------------------------------- |
 | 创建时立即执行 | 默认不立即执行（`immediate: true` 时立即执行） |
-| 回调无参数 | 回调收到新旧值 |
-| 适合副作用 | 适合观察变化 |
-| 可返回清理函数 | 不处理清理函数 |
+| 回调无参数     | 回调收到新旧值                                 |
+| 适合副作用     | 适合观察变化                                   |
+| 可返回清理函数 | 不处理清理函数                                 |
 
 多个来源：
 
@@ -486,13 +499,13 @@ import { defaultScheduler, Scheduler } from '@lania-v/runtime';
 type SchedulerPriority = 'immediate' | 'high' | 'normal' | 'low' | 'idle';
 ```
 
-| 优先级 | 典型用途 |
-| --- | --- |
+| 优先级      | 典型用途           |
+| ----------- | ------------------ |
 | `immediate` | 需要尽快执行的任务 |
-| `high` | 组件生命周期更新 |
-| `normal` | 普通 Signal 更新 |
-| `low` | effect、transition |
-| `idle` | 空闲任务 |
+| `high`      | 组件生命周期更新   |
+| `normal`    | 普通 Signal 更新   |
+| `low`       | effect、transition |
+| `idle`      | 空闲任务           |
 
 执行顺序：
 
@@ -658,34 +671,32 @@ pending(); // boolean
 
 `pending` 是全局标志：多个 transition 同时存在时使用计数管理，最后一个结束后回落。
 
-## Store
+## 原子状态（`@lania/store`）
 
-### 为什么需要 Store
+### 为什么需要 atom
 
 多个 Signal 适合平铺状态，但嵌套对象会出现两个问题：
 
 1. 修改深层字段需要手动展开；
 2. 读取任意字段都可能订阅整个对象。
 
-`createStore()` 用“路径 + 版本 Signal”解决：
+`@lania/store` 的 `createAtom()` 用「原子 + 路径 + 版本 Signal」解决：
 
-- 读取 `state.user.name` 订阅 `['user', 'name']`；
-- 写入必须走 `set()`，只通知受影响的祖先 / 后代路径；
-- 路径视图按需创建并缓存，视图是只读的，属性赋值会直接报错。
+- atom 本身是稳定的身份对象，可以组合派生与动作；
+- 读取 `atom.value.user.name` 订阅 `['user', 'name']`；
+- 写入走 `set()`，只通知受影响的路径；
+- 视图按路径缓存且只读，属性赋值会直接抛错。
 
-### `createStore()`
+### `createAtom()`
 
 ```ts
-createStore<T extends object>(
-  initialValue: T,
-  scheduler?: Scheduler
-): Store<T>
+createAtom<T>(initialValue: T, options?: AtomOptions<T>): Atom<T>
 ```
 
-`Store<T>` 在 `T` 的对象式访问之上提供 `set` / `peek`，与 `createSignal()` 的句柄形态一致。
-
 ```ts
-const state = createStore({
+import { createAtom } from '@lania/store';
+
+const state = createAtom({
   user: { name: 'Ada', age: 36 },
   list: [] as number[],
 });
@@ -694,136 +705,119 @@ const state = createStore({
 #### 读取
 
 ```ts
-state.user.name;
-state.list[0];
-state.list.length;
+state.value.user.name;
+state.value.list[0];
+state.value.list.length;
 ```
 
-- 读取原始值会订阅该路径；
-- 读取嵌套对象会返回按路径缓存的只读视图，不会订阅父路径；
-- 方法调用会自动绑定到所属对象；
-- 属性是只读的，任何 `state.xxx = ...` 都会抛 `TypeError`。
+- 读取原始值订阅该路径；
+- 读取嵌套对象返回按路径缓存的只读视图；
+- 任何 `state.value.xxx = ...` 都会抛 `TypeError`。
 
 #### 写入
 
 ```ts
-// 整体替换（未给出的字段会被丢弃）
-state.set({ user: { name: 'Grace' }, list: [] });
-
-// 点路径写入
-state.set('user.name', 'Grace');
-
-// 数组路径
-state.set(['user', 'name'], 'Grace');
-
-// 分段路径写入
-state.set('user', 'name', 'Grace');
-
-// 路径 + updater
-state.set('list', (list: number[]) => [...list, 1]);
-
-// 数组下标
-state.set('list', 0, 99);
-state.set('list.0.title', 'updated');
+state.set('user.name', 'Grace'); // 点路径
+state.set(['user', 'age'], 37); // 数组路径
+state.set('user', 'age', 38); // 分段路径
+state.set('list', (list) => [...list, 1]); // updater
 ```
 
-`set` 不合并：单参数一律整体替换，局部更新请用嵌套路径。路径不存在时会按需创建中间对象。
-
-两个参数且首参为字符串时按 `.` 拆分路径；首参为数组时按分段路径处理；三个及以上参数同样按分段路径处理。
-
-路径更新采用不可变策略：
-
-1. 复制根容器；
-2. 复制路径上的每一层；
-3. 替换目标字段。
+`set` 返回 atom 自身，因此可以链式调用：
 
 ```ts
-const before = state.user;
-state.set('user.name', 'Grace');
-state.user !== before; // true
+state.set('user.name', 'Grace').set('user.age', 40);
 ```
 
-#### 方法绑定
+路径更新采用不可变策略：复制根容器、复制路径上的每一层、替换目标字段。
 
 ```ts
-const state = createStore({
-  count: 1,
-  increment() {
-    this.set('count', (count: number) => count + 1);
-  },
+const before = state.peek();
+state.set('user.name', 'Grace');
+state.peek() !== before; // true
+```
+
+#### `peek()` / `reset()`
+
+```ts
+state.peek(); // 当前原始对象，不建立订阅
+state.reset(); // 回到创建时的初始值
+```
+
+### `createDerivedAtom()`
+
+```ts
+createDerivedAtom<T>(read: () => T): DerivedAtom<T>
+createDerivedAtom<T, Args>(read: () => T, write: (...args: Args) => void): WritableDerivedAtom<T, Args>
+```
+
+```ts
+const price = createAtom(100);
+const count = createAtom(2);
+const total = createDerivedAtom(() => price.value * count.value);
+
+const doubled = createDerivedAtom(
+  () => count.value * 2,
+  (next: number) => count.set(next / 2)
+);
+```
+
+派生 atom 由 `createMemo` 承载缓存，依赖不变时不会重算；写函数执行后会同步刷新派生值。
+
+### `createAction()` / `createAtomFamily()`
+
+```ts
+const addTodo = createAction((text: string) => {
+  todos.set((prev) => [
+    ...prev,
+    { id: crypto.randomUUID(), text, done: false },
+  ]);
+  draft.set('');
 });
 
-state.increment();
+const todoOf = createAtomFamily((id: string) =>
+  createDerivedAtom(() => todos.value.find((todo) => todo.id === id) ?? null)
+);
 ```
 
-方法会绑定回当前路径，因此 `this` 指向正确对象；但 `this` 同样是只读视图，写入需要走 `set()`。
-
-#### `peek()`
-
-```ts
-const raw = state.peek();
-```
-
-返回当前原始对象且不建立订阅。
-
-#### `__raw`
-
-```ts
-const raw = state.user.__raw;
-```
-
-读取当前路径的原始值。它是内部逃生口，业务代码应优先保持响应式读取。
-
-### `produce()`
-
-```ts
-produce<T extends object>(
-  store: Store<T>,
-  recipe: (draft: T) => T
-): T
-```
-
-用纯函数计算下一个状态：
-
-```ts
-produce(state, (draft) => ({
-  ...draft,
-  list: [...draft.list, 1],
-  user: { ...draft.user, name: 'Grace' },
-}));
-```
-
-约束：
-
-- `draft` 是只读视图，回调内不能直接赋值或调用数组变更方法；
-- 回调必须有返回值，返回值作为新状态整体写回；
-- 需要局部更新时优先用 `state.set('path.to.value', next)`。
+`createAction` 内部使用 `batch()`，多次写入合并成一帧。
 
 ### 按路径订阅
 
-Store 的读取本身就是细粒度的：读到哪条路径，就只订阅那条路径。
-
 ```ts
-const state = createStore({ user: { name: 'Ada' }, count: 0 });
+import { watch } from '@lania-v/runtime';
 
-// 只在 state.user.name 变化时触发
+// 只在 user.name 变化时触发
 watch(
-  () => state.user.name,
+  () => state.value.user.name,
   (current, previous) => {
     console.log(previous, '->', current);
   }
 );
 ```
 
-同样的读取放进 `createEffect` / `createMemo` 里会自动建立依赖，不需要额外的路径 API：
+放进 `createEffect` / `createMemo` 会自动建立依赖。`watch` 的 getter 形式按值比较，写入相同值不触发；需要整体比较时可加 `{ deep: true }`。
+
+### 作用域
 
 ```ts
-createEffect(() => {
-  console.log(state.user.name);
-});
+import { createStore, runWithStore, bindStore } from '@lania/store';
+
+const scope = createStore();
+const count = runWithStore(scope, () => createAtom(0, { key: 'count' }));
+
+scope.snapshot(); // { count: 0 }
+scope.hydrate({ count: 5 });
+
+const later = bindStore(() => count.set(6));
+setTimeout(later, 0);
 ```
 
-`watch` 的 getter 形式按值比较：写入相同的值不会触发回调。需要比较整个对象时可加 `{ deep: true }`。
+未显式指定作用域时，atom 落在模块级默认 store，因此组件内外写法一致。
+
+::: tip 迁移
+`@lania-v/runtime` 的 `createStore()` / `produce()` 已移除，等价能力见 [状态管理](/guide/state#从-createstore-迁移)。
+:::
 
 ## Resource
 
@@ -930,7 +924,10 @@ const isSelected = createSelector(selectedId);
 自定义比较：
 
 ```ts
-const isCurrent = createSelector(currentUser, (key, value) => key.id === value?.id);
+const isCurrent = createSelector(
+  currentUser,
+  (key, value) => key.id === value?.id
+);
 ```
 
 释放：
@@ -1083,11 +1080,11 @@ provideContext(ThemeContext, theme);
 
 值类型：
 
-| 传入 | 行为 |
-| --- | --- |
-| Signal / Memo | 直接使用 |
-| `() => T` | 初始化时求值一次，包装为 Signal |
-| 普通值 | 包装为 Signal |
+| 传入          | 行为                            |
+| ------------- | ------------------------------- |
+| Signal / Memo | 直接使用                        |
+| `() => T`     | 初始化时求值一次，包装为 Signal |
+| 普通值        | 包装为 Signal                   |
 
 ### `useContext()`
 
@@ -1143,10 +1140,10 @@ import {
 const { value, deps } = trackSignals(() => count() + other());
 ```
 
-| API | 说明 |
-| --- | --- |
-| `isTracking()` | 当前是否在收集依赖 |
-| `trackSignals(run)` | 执行并返回 `{ value, deps }` |
+| API                        | 说明                             |
+| -------------------------- | -------------------------------- |
+| `isTracking()`             | 当前是否在收集依赖               |
+| `trackSignals(run)`        | 执行并返回 `{ value, deps }`     |
 | `linkTrackedSignals(deps)` | 把一组 Signal 加入当前收集上下文 |
 
 这些 API 主要供高级集成和运行时内部使用。

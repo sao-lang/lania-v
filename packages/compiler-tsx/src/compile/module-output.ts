@@ -30,6 +30,8 @@ export interface CompiledTsxModule {
 }
 
 const RUNTIME_IMPORT_PATTERN = /^['"]@lania-v\/runtime(?:\/[^'"]+)?['"]$/;
+// `@lania/store` 是生态包而非 runtime 内部模块：它的具名导入必须原样保留在产物里。
+const STORE_IMPORT_PATTERN = /^['"]@lania\/store(?:\/[^'"]+)?['"]$/;
 
 // 运行时能力按“组件基类/响应式 API/模板 slot/SSR 辅助”混合列举，
 // 目的是让生成代码始终可以从单一入口稳定解构，而不是按需拼出多条 import。
@@ -45,7 +47,6 @@ const TSX_RUNTIME_BINDINGS = [
   'readonly',
   'untrack',
   'createDeferred',
-  'createStore',
   'createResource',
   'lazy',
   'onMount',
@@ -143,7 +144,7 @@ const TSX_ADVANCED_RUNTIME_BINDINGS = [
 ] as const;
 
 // 编译器产物专用的内部能力：不走公共 API，避免把实现细节写进用户可见的导入面。
-const TSX_INTERNAL_RUNTIME_BINDINGS = ['getStorePathSignal'] as const;
+const TSX_INTERNAL_RUNTIME_BINDINGS = ['getAtomDependency'] as const;
 
 // 这一小步属于生成结果收口，不改业务语义，只修正打印器对对象字面量箭头函数的包裹形式。
 const normalizeModelObjectUpdaters = (code: string): string => {
@@ -199,7 +200,8 @@ const collectUserRuntimeBindings = (
     }
 
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
-    if (!RUNTIME_IMPORT_PATTERN.test(specifier)) {
+    // 只有 runtime 自身的具名导入需要并入统一前导；`@lania/store` 会原样保留。
+    if (!RUNTIME_IMPORT_PATTERN.test(specifier) || STORE_IMPORT_PATTERN.test(specifier)) {
       return;
     }
 
@@ -457,7 +459,8 @@ const extractNonRuntimeImports = (fileName: string, source: string): string => {
     }
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
     // 运行时依赖由编译器统一注入，避免与用户源码中的导入重复。
-    if (RUNTIME_IMPORT_PATTERN.test(specifier)) {
+    // `@lania/store` 属于生态包，编译器不接管它的导入，必须原样保留。
+    if (RUNTIME_IMPORT_PATTERN.test(specifier) && !STORE_IMPORT_PATTERN.test(specifier)) {
       return;
     }
     imports.push(stmt.getText(sourceFile));

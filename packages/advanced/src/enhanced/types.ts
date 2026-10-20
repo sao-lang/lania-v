@@ -4,25 +4,21 @@
  * 这里既包含 JSX 运行时可识别的渲染值，也包含 KeepAlive、Transition、Boundary
  * 等高阶组件的 props 契约，属于增强组件子系统的类型汇总入口。
  */
-import type {
-  BoundaryPayload,
-  CachePayload,
-  TransitionPayload,
-} from '@lania-v/shared';
-import type { KeepAliveKeyPattern } from '../lifecycle/keepalive/types';
+import {
+  ENHANCED_COMPONENT_KIND,
+  type BoundaryPayload,
+  type CachePayload,
+  type TransitionPayload,
+} from '@lania-v/runtime';
 
-export const ENHANCED_COMPONENT_KIND = Symbol.for('lania.enhanced-component');
+import type { EnhancedRenderable } from '@lania-v/runtime';
 
-// 统一描述增强组件允许返回的渲染值，后续兼容层会继续展开函数和数组。
-export type EnhancedRenderable =
-  | Node
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | (() => EnhancedRenderable)
-  | readonly EnhancedRenderable[];
+export type { EnhancedRenderable };
+import type { KeepAliveKeyPattern } from '@lania-v/runtime/component/lifecycle';
+
+export type { KeepAliveKeyPattern };
+
+export { ENHANCED_COMPONENT_KIND } from '@lania-v/runtime';
 
 // 所有增强组件定义都会打上运行时标记，便于在 JSX 阶段识别。
 export interface EnhancedComponentDefinition<
@@ -72,8 +68,7 @@ export interface EachProps<T> extends EnhancedComponentProps {
   key?: (item: T, index: number) => PropertyKey;
   fallback?: EnhancedRenderable;
   children:
-    | ((item: T, index: number) => EnhancedRenderable)
-    | EnhancedRenderable;
+    ((item: T, index: number) => EnhancedRenderable) | EnhancedRenderable;
 }
 
 export interface TeleportProps extends EnhancedComponentProps {
@@ -104,7 +99,11 @@ export interface KeepAliveProps extends EnhancedComponentProps {
   include?: KeepAliveKeyPattern;
   exclude?: KeepAliveKeyPattern;
   max?: number;
-  onActivate?: (value: EnhancedRenderable, key: string, reused: boolean) => void;
+  onActivate?: (
+    value: EnhancedRenderable,
+    key: string,
+    reused: boolean
+  ) => void;
   onDeactivate?: (value: EnhancedRenderable, key: string) => void;
   onCache?: (value: EnhancedRenderable, key: string) => void;
   onEvict?: (value: EnhancedRenderable, key: string) => void;
@@ -141,8 +140,7 @@ export interface TransitionLifecycleHooks {
   onAppear?: TransitionLifecycleHook;
 }
 
-export interface TransitionProps
-  extends EnhancedComponentProps {
+export interface TransitionProps extends EnhancedComponentProps {
   payload?: TransitionPayload;
   name?: string;
   transitionKey?: PropertyKey | null;

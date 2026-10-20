@@ -1,12 +1,6 @@
-import {
-  createSignal,
-  createStore,
-  Each,
-  onMount,
-  untrack,
-  watch,
-  When,
-} from '@lania-v/runtime';
+import { createSignal, onMount, untrack, watch } from '@lania-v/runtime';
+import { Each, When } from '@lania-v/advanced';
+import { createAtom } from '@lania/store';
 import {
   ApiError,
   type ListUsersResult,
@@ -28,13 +22,15 @@ const PAGE_SIZE = 5;
 
 const describeError = (error: unknown): string => {
   if (error instanceof ApiError) {
-    return error.status > 0 ? `${error.message}（${error.status}）` : error.message;
+    return error.status > 0
+      ? `${error.message}（${error.status}）`
+      : error.message;
   }
   return error instanceof Error ? error.message : '请求失败';
 };
 
 export default function ProfilePage(props: ProfilePageProps) {
-  const users = createStore<{ items: UserView[] }>({ items: [] });
+  const users = createAtom<{ items: UserView[] }>({ items: [] });
   const keyword = createSignal('');
   const page = createSignal(1);
   const total = createSignal(0);
@@ -182,7 +178,11 @@ export default function ProfilePage(props: ProfilePageProps) {
         <button className="ghost" type="button" onClick={() => togglePwdForm()}>
           {pwdOpen.value ? '收起' : '修改密码'}
         </button>
-        <button className="ghost" type="button" onClick={() => props.signedOut?.()}>
+        <button
+          className="ghost"
+          type="button"
+          onClick={() => props.signedOut?.()}
+        >
           退出登录
         </button>
       </header>
@@ -207,7 +207,10 @@ export default function ProfilePage(props: ProfilePageProps) {
                     },
                   },
                 }}
-                onKeyDown={{ handler: submitPasswordChange, modifiers: { enter: true } }}
+                onKeyDown={{
+                  handler: submitPasswordChange,
+                  modifiers: { enter: true },
+                }}
               />
               <button
                 className="toggle"
@@ -238,10 +241,18 @@ export default function ProfilePage(props: ProfilePageProps) {
                     },
                   },
                 }}
-                onKeyDown={{ handler: submitPasswordChange, modifiers: { enter: true } }}
+                onKeyDown={{
+                  handler: submitPasswordChange,
+                  modifiers: { enter: true },
+                }}
               />
             </span>
-            <When when={pwdNew.value.length > 0 && pwdNew.value.length < PASSWORD_MIN_LENGTH}>
+            <When
+              when={
+                pwdNew.value.length > 0 &&
+                pwdNew.value.length < PASSWORD_MIN_LENGTH
+              }
+            >
               <p className="hint">新密码至少需要 {PASSWORD_MIN_LENGTH} 位。</p>
             </When>
           </label>
@@ -264,7 +275,10 @@ export default function ProfilePage(props: ProfilePageProps) {
                     },
                   },
                 }}
-                onKeyDown={{ handler: submitPasswordChange, modifiers: { enter: true } }}
+                onKeyDown={{
+                  handler: submitPasswordChange,
+                  modifiers: { enter: true },
+                }}
               />
             </span>
             <When when={pwdMismatch()}>
@@ -344,10 +358,16 @@ export default function ProfilePage(props: ProfilePageProps) {
 
       <When when={state.value === 'ready'}>
         <ul className="user-list">
-          <Each items={users.items} fallback={<li class="empty">没有匹配的用户</li>}>
+          <Each
+            items={users.value.items}
+            fallback={<li class="empty">没有匹配的用户</li>}
+          >
             {(item: UserView): any => (
               <li
-                className={['user-item', { 'is-active': selectedId.value === item.id }]}
+                className={[
+                  'user-item',
+                  { 'is-active': selectedId.value === item.id },
+                ]}
                 onClick={() => selectUser(item)}
               >
                 <span className="user-avatar">{item.name.slice(0, 1)}</span>

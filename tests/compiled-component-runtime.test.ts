@@ -6,6 +6,7 @@ import ts from 'typescript';
 import * as runtime from '@lania-v/runtime';
 import * as advanced from '@lania-v/runtime/advanced';
 import * as runtimeInternal from '@lania-v/runtime/internal';
+import * as store from '@lania/store';
 import { mountComponent } from '@lania-v/runtime';
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
@@ -41,6 +42,9 @@ const loadComponent = (source: string): any => {
     }
     if (id === '@lania-v/runtime/internal') {
       return runtimeInternal;
+    }
+    if (id === '@lania/store') {
+      return store;
     }
     throw new Error(`Unexpected import: ${id}`);
   };
@@ -122,11 +126,15 @@ export default defineComponent(function CardAliasView(props: CardAliasProps & Ca
       props: { title: 'Hello', subtitle: 'Base' },
     });
     await flush();
-    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe('Hello|Base');
+    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe(
+      'Hello|Base'
+    );
 
     element.title = 'Updated';
     await flush();
-    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe('Updated|Base');
+    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe(
+      'Updated|Base'
+    );
     element.remove();
   });
 
@@ -155,11 +163,12 @@ export default defineComponent(function CardComposable() {
     element.remove();
   });
 
-  it('updates compiled store paths through store.set', async () => {
+  it('updates compiled atom paths through atom.set', async () => {
     const StoreView = loadComponent(`
-import { createStore, defineComponent } from '@lania-v/runtime';
+import { createAtom } from '@lania/store';
+import { defineComponent } from '@lania-v/runtime';
 export default defineComponent(function StoreView() {
-  const store = createStore({
+  const store = createAtom({
     user: { name: 'Ada' },
     list: [{ title: 'a' }],
   });
@@ -173,7 +182,7 @@ export default defineComponent(function StoreView() {
       >
         update
       </button>
-      <output>{store.user.name}|{store.list[0].title}</output>
+      <output>{store.value.user.name}|{store.value.list[0].title}</output>
     </div>
   );
 });
@@ -181,11 +190,15 @@ export default defineComponent(function StoreView() {
 
     const element = mountComponent(document.body, StoreView, {});
     await flush();
-    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('Ada|a');
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe(
+      'Ada|a'
+    );
 
     (element.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
     await flush();
-    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('Grace|b');
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe(
+      'Grace|b'
+    );
     element.remove();
   });
 
@@ -247,7 +260,9 @@ export default defineComponent(function BindingPanel(_props: BindingPanelProps) 
       'onToggle'
     );
     expect(element.shadowRoot?.querySelector('.header')?.textContent).toBe('H');
-    expect(element.shadowRoot?.querySelector('.default')?.textContent).toBe('D');
+    expect(element.shadowRoot?.querySelector('.default')?.textContent).toBe(
+      'D'
+    );
     expect(element.shadowRoot?.querySelector('.footer')?.textContent).toBe('F');
 
     (element.shadowRoot?.querySelector('.toggle') as HTMLButtonElement).click();
@@ -260,8 +275,12 @@ export default defineComponent(function BindingPanel(_props: BindingPanelProps) 
 
     element.children = { header: 'H2', default: 'D2' };
     await flush();
-    expect(element.shadowRoot?.querySelector('.header')?.textContent).toBe('H2');
-    expect(element.shadowRoot?.querySelector('.default')?.textContent).toBe('D2');
+    expect(element.shadowRoot?.querySelector('.header')?.textContent).toBe(
+      'H2'
+    );
+    expect(element.shadowRoot?.querySelector('.default')?.textContent).toBe(
+      'D2'
+    );
     expect(element.shadowRoot?.querySelector('.footer')?.textContent).toBe(
       'missing'
     );
@@ -429,7 +448,9 @@ export default CardStyled;
 
     const element = mountComponent(document.body, CardStyled, {});
     await flush();
-    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe('hello!');
+    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe(
+      'hello!'
+    );
     element.remove();
   });
 
@@ -501,20 +522,28 @@ export default defineComponent(function DestructuredCard(props: {
     });
     await flush();
 
-    expect(element.shadowRoot?.querySelector('.title')?.textContent).toBe('fallback');
+    expect(element.shadowRoot?.querySelector('.title')?.textContent).toBe(
+      'fallback'
+    );
     expect(element.shadowRoot?.querySelector('.name')?.textContent).toBe('Ann');
     expect(element.shadowRoot?.querySelector('.age')?.textContent).toBe('0');
-    expect(element.shadowRoot?.querySelector('.rest')?.textContent).toBe('2-true');
+    expect(element.shadowRoot?.querySelector('.rest')?.textContent).toBe(
+      '2-true'
+    );
 
     element.title = 'Hello';
     element.user = { name: 'Bob', age: 30 };
     element.count = 7;
     await flush();
 
-    expect(element.shadowRoot?.querySelector('.title')?.textContent).toBe('Hello');
+    expect(element.shadowRoot?.querySelector('.title')?.textContent).toBe(
+      'Hello'
+    );
     expect(element.shadowRoot?.querySelector('.name')?.textContent).toBe('Bob');
     expect(element.shadowRoot?.querySelector('.age')?.textContent).toBe('30');
-    expect(element.shadowRoot?.querySelector('.rest')?.textContent).toBe('7-true');
+    expect(element.shadowRoot?.querySelector('.rest')?.textContent).toBe(
+      '7-true'
+    );
 
     element.remove();
   });
@@ -551,18 +580,23 @@ export default MultiParent;
 
     // 子组件同样走了编译路径：它是独立自定义元素，自己有 shadow root。
     const child = element.shadowRoot?.querySelector('multi-child') as
-      | (HTMLElement & { label?: string })
-      | null;
+      (HTMLElement & { label?: string }) | null;
     expect(child).not.toBeNull();
-    expect(child?.shadowRoot?.querySelector('.child')?.textContent).toBe('nested');
+    expect(child?.shadowRoot?.querySelector('.child')?.textContent).toBe(
+      'nested'
+    );
 
     child!.label = 'changed';
     await flush();
-    expect(child?.shadowRoot?.querySelector('.child')?.textContent).toBe('changed');
+    expect(child?.shadowRoot?.querySelector('.child')?.textContent).toBe(
+      'changed'
+    );
 
     element.title = 'Updated';
     await flush();
-    expect(element.shadowRoot?.querySelector('h2')?.textContent).toBe('Updated');
+    expect(element.shadowRoot?.querySelector('h2')?.textContent).toBe(
+      'Updated'
+    );
 
     element.remove();
   });

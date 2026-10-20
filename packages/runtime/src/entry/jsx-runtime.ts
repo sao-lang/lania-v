@@ -24,26 +24,25 @@ import {
   withComponentProps,
   withRuntimeScope,
 } from '../component/host/function-component';
-import {
-  Fragment as RuntimeFragment,
-  type EnhancedRenderable,
-  type CaseProps,
-  type DefaultProps,
-  type DynamicProps,
-  type EachProps,
-  type ElseProps,
-  type ErrorBoundaryProps,
-  type FragmentProps,
-  type KeepAliveProps,
-  type LazyLoadProps,
-  type SuspenseProps,
-  type SwitchProps,
-  type TeleportProps,
-  type ThenProps,
-  type TransitionGroupProps,
-  type TransitionProps,
-  type WhenProps,
-} from '../component/enhanced-components';
+import type {
+  EnhancedRenderable,
+  CaseProps,
+  DefaultProps,
+  DynamicProps,
+  EachProps,
+  ElseProps,
+  ErrorBoundaryProps,
+  FragmentProps,
+  KeepAliveProps,
+  LazyLoadProps,
+  SuspenseProps,
+  SwitchProps,
+  TeleportProps,
+  ThenProps,
+  TransitionGroupProps,
+  TransitionProps,
+  WhenProps,
+} from '../component/renderable-types';
 import type { ClassValue } from '../dom/class-value';
 import { writeClassAttribute } from '../dom/class-value';
 import {
@@ -53,7 +52,13 @@ import {
 } from '../dom/directives';
 import { applyHtml, type HtmlBindingValue } from '../dom/html-value';
 import { setRef, type RefBinding } from '../dom/ref';
-import { writeStyleAttribute, type StyleBindingValue } from '../dom/style-value';
+import {
+  writeStyleAttribute,
+  type StyleBindingValue,
+} from '../dom/style-value';
+
+// Fragment 是唯一留在 runtime 的增强组件形态：它不产生节点，只透传 children。
+const RuntimeFragment = Symbol.for('lania.fragment');
 
 // 对编辑器 hover 与 JSX namespace 来说，JSX 返回值类型统一暴露为“可直接渲染值”。
 // 这里刻意不引入专门的 VNode 类型，避免类型层与运行时模型出现两套概念。
@@ -70,8 +75,7 @@ type WritableSignalLike<T = unknown> = (() => T) & {
 type EventBindingObject<TEvent extends Event = Event> = {
   handler: (event: TEvent) => unknown;
   modifiers?:
-    | readonly EventModifier[]
-    | Readonly<Record<string, boolean | undefined>>;
+    readonly EventModifier[] | Readonly<Record<string, boolean | undefined>>;
   listener?: {
     once?: boolean;
     capture?: boolean;
@@ -80,8 +84,7 @@ type EventBindingObject<TEvent extends Event = Event> = {
 };
 
 type EventBindingValue<TEvent extends Event = Event> =
-  | ((event: TEvent) => unknown)
-  | EventBindingObject<TEvent>;
+  ((event: TEvent) => unknown) | EventBindingObject<TEvent>;
 
 type PrimitiveAttributeValue = string | number | boolean | null | undefined;
 type InputTypeAttribute =
@@ -195,9 +198,7 @@ export type LaniaEventProps = {
 };
 
 export type LaniaIntrinsicElementProps<TElement extends Element = HTMLElement> =
-  CommonDomProps<TElement> &
-  LaniaDirectiveProps &
-  LaniaEventProps;
+  CommonDomProps<TElement> & LaniaDirectiveProps & LaniaEventProps;
 
 export interface LaniaCommonIntrinsicElements {
   div: LaniaIntrinsicElementProps<HTMLDivElement>;
@@ -363,7 +364,13 @@ export interface LaniaCommonIntrinsicElements {
   };
   track: LaniaIntrinsicElementProps<HTMLTrackElement> & {
     default?: boolean;
-    kind?: 'subtitles' | 'captions' | 'descriptions' | 'chapters' | 'metadata' | (string & {});
+    kind?:
+      | 'subtitles'
+      | 'captions'
+      | 'descriptions'
+      | 'chapters'
+      | 'metadata'
+      | (string & {});
     src?: string;
     srclang?: string;
     label?: string;
@@ -660,10 +667,14 @@ const createIntrinsicElement = (
   return element;
 };
 
+/**
+ * Fragment 的占位实现：不产生宿主节点，`jsx()` 会直接透传 children。
+ * 真正的 Fragment 组件在 `@lania-v/advanced`，两者语义一致。
+ */
 export const Fragment = RuntimeFragment;
 
 export const jsx = (
-  type: string | ((props: JsxProps) => JsxElement),
+  type: string | symbol | ((props: JsxProps) => JsxElement),
   props: JsxProps | null,
   key?: string
 ): JsxElement => {
@@ -701,7 +712,9 @@ export const jsx = (
     {
       // JSX 入口先把 handler keys 显式标出来，后续 `bindProps()` /
       // `bindHandlers()` 就不必每次都重新猜一遍。
-      handlerKeys: Object.keys(nextProps).filter((name) => /^on[A-Z]/.test(name)),
+      handlerKeys: Object.keys(nextProps).filter((name) =>
+        /^on[A-Z]/.test(name)
+      ),
     }
   );
   const cleanups = new Set<() => void>();
@@ -711,7 +724,10 @@ export const jsx = (
       functionComponentCleanups: cleanups,
     },
     // 组件体内可以无参调用 `bindProps()` / `bindHandlers()`，这里把本次入参设为当前上下文。
-    () => withComponentProps(functionProps, () => type(functionProps))
+    () =>
+      withComponentProps(functionProps, () =>
+        (type as (props: JsxProps) => JsxElement)(functionProps)
+      )
   );
   registerFunctionComponentRenderResult(result, cleanups);
   return result;

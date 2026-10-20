@@ -1,393 +1,361 @@
 # 状态管理
 
-`lania-v` 不强制使用单一状态容器。小型状态直接用 `createSignal()`；对象型状态用 `createStore()`；列表选中态用 `createSelector()`。
+`lania-v` 把状态分成两层：
 
-## Signal 还是 Store
+- **响应式原语**（`@lania-v/runtime`）：`createSignal()` / `createMemo()` / `watch()`，是框架内部与组件局部状态的基础；
+- **状态管理包**（`@lania/store`）：在 Signal 之上做**原子化（atom）**建模，提供派生、动作、原子族与作用域快照。
 
-| 场景 | 选择 |
-| --- | --- |
-| 单个值 | `createSignal()` |
-| 少量相关字段 | 多个 `createSignal()` |
-| 嵌套对象 / 数组 | `createStore()` |
-| 需要按字段路径精确订阅 | `createStore()` |
-| 列表选中态 | `createSelector()` |
+局部状态用 `createSignal()` 就够；需要跨组件共享、按字段精确订阅、需要派生与批量写入时，用 `@lania/store`。
 
-## `createStore()`
+## Signal 还是 Atom
 
-```ts
-import { createStore } from '@lania-v/runtime';
+| 场景                         | 选择                                   |
+| ---------------------------- | -------------------------------------- |
+| 只在单个组件内使用           | `createSignal()`                       |
+| 跨组件共享的单一值           | `createAtom()`                         |
+| 互相派生的状态               | `createAtom()` + `createDerivedAtom()` |
+| 一组字段的整体状态（如表单） | `createAtom({...})` + 路径写入         |
+| 批量修改多个 atom            | `createAction()`                       |
+| 按 key 派生同构 atom         | `createAtomFamily()`                   |
+| SSR / 测试需要隔离           | `createStore()` + `runWithStore()`     |
 
-const state = createStore({
-  user: { name: 'Ada', age: 36 },
-  list: [] as number[],
-});
+## 安装与引入
 
-state.user.name; // 'Ada'
+```bash
+npm install @lania/store
 ```
 
-返回一个与 `createSignal()` 用法一致的句柄：
-
 ```ts
-const state = createStore(initialValue, scheduler?);
+import {
+  createAtom,
+  createDerivedAtom,
+  createAction,
+  createAtomFamily,
+  createStore,
+  runWithStore,
+  bindStore,
+} from '@lania/store';
 ```
 
-| API | 作用 |
-| --- | --- |
-| `state.xxx` | 响应式只读读取；任意深度的嵌套字段按路径订阅 |
-| `state.set(...)` | 唯一的写入入口 |
-| `state.peek()` | 读取当前原始快照，不建立订阅 |
+`@lania/store` 的 atom 在运行时就是 Signal，因此编译器会像识别 `createSignal()` 一样把 `createAtom()` 声明提升为组件实例字段，模板里的 `count.value` 直接进入 `updater.deps`，不需要额外订阅代码。
 
-### 读取
+## `createAtom()`
 
 ```ts
-state.user.name;
-state.list.length;
-state.list[0];
+const count = createAtom(0);
+const user = createAtom(
+  { name: 'Ada', profile: { city: 'Paris' } },
+  { key: 'user' }
+);
 ```
 
-任意深度的字段都按路径精确订阅：读取 `state.user.name` 只订阅 `['user', 'name']`，不会因为兄弟字段变化而重跑。
+| API                            | 作用                                         |
+| ------------------------------ | -------------------------------------------- |
+| `atom.value`                   | 响应式读取；对象类型返回按路径订阅的只读视图 |
+| `atom.set(...)`                | 写入，**返回 atom 自身**，支持链式调用       |
+| `atom.peek()`                  | 不建立订阅的快照读取                         |
+| `atom.reset()`                 | 恢复到创建时的初始值                         |
+| `atom.atomId` / `atom.atomKey` | 稳定身份与快照 key                           |
 
-### 写入
+### 链式写入
 
-属性是**只读视图**，`state.user.name = 'Grace'` 会在运行时抛 `TypeError`，而不是静默失效：
+`set` 返回 atom 本身，因此可以连续写多个字段：
 
 ```ts
-state.user.name = 'Grace';
-// TypeError: store.user.name is read-only.
-// Use store.set("user.name", value) to update the store.
+const form = createAtom({ account: '', password: '', remember: false });
+
+form.set('account', 'ada').set('password', 'secret').set('remember', true);
 ```
 
-所有写入都必须走 `set()`；`set` 一律是**整体替换**，局部更新用嵌套路径：
+### 路径写入
 
 ```ts
-// 整体替换（未给出的字段会被丢弃）
-state.set({ user: { name: 'Grace' }, list: [] });
+const state = createAtom({ user: { name: 'Ada', age: 20 }, list: [1, 2] });
 
-// 点路径写入（推荐用于局部更新）
+state.set('user.name', 'Grace'); // 点路径
+state.set(['user', 'age'], 21); // 数组路径
+state.set('user', 'age', 22); // 分段路径
+state.set('list.0', 99); // 数组下标
+state.set('user.age', (age) => age + 1); // updater
+```
+
+路径写入采用**沿路径浅拷贝**的不可变更新：只重建变更链路上的容器。
+
+```ts
+const before = state.peek();
 state.set('user.name', 'Grace');
-
-// 数组路径
-state.set(['user', 'name'], 'Grace');
-
-// 分段路径
-state.set('user', 'name', 'Grace');
-
-// 路径 + updater
-state.set('user.age', (age: number) => age + 1);
-
-// 数组
-state.set('list', (list: number[]) => [...list, 1]);
-state.set('list', 0, 99);
-state.set('list.0.title', 'updated');
+before.user.name; // 'Ada'（旧快照不受影响）
 ```
 
-嵌套写入不需要手动展开整个对象：
+### 深度响应
+
+对象 atom 的读取按路径精确订阅：
 
 ```ts
-const state = createStore({ user: { profile: { city: 'Paris' } }, page: 1 });
+const state = createAtom({ user: { name: 'Ada', age: 20 } });
 
-state.set('user.profile.city', 'Lyon');
-// 只有 user.profile.city 变化，page 与其它兄弟字段保持原值
-```
-
-两个参数且首参是字符串时，首参按 `.` 拆成路径；三个及以上参数保持分段路径语义。
-路径不存在时会按需创建中间对象。
-
-路径写入采用**沿路径浅拷贝**的不可变更新策略：
-
-1. 复制根对象；
-2. 复制路径上的每一层容器；
-3. 只替换目标字段。
-
-因此：
-
-```ts
-const before = state.user;
-state.set('user.name', 'Grace');
-const after = state.user;
-
-before !== after; // true
-```
-
-### 方法调用
-
-Store 中的方法会自动绑定到所属对象，因此 `this` 指向正确路径，但 `this` 同样是只读视图：
-
-```ts
-const state = createStore({
-  count: 1,
-  increment() {
-    // ❌ 编译与运行时都不允许：this 是只读视图
-    // this.count += 1;
-    this.set('count', (count: number) => count + 1);
-  },
-});
-
-state.increment();
-```
-
-方法里需要写入时，请显式调用 `set()`（如上）；这里的 `this.set` 会写入当前路径下的字段。
-
-### `peek()`
-
-```ts
-const snapshot = state.peek();
-```
-
-`peek()` 返回当前原始对象且不建立订阅，适合事件回调、日志等非渲染场景。
-
-### 其他状态方法
-
-| API | 作用 |
-| --- | --- |
-| `state.get('a.b')` | 按路径读取单个值（支持动态路径） |
-| `state.has('a.b')` | 路径是否存在 |
-| `state.keys()` / `state.entries()` | 浅层快照遍历 |
-| `state.update('a.b', fn)` | 路径更新，`fn` 必须返回新值 |
-| `state.delete('a.b')` | 删除路径 |
-| `state.patch({ ... })` | 显式浅合并（`set` 是整体替换） |
-| `state.reset()` | 恢复到创建时的初始值 |
-| `state.subscribe(fn)` | 任意变化时回调，返回取消订阅函数 |
-| `state.subscribe('a.b', fn)` | 只订阅某个路径 |
-| `state.derive(fn)` | 从 store 派生只读 memo |
-
-```ts
-const unsubscribe = state.subscribe('user.name', (next) => {
-  console.log('name is now', next);
-});
-
-state.update('user.age', (age: number) => age + 1);
-state.patch({ theme: 'dark' });   // 只覆盖给出的字段
-state.delete('user.nickname');
-unsubscribe();
-```
-
-### `__raw`
-
-需要读取当前路径的原始值时，可以使用 `__raw`：
-
-```ts
-const raw = state.user.__raw;
-```
-
-这是内部逃生口，业务代码应优先保持响应式读取。
-
-### 等值语义
-
-Signal 层使用 `Object.is()`。因此：
-
-```ts
-state.set('user', 'name', 'Ada'); // 值没变，不会触发订阅者
-```
-
-## `produce()`
-
-`produce()` 用**纯函数**计算下一个状态：`draft` 是只读快照，回调必须有返回值，返回值作为新状态整体写回。
-
-```ts
-import { createStore, produce } from '@lania-v/runtime';
-
-const state = createStore({
-  list: [] as number[],
-  user: { name: 'Ada' },
-});
-
-produce(state, (draft) => ({
-  ...draft,
-  list: [...draft.list, 1],
-  user: { ...draft.user, name: 'Grace' },
-}));
-```
-
-约束：
-
-- `draft` 只读，回调内直接赋值/`push` 会抛错；
-- 必须返回新的状态对象，返回 `undefined` 会抛错；
-- 需要局部更新时，用 `state.set('path', value)` 更直接。
-
-实现细节：
-
-- 优先使用 `structuredClone()` 生成草稿；
-- 数据包含函数 / 类实例等不可克隆值时退回浅拷贝；
-- 退回浅拷贝时，深层修改可能不会按路径精确通知，建议改用路径写法。
-
-## 按路径订阅
-
-Store 的读取本身就是路径级的：读到哪条路径，就只订阅那条路径。
-
-```ts
-import { createStore, createEffect, watch } from '@lania-v/runtime';
-
-const state = createStore({ user: { name: 'Ada' }, count: 0 });
-
+// 只订阅 ['user', 'name']，改 age 不会触发这里
 createEffect(() => {
-  console.log(state.user.name);
+  console.log(state.value.user.name);
 });
 
-state.set('user.name', 'Grace'); // effect 触发
-state.set('count', 1);           // 不触发
+state.set('user.age', 21); // 不触发
+state.set('user.name', 'Bob'); // 触发
 ```
 
-需要新旧值时用 `watch` 的 getter 形式：
+### `watch` 监听
+
+atom 是 Signal 形态，可以直接交给 `watch`：
 
 ```ts
+import { watch } from '@lania-v/runtime';
+
+watch(count, (next, previous) => {
+  console.log(previous, '->', next);
+});
+
+// 只监听某个路径
 watch(
-  () => state.user.name,
-  (current, previous) => {
-    console.log(previous, '->', current);
+  () => state.value.user.name,
+  (name) => {
+    console.log('name:', name);
   }
 );
 ```
 
-这在编写 composable 或需要手动订阅路径时很有用，不需要额外的路径 API。
-
-## `createSelector()`
-
-常见写法：
-
-```tsx
-<Each items={items()}>
-  {(item) => (
-    <Row selected={selectedId() === item.id} />
-  )}
-</Each>
-```
-
-这会让每个 `Row` 都订阅 `selectedId`。一次选中变化会触发整列表的更新。
-
-`createSelector()` 把每个 key 的布尔结果独立成一个小 Signal：
+对象 atom 传 `{ deep: true }` 时按内容比较，只有真正变化才回调：
 
 ```ts
-import { createSelector, createSignal } from '@lania-v/runtime';
-
-const selectedId = createSignal<string | null>(null);
-const isSelected = createSelector(selectedId);
-
-isSelected('a'); // false
-selectedId.set('a');
-isSelected('a'); // true
+watch(state, callback, { deep: true });
 ```
 
-模板里：
+::: tip
+路径子集监听优先用 getter 形式（`() => state.value.user.name`），比 `deep: true` 更省。
+:::
 
-```tsx
-<Each items={items()}>
-  {(item) => <Row selected={isSelected(item.id)} />}
-</Each>
-```
+## `createDerivedAtom()`
 
-只有选中态真正变化的 key 会更新。
-
-自定义比较：
+派生 atom 的读函数自动收集依赖；依赖不变时不会重算。
 
 ```ts
-const isCurrent = createSelector(currentUser, (key, value) => key.id === value?.id);
+const price = createAtom(100);
+const count = createAtom(2);
+
+const total = createDerivedAtom(() => price.value * count.value);
+
+total.value; // 200
+count.set(3);
+total.value; // 300
 ```
 
-释放：
+### 可写派生
+
+第二个参数是写函数，语义与 jotai 的 read/write atom 一致：
 
 ```ts
-onCleanup(() => isSelected.dispose());
+const doubled = createDerivedAtom(
+  () => count.value * 2,
+  (next: number) => {
+    count.set(next / 2);
+  }
+);
+
+doubled.set(10); // count 变成 5
+doubled.value; // 10（写函数执行后同步刷新）
 ```
 
-`createSelector` 内部使用一个 `createEffect`，但它是通过运行时函数创建的，不会被编译器当作组件级 effect 改写。因此在组件内使用时请显式 `dispose()`（例如在 `onCleanup()` 中），或把它放进 `createScope()`。
+派生 atom 不进入快照（由源 atom 重新计算），但可以用 `{ key }` 标注便于调试。
+
+## `createAction()`
+
+动作把一组写入合并成一次提交，避免同一帧内多次重渲染。
+
+```ts
+const addTodo = createAction((text: string) => {
+  todos.set((prev) => [
+    ...prev,
+    { id: crypto.randomUUID(), text, done: false },
+  ]);
+  draft.set('');
+});
+
+addTodo('write docs');
+```
+
+内部走 `batch()`：所有 `atom.set` 只触发一轮调度。
+
+## `createAtomFamily()`
+
+按 key 缓存 atom，保证同一个 key 拿到同一个身份：
+
+```ts
+const todoOf = createAtomFamily((id: string) =>
+  createDerivedAtom(() => todos.value.find((todo) => todo.id === id) ?? null)
+);
+
+todoOf('a') === todoOf('a'); // true
+```
+
+## 作用域：`createStore()` / `runWithStore()`
+
+默认情况下所有 atom 落在**模块级默认 store**，因此在组件内外写法完全一致。需要隔离（SSR 每请求、测试、多实例）时显式创建：
+
+```ts
+import { createStore, runWithStore } from '@lania/store';
+
+const isolated = createStore();
+
+const count = runWithStore(isolated, () => createAtom(0, { key: 'count' }));
+count.set(7);
+
+isolated.snapshot(); // { count: 7 }
+isolated.hydrate({ count: 1 });
+count.value; // 1
+```
+
+### 异步边界
+
+`runWithStore` 只覆盖同步调用链。跨异步时需要 `bindStore()`：
+
+```ts
+const save = bindStore((text: string) => addTodo(text));
+setTimeout(() => save('later'), 100); // 仍写回原 store
+```
+
+### 快照与恢复
+
+```ts
+const snapshot = store.snapshot(); // 只包含可写 atom
+store.hydrate(snapshot); // 派生 atom 自动重算
+```
+
+给 atom 指定稳定的 `key` 才能被快照与持久化识别：
+
+```ts
+const settings = createAtom({ theme: 'dark' }, { key: 'settings' });
+```
+
+## 中间件
+
+### `persist()`
+
+```ts
+import { createAtom, persist } from '@lania/store';
+
+const settings = persist(createAtom({ theme: 'dark' }), {
+  key: 'app.settings',
+  pick: (value) => value.theme,
+});
+```
+
+- 创建时同步读取一次；
+- 每次写入回写 storage；
+- storage 不可用（SSR、隐私模式）时自动降级为纯内存 atom。
+
+### `withHistory()`
+
+```ts
+const history = withHistory(editor);
+
+history.undo();
+history.redo();
+history.canUndo;
+```
+
+### `withDevtools()`
+
+```ts
+const devtools = withDevtools({ name: 'todo' });
+devtools.snapshot('after-add');
+```
+
+生产环境自动降级为空实现。
 
 ## 组合示例
 
 ```tsx
-import {
-  createMemo,
-  createSelector,
-  createSignal,
-  createStore,
-  defineComponent,
-  Each,
-  onCleanup,
-  produce,
-} from '@lania-v/runtime';
+import { createAction, createAtom, createDerivedAtom } from '@lania/store';
+import { defineComponent } from '@lania-v/runtime';
+import { Each, When } from '@lania-v/advanced';
 
 type Todo = { id: string; text: string; done: boolean };
 
+const todos = createAtom<Todo[]>([], { key: 'todos' });
+const draft = createAtom('');
+
+const remaining = createDerivedAtom(
+  () => todos.value.filter((todo) => !todo.done).length
+);
+const visible = createDerivedAtom(() => todos.value);
+
+const addTodo = createAction(() => {
+  const text = draft.value.trim();
+  if (!text) return;
+  todos.set((prev) => [
+    ...prev,
+    { id: crypto.randomUUID(), text, done: false },
+  ]);
+  draft.set('');
+});
+
+const toggle = createAction((id: string) => {
+  todos.set((prev) =>
+    prev.map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo))
+  );
+});
+
 export default defineComponent(function TodoApp() {
-  const state = createStore({
-    todos: [] as Todo[],
-    filter: 'all' as 'all' | 'active' | 'done',
-  });
-
-  const draft = createSignal('');
-  const selectedId = createSignal<string | null>(null);
-  const isSelected = createSelector(selectedId);
-
-  onCleanup(() => isSelected.dispose());
-
-  const visibleTodos = createMemo(() => {
-    const filter = state.filter;
-    if (filter === 'active') return state.todos.filter((todo) => !todo.done);
-    if (filter === 'done') return state.todos.filter((todo) => todo.done);
-    return state.todos;
-  });
-
-  const add = () => {
-    const text = draft.value.trim();
-    if (!text) return;
-
-    produce(state, (previous) => ({
-      ...previous,
-      todos: [...previous.todos, { id: crypto.randomUUID(), text, done: false }],
-    }));
-    draft.set('');
-  };
-
   return (
     <section>
-      <input model={{ target: draft }} onKeyDown={(event) => event.key === 'Enter' && add()} />
-
-      <select
+      <input
         model={{
           source: {
-            get: () => state.filter,
-            set: (value) => state.set('filter', value as 'all' | 'active' | 'done'),
+            get: () => draft.value,
+            set: (value) => draft.set(String(value ?? '')),
           },
         }}
-      >
-        <option value="all">All</option>
-        <option value="active">Active</option>
-        <option value="done">Done</option>
-      </select>
-
-      <Each items={visibleTodos.value} key={(todo) => todo.id}>
+        onKeyDown={{ handler: addTodo, modifiers: { enter: true } }}
+      />
+      <p>剩余 {remaining.value} 项</p>
+      <Each items={visible.value} key={(todo) => todo.id}>
         {(todo) => (
-          <div className={isSelected(todo.id) ? 'row is-selected' : 'row'}>
+          <label>
             <input
               type="checkbox"
               model={{
-                source: {
-                  get: () => todo.done,
-                  set: () =>
-                    state.set('todos', (list) =>
-                      list.map((entry) =>
-                        entry.id === todo.id ? { ...entry, done: !entry.done } : entry
-                      )
-                    ),
-                },
+                prop: 'checked',
+                source: { get: () => todo.done, set: () => toggle(todo.id) },
               }}
             />
             <span>{todo.text}</span>
-            <button onClick={() => selectedId.set(todo.id)}>select</button>
-          </div>
+          </label>
         )}
       </Each>
+      <When when={visible.value.length === 0}>
+        <p>暂无待办</p>
+      </When>
     </section>
   );
 });
 ```
 
-::: tip
-`model` 的 `source` 形式适合把 Store 路径包装成可读写句柄。如果只是单向展示，直接读取即可。
-:::
+## 从 `createStore` 迁移
+
+`createStore` 已从 runtime 移除，能力由 `@lania/store` 承接：
+
+| 旧 API                      | 新写法                                        |
+| --------------------------- | --------------------------------------------- |
+| `createStore({...})`        | `createAtom({...})`                           |
+| `store.user.name`           | `atom.value.user.name`                        |
+| `store.set('user.name', v)` | `atom.set('user.name', v)`                    |
+| `store.patch({...})`        | `atom.set((prev) => ({ ...prev, ...patch }))` |
+| `store.reset()`             | `atom.reset()`                                |
+| `store.derive(fn)`          | `createDerivedAtom(fn)`                       |
+| `store.subscribe(fn)`       | `watch(atom, fn)`                             |
+| `produce(store, fn)`        | `createAction()` + `atom.set(prev => next)`   |
 
 ## 下一步
 
-- [响应式 API](/api/reactivity)：`createStore` / `produce` / `createSelector` 的完整签名。
-- [过渡与缓存](/guide/transitions-and-cache)：低优先级列表更新与 `TransitionGroup`。
-- [更新链路](/advanced/update-pipeline)：Store 路径 Signal 如何进入调度器。
+- [响应式 API](/api/reactivity)：Signal / Memo / watch 的完整签名。
+- [包与导出入口](/api/packages)：`@lania-v/runtime` 与 `@lania/store` / `@lania-v/advanced` 的分工。
+- [增强组件 API](/api/enhanced-components)：`When` / `Each` / `KeepAlive` 等组件的入口位置。

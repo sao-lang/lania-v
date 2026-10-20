@@ -10,7 +10,9 @@
 有些 API 只在源码层面有意义：
 
 ```tsx
-onMount(() => { /* ... */ });
+onMount(() => {
+  /* ... */
+});
 provideContext(ThemeContext, theme);
 useFormValue(() => account());
 const inputRef = createRef<HTMLInputElement>();
@@ -191,11 +193,11 @@ useFormValidity(() =>
 
 ### Signal / Memo / Effect
 
-| 源码 | 编译后 |
-| --- | --- |
-| `const count = createSignal(0)` | 实例字段 `count = createSignal(0)` |
+| 源码                                           | 编译后                                                    |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| `const count = createSignal(0)`                | 实例字段 `count = createSignal(0)`                        |
 | `const double = createMemo(() => count() * 2)` | `double = createComputedAccessor(() => this.count() * 2)` |
-| `createEffect(() => {...})` | `EffectUpdater`，随组件 attach / detach |
+| `createEffect(() => {...})`                    | `EffectUpdater`，随组件 attach / detach                   |
 
 注意：
 
@@ -205,14 +207,14 @@ useFormValidity(() =>
 
 ### Props
 
-| 源码 | 编译后 |
-| --- | --- |
-| `props.title` | `this.title` |
-| `const { title } = props` | `this.title` |
-| `const { count: total } = props` | `this.count`（`total` 为本地别名） |
-| `const { user: { name } } = props` | `this.user?.name` |
-| `const { title = 'x' } = props` | `(this.title ?? 'x')` |
-| `...rest` | `this.rest` |
+| 源码                               | 编译后                             |
+| ---------------------------------- | ---------------------------------- |
+| `props.title`                      | `this.title`                       |
+| `const { title } = props`          | `this.title`                       |
+| `const { count: total } = props`   | `this.count`（`total` 为本地别名） |
+| `const { user: { name } } = props` | `this.user?.name`                  |
+| `const { title = 'x' } = props`    | `(this.title ?? 'x')`              |
+| `...rest`                          | `this.rest`                        |
 
 #### 支持的 props 类型
 
@@ -238,12 +240,12 @@ useFormValidity(() =>
 
 除响应式工厂外，函数体顶层的本地声明都会提升为实例字段，模板里的裸引用会改写成 `this.<name>`：
 
-| 源码 | 编译后 |
-| --- | --- |
-| `const store = createStore(initial)` | `store = createStore(initial)`，引用变为 `this.store` |
+| 源码                                         | 编译后                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `const count = createAtom(0)`                | `count = createAtom(0)`，引用变为 `this.count`                                              |
 | `const { pending, start } = useTransition()` | 临时字段 `__setup_object_0 = useTransition()`，`pending = this.__setup_object_0["pending"]` |
-| `const { a: alias, ...rest } = source` | `alias` / `rest` 各自成为实例字段，`source` 只求值一次 |
-| `const [first, second] = pair()` | `__setup_tuple_0 = pair()`，元素按索引取字段 |
+| `const { a: alias, ...rest } = source`       | `alias` / `rest` 各自成为实例字段，`source` 只求值一次                                      |
+| `const [first, second] = pair()`             | `__setup_tuple_0 = pair()`，元素按索引取字段                                                |
 
 注意：
 
@@ -253,33 +255,33 @@ useFormValidity(() =>
 
 ### 事件
 
-| 源码 | 编译后 |
-| --- | --- |
-| `onClick={fn}` | DOM event slot |
-| `onKeyDown={fn}` | DOM `keydown` 事件 slot（事件名转小写） |
-| `onToggle={fn}`（组件标签） | 组件事件 `toggle` |
-| `onClick={ { handler, modifiers } }` | 带修饰符的事件 slot |
-| `onClick={ { handler, listener } }` | 带原生监听选项、不走委托的事件 slot |
-| `on:close={fn}` | 组件事件 `close`（`directive-extended`） |
-| `onClick.stop={fn}` | DOM `click` + `stop`（`directive-extended`） |
+| 源码                                 | 编译后                                       |
+| ------------------------------------ | -------------------------------------------- |
+| `onClick={fn}`                       | DOM event slot                               |
+| `onKeyDown={fn}`                     | DOM `keydown` 事件 slot（事件名转小写）      |
+| `onToggle={fn}`（组件标签）          | 组件事件 `toggle`                            |
+| `onClick={ { handler, modifiers } }` | 带修饰符的事件 slot                          |
+| `onClick={ { handler, listener } }`  | 带原生监听选项、不走委托的事件 slot          |
+| `on:close={fn}`                      | 组件事件 `close`（`directive-extended`）     |
+| `onClick.stop={fn}`                  | DOM `click` + `stop`（`directive-extended`） |
 
 ### 指令
 
-| 源码 | 编译后 |
-| --- | --- |
-| `model={ { target } }` | `ModelBindingSlot` |
-| `html={html\`...\`}` | HTML slot |
-| `ref={ref}` | `RefSlot`（`createRef()` 声明时改写为字段赋值） |
-| `use={ { name: value } }` | `UseDirectiveSlot` |
-| `class={...}` / `className={...}` | ClassSlot / AttrSlot |
-| `style={...}` | StyleSlot / StyleObjectSlot |
+| 源码                              | 编译后                                          |
+| --------------------------------- | ----------------------------------------------- |
+| `model={ { target } }`            | `ModelBindingSlot`                              |
+| `html={html\`...\`}`              | HTML slot                                       |
+| `ref={ref}`                       | `RefSlot`（`createRef()` 声明时改写为字段赋值） |
+| `use={ { name: value } }`         | `UseDirectiveSlot`                              |
+| `class={...}` / `className={...}` | ClassSlot / AttrSlot                            |
+| `style={...}`                     | StyleSlot / StyleObjectSlot                     |
 
 ### 生命周期
 
-| 源码 | 编译后 |
-| --- | --- |
-| `onMount(fn)` | `__fcOnMount()` |
-| `onCleanup(fn)` | `__fcOnCleanup()` |
+| 源码            | 编译后                        |
+| --------------- | ----------------------------- |
+| `onMount(fn)`   | `__fcOnMount()`               |
+| `onCleanup(fn)` | `__fcOnCleanup()`             |
 | `onUpdated(fn)` | `__fcOnUpdated(changedProps)` |
 
 ## `@lania-v/compiler-tsx`
@@ -345,19 +347,19 @@ interface CompiledTsxFunctionComponent {
 }
 ```
 
-| 字段 | 用途 |
-| --- | --- |
-| `className` | 入口组件类名（`export default` 指向） |
-| `classNames` | 文件内所有组件类名 |
-| `program` | 统一 `CompilerProgram` |
-| `componentAst` | 入口组件的 AST 声明 |
-| `ir` | 入口组件 `ComponentIR` |
-| `staticHtml` | 静态模板 HTML |
-| `textBindings` | 文本绑定计划 |
-| `renderCode` | CSR 代码生成结果 |
-| `ssrCode` | SSR 代码生成结果 |
-| `classCode` | 入口组件类代码 |
-| `componentClasses` | 每个组件的类代码 |
+| 字段               | 用途                                  |
+| ------------------ | ------------------------------------- |
+| `className`        | 入口组件类名（`export default` 指向） |
+| `classNames`       | 文件内所有组件类名                    |
+| `program`          | 统一 `CompilerProgram`                |
+| `componentAst`     | 入口组件的 AST 声明                   |
+| `ir`               | 入口组件 `ComponentIR`                |
+| `staticHtml`       | 静态模板 HTML                         |
+| `textBindings`     | 文本绑定计划                          |
+| `renderCode`       | CSR 代码生成结果                      |
+| `ssrCode`          | SSR 代码生成结果                      |
+| `classCode`        | 入口组件类代码                        |
+| `componentClasses` | 每个组件的类代码                      |
 
 ### `compileFunctionComponentTsxToModule()`
 
@@ -431,9 +433,9 @@ createCompiledTsxModuleMap(
 type TsxTemplateSyntaxMode = 'jsx-standard' | 'directive-extended';
 ```
 
-| 模式 | 支持 |
-| --- | --- |
-| `jsx-standard` | 标准 JSX；`model={ {...} }`、`html={...}`、`className`、对象事件 |
+| 模式                 | 支持                                                                                          |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| `jsx-standard`       | 标准 JSX；`model={ {...} }`、`html={...}`、`className`、对象事件                              |
 | `directive-extended` | 额外兼容 `model:value.trim`、`style:width.px`、`class:active`、`use:name`、`click.stop`、`if` |
 
 ### 其他导出
@@ -499,13 +501,13 @@ interface CompilerPlugin {
 }
 ```
 
-| Hook | 适合做什么 |
-| --- | --- |
-| `transformProgram` | 全局扫描、注入元信息 |
-| `transformTemplate` | 改写模板 IR |
-| `beforeAnalyzeComponent` | 补充分析输入 |
-| `afterAnalyzeComponent` | 读取 / 修正分析结果 |
-| `afterGenerateArtifact` | 采集统计、产物后处理 |
+| Hook                     | 适合做什么           |
+| ------------------------ | -------------------- |
+| `transformProgram`       | 全局扫描、注入元信息 |
+| `transformTemplate`      | 改写模板 IR          |
+| `beforeAnalyzeComponent` | 补充分析输入         |
+| `afterAnalyzeComponent`  | 读取 / 修正分析结果  |
+| `afterGenerateArtifact`  | 采集统计、产物后处理 |
 
 示例：
 

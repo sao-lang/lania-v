@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { Await, Virtual } from '../packages/runtime/src/component/enhanced-components';
+import { Await, Virtual } from '../packages/advanced/src/index';
 
 const flush = async (): Promise<void> => {
   for (let index = 0; index < 6; index += 1) {

@@ -35,7 +35,19 @@ export {
   type WhenProps,
 } from './types';
 export { KeepAlive } from './keepalive';
-export { Case, Default, Dynamic, Each, Else, Fragment, Slot, Switch, Teleport, Then, When } from './basic';
+export {
+  Case,
+  Default,
+  Dynamic,
+  Each,
+  Else,
+  Fragment,
+  Slot,
+  Switch,
+  Teleport,
+  Then,
+  When,
+} from './basic';
 export { ErrorBoundary, LazyLoad, Suspense } from './async';
 export { Await, Virtual } from './await-virtual';
 export { Transition, TransitionGroup } from './transition';

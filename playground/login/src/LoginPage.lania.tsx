@@ -1,13 +1,13 @@
 import {
   createMemo,
-  createStore,
   defineComponent,
   onCleanup,
   onMount,
   useFormValue,
   watch,
-  When,
 } from '@lania-v/runtime';
+import { When } from '@lania-v/advanced';
+import { createAtom } from '@lania/store';
 import {
   ApiError,
   type AuthSession,
@@ -39,8 +39,8 @@ const describeError = (error: unknown): string => {
 export default defineComponent(function LoginPage() {
   const rememberedAccount = readRememberedAccount();
 
-  // 表单是一份整体状态，用 Store 按字段路径精确订阅；写入统一走 set()。
-  const form = createStore({
+  // 表单是一份整体状态，用 atom 按字段路径精确订阅；写入统一走 set()。
+  const form = createAtom({
     mode: 'login' as AuthMode,
     account: rememberedAccount,
     password: '',
@@ -57,49 +57,58 @@ export default defineComponent(function LoginPage() {
   });
 
   // 登录态：初始值取本地缓存，刷新页面后先按已登录渲染，再由 /auth/me 校验。
-  const session = createStore<{ current: AuthSession | null }>({ current: getSession() });
+  const session = createAtom<{ current: AuthSession | null }>({
+    current: getSession(),
+  });
 
   // 让宿主元素参与原生表单提交：<form> 里提交时会带上当前账号。
-  useFormValue(() => form.account);
+  useFormValue(() => form.value.account);
 
-  const isRegister = createMemo(() => form.mode === 'register');
-  const isForgot = createMemo(() => form.mode === 'forgot');
+  const isRegister = createMemo(() => form.value.mode === 'register');
+  const isForgot = createMemo(() => form.value.mode === 'forgot');
   const needsPassword = createMemo(() => !isForgot.value);
-  const submitting = createMemo(() => form.status === 'submitting');
+  const submitting = createMemo(() => form.value.status === 'submitting');
   const accountMissing = createMemo(
-    () => form.account.trim().length < ACCOUNT_MIN_LENGTH
+    () => form.value.account.trim().length < ACCOUNT_MIN_LENGTH
   );
-  const passwordMissing = createMemo(() => form.password.length < PASSWORD_MIN_LENGTH);
+  const passwordMissing = createMemo(
+    () => form.value.password.length < PASSWORD_MIN_LENGTH
+  );
   const newPasswordMissing = createMemo(
-    () => form.newPassword.length < PASSWORD_MIN_LENGTH
+    () => form.value.newPassword.length < PASSWORD_MIN_LENGTH
   );
   const confirmMismatch = createMemo(
-    () => form.confirmPassword.length > 0 && form.confirmPassword !== form.newPassword
+    () =>
+      form.value.confirmPassword.length > 0 &&
+      form.value.confirmPassword !== form.value.newPassword
   );
   const canSubmit = createMemo(() => {
     if (submitting.value || accountMissing.value) return false;
     if (isForgot.value) {
       return (
         !newPasswordMissing.value &&
-        form.confirmPassword === form.newPassword
+        form.value.confirmPassword === form.value.newPassword
       );
     }
     return !passwordMissing.value;
   });
-  const accountInvalid = createMemo(() => form.accountTouched && accountMissing.value);
+  const accountInvalid = createMemo(
+    () => form.value.accountTouched && accountMissing.value
+  );
   const passwordInvalid = createMemo(
-    () => form.passwordTouched && needsPassword.value && passwordMissing.value
+    () =>
+      form.value.passwordTouched && needsPassword.value && passwordMissing.value
   );
 
   const resetStatus = () => {
-    if (form.status !== 'idle') {
+    if (form.value.status !== 'idle') {
       form.set('status', 'idle');
       form.set('message', '');
     }
   };
 
   const setMode = (mode: AuthMode) => {
-    if (form.mode === mode) return;
+    if (form.value.mode === mode) return;
     form.set('mode', mode);
     form.set('role', 'member');
     form.set('newPassword', '');
@@ -115,16 +124,20 @@ export default defineComponent(function LoginPage() {
     form.set('passwordTouched', true);
     if (!canSubmit.value) return;
 
-    const account = form.account.trim();
-    const password = form.password;
-    const mode = form.mode;
+    const account = form.value.account.trim();
+    const password = form.value.password;
+    const mode = form.value.mode;
 
     form.set('status', 'submitting');
     form.set('message', '');
 
     try {
       if (mode === 'register') {
-        const created = await register({ username: account, password, role: form.role });
+        const created = await register({
+          username: account,
+          password,
+          role: form.value.role,
+        });
         writeSignedUpAccount(created.username);
         // 注册成功回到登录态并预填账号，避免用户再手动输入。
         form.set('mode', 'login');
@@ -137,7 +150,10 @@ export default defineComponent(function LoginPage() {
       }
 
       if (mode === 'forgot') {
-        const message = await forgotPassword({ username: account, newPassword: form.newPassword });
+        const message = await forgotPassword({
+          username: account,
+          newPassword: form.value.newPassword,
+        });
         // 重置成功：回到登录态，密码留空由用户输入新密码。
         writeRememberedAccount(account);
         form.set('mode', 'login');
@@ -152,7 +168,7 @@ export default defineComponent(function LoginPage() {
       }
 
       const next = await login({ username: account, password });
-      writeRememberedAccount(form.remember ? account : '');
+      writeRememberedAccount(form.value.remember ? account : '');
       writeSignedUpAccount('');
       form.set('status', 'success');
       form.set('message', `欢迎回来，${next.username}。`);
@@ -161,7 +177,11 @@ export default defineComponent(function LoginPage() {
       form.set('status', 'error');
       form.set('message', describeError(error));
       // 后端在 token 过期时也会返回 401：只有已登录状态才需要清会话。
-      if (error instanceof ApiError && error.status === 401 && session.current !== null) {
+      if (
+        error instanceof ApiError &&
+        error.status === 401 &&
+        session.value.current !== null
+      ) {
         signOut();
       }
     }
@@ -181,34 +201,37 @@ export default defineComponent(function LoginPage() {
   };
 
   const headline = createMemo(() => {
-    if (form.mode === 'forgot') return '重置密码';
-    return form.mode === 'register' ? '创建账号' : '欢迎回来';
+    if (form.value.mode === 'forgot') return '重置密码';
+    return form.value.mode === 'register' ? '创建账号' : '欢迎回来';
   });
 
   const summary = createMemo(() => {
-    if (form.mode === 'forgot') return '输入账号并设置新密码，重置后旧会话会失效。';
-    return form.mode === 'register'
+    if (form.value.mode === 'forgot')
+      return '输入账号并设置新密码，重置后旧会话会失效。';
+    return form.value.mode === 'register'
       ? '注册成功即可登录，查看真实接口返回的用户信息。'
       : '登录后继续查看编译产物与运行时演示。';
   });
 
   const submitLabel = createMemo(() => {
     if (submitting.value) {
-      if (form.mode === 'forgot') return '正在重置…';
-      return form.mode === 'register' ? '正在注册…' : '正在登录…';
+      if (form.value.mode === 'forgot') return '正在重置…';
+      return form.value.mode === 'register' ? '正在注册…' : '正在登录…';
     }
-    if (form.mode === 'forgot') return '重 置 密 码';
-    return form.mode === 'register' ? '注 册' : '登 录';
+    if (form.value.mode === 'forgot') return '重 置 密 码';
+    return form.value.mode === 'register' ? '注 册' : '登 录';
   });
 
   onMount(() => {
-    console.log('[login] mounted', { authenticated: session.current !== null });
+    console.log('[login] mounted', {
+      authenticated: session.value.current !== null,
+    });
   });
 
-  // 只在状态真正变化时打点：getter 形式的 watch 会精确追踪 form.status 这一条路径，
+  // 只在状态真正变化时打点：getter 形式的 watch 会精确追踪 form.value.status 这一条路径，
   // 写输入框（其它字段）不会触发。
   watch(
-    () => form.status,
+    () => form.value.status,
     (current, previous) => {
       console.log('[login] status', previous, '->', current);
     }
@@ -224,15 +247,17 @@ export default defineComponent(function LoginPage() {
         <span className="brand-mark">L</span>
         <span className="brand-text">
           <span className="brand-name">lania-v</span>
-          <span className="brand-tag">编译优先的细粒度 Web Components 框架</span>
+          <span className="brand-tag">
+            编译优先的细粒度 Web Components 框架
+          </span>
         </span>
       </div>
 
-      <When when={session.current !== null}>
+      <When when={session.value.current !== null}>
         <ProfilePage signedOut={() => signOut()} />
       </When>
 
-      <When when={session.current === null}>
+      <When when={session.value.current === null}>
         <div className="headline">
           <h1>{headline.value}</h1>
           <p>{summary.value}</p>
@@ -240,10 +265,10 @@ export default defineComponent(function LoginPage() {
 
         <div className="tabs" role="tablist">
           <button
-            className={['tab', { 'is-active': form.mode === 'login' }]}
+            className={['tab', { 'is-active': form.value.mode === 'login' }]}
             type="button"
             role="tab"
-            aria-selected={form.mode === 'login'}
+            aria-selected={form.value.mode === 'login'}
             onClick={() => setMode('login')}
           >
             登录
@@ -267,10 +292,12 @@ export default defineComponent(function LoginPage() {
               type="text"
               name="username"
               autocomplete="username"
-              placeholder={isRegister.value ? '3-20 位账号，如 alice01' : '请输入账号'}
+              placeholder={
+                isRegister.value ? '3-20 位账号，如 alice01' : '请输入账号'
+              }
               model={{
                 source: {
-                  get: () => form.account,
+                  get: () => form.value.account,
                   set: (value) => {
                     form.set('account', String(value ?? ''));
                     resetStatus();
@@ -292,13 +319,15 @@ export default defineComponent(function LoginPage() {
             <span class={['control', { 'is-invalid': passwordInvalid.value }]}>
               <input
                 className="input"
-                type={form.passwordVisible ? 'text' : 'password'}
+                type={form.value.passwordVisible ? 'text' : 'password'}
                 name="password"
-                autocomplete={isRegister.value ? 'new-password' : 'current-password'}
+                autocomplete={
+                  isRegister.value ? 'new-password' : 'current-password'
+                }
                 placeholder={isRegister.value ? '至少 6 位密码' : '请输入密码'}
                 model={{
                   source: {
-                    get: () => form.password,
+                    get: () => form.value.password,
                     set: (value) => {
                       form.set('password', String(value ?? ''));
                       resetStatus();
@@ -311,10 +340,12 @@ export default defineComponent(function LoginPage() {
               <button
                 className="toggle"
                 type="button"
-                aria-pressed={form.passwordVisible}
-                onClick={() => form.set('passwordVisible', !form.passwordVisible)}
+                aria-pressed={form.value.passwordVisible}
+                onClick={() =>
+                  form.set('passwordVisible', !form.value.passwordVisible)
+                }
               >
-                {form.passwordVisible ? '隐藏' : '显示'}
+                {form.value.passwordVisible ? '隐藏' : '显示'}
               </button>
             </span>
             <When when={passwordInvalid.value}>
@@ -329,13 +360,13 @@ export default defineComponent(function LoginPage() {
             <span class="control">
               <input
                 className="input"
-                type={form.passwordVisible ? 'text' : 'password'}
+                type={form.value.passwordVisible ? 'text' : 'password'}
                 name="newPassword"
                 autocomplete="new-password"
                 placeholder="至少 6 位新密码"
                 model={{
                   source: {
-                    get: () => form.newPassword,
+                    get: () => form.value.newPassword,
                     set: (value) => {
                       form.set('newPassword', String(value ?? ''));
                       resetStatus();
@@ -347,13 +378,19 @@ export default defineComponent(function LoginPage() {
               <button
                 className="toggle"
                 type="button"
-                aria-pressed={form.passwordVisible}
-                onClick={() => form.set('passwordVisible', !form.passwordVisible)}
+                aria-pressed={form.value.passwordVisible}
+                onClick={() =>
+                  form.set('passwordVisible', !form.value.passwordVisible)
+                }
               >
-                {form.passwordVisible ? '隐藏' : '显示'}
+                {form.value.passwordVisible ? '隐藏' : '显示'}
               </button>
             </span>
-            <When when={form.newPassword.length > 0 && newPasswordMissing.value}>
+            <When
+              when={
+                form.value.newPassword.length > 0 && newPasswordMissing.value
+              }
+            >
               <p className="hint">新密码至少需要 {PASSWORD_MIN_LENGTH} 位。</p>
             </When>
           </label>
@@ -363,13 +400,13 @@ export default defineComponent(function LoginPage() {
             <span class={['control', { 'is-invalid': confirmMismatch.value }]}>
               <input
                 className="input"
-                type={form.passwordVisible ? 'text' : 'password'}
+                type={form.value.passwordVisible ? 'text' : 'password'}
                 name="confirmPassword"
                 autocomplete="new-password"
                 placeholder="再次输入新密码"
                 model={{
                   source: {
-                    get: () => form.confirmPassword,
+                    get: () => form.value.confirmPassword,
                     set: (value) => {
                       form.set('confirmPassword', String(value ?? ''));
                       resetStatus();
@@ -394,7 +431,7 @@ export default defineComponent(function LoginPage() {
                 name="role"
                 model={{
                   source: {
-                    get: () => form.role,
+                    get: () => form.value.role,
                     set: (value) => {
                       form.set('role', value === 'admin' ? 'admin' : 'member');
                       resetStatus();
@@ -416,7 +453,7 @@ export default defineComponent(function LoginPage() {
               model={{
                 prop: 'checked',
                 source: {
-                  get: () => form.remember,
+                  get: () => form.value.remember,
                   set: (value) => form.set('remember', value === true),
                 },
               }}
@@ -424,7 +461,11 @@ export default defineComponent(function LoginPage() {
             <span>记住账号</span>
           </label>
           <When when={!isForgot.value}>
-            <button className="link" type="button" onClick={() => setMode('forgot')}>
+            <button
+              className="link"
+              type="button"
+              onClick={() => setMode('forgot')}
+            >
               忘记密码？
             </button>
           </When>
@@ -454,24 +495,34 @@ export default defineComponent(function LoginPage() {
             className="link"
             type="button"
             onClick={() =>
-              setMode(isForgot.value ? 'login' : isRegister.value ? 'login' : 'register')
+              setMode(
+                isForgot.value
+                  ? 'login'
+                  : isRegister.value
+                    ? 'login'
+                    : 'register'
+              )
             }
           >
-            {isForgot.value ? '返回登录' : isRegister.value ? '直接登录' : '立即注册'}
+            {isForgot.value
+              ? '返回登录'
+              : isRegister.value
+                ? '直接登录'
+                : '立即注册'}
           </button>
         </p>
 
-        <When when={form.status === 'success'}>
+        <When when={form.value.status === 'success'}>
           <div className="banner" role="status">
             <span className="banner-check">✓</span>
-            <span>{form.message}</span>
+            <span>{form.value.message}</span>
           </div>
         </When>
 
-        <When when={form.status === 'error'}>
+        <When when={form.value.status === 'error'}>
           <div className="banner banner-error" role="alert">
             <span className="banner-check">!</span>
-            <span>{form.message}</span>
+            <span>{form.value.message}</span>
           </div>
         </When>
       </When>
