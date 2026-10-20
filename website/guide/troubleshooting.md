@@ -141,11 +141,11 @@ items().push(item);             // ❌ 修改快照不会触发更新
 items.set([...items(), item]);  // ✅
 ```
 
-Store 场景不能用「改副本」或直接 `push`（Store 代理没有 `set` 陷阱），要走路径写入或 `produce()`：
+Store 场景不能用「改副本」或直接 `push`（Store 视图是只读的，属性赋值与数组变更方法都会报错），要走路径写入或 `produce()`：
 
 ```ts
-state.set('list', (list) => [...list, item]);           // ✅ 路径 + updater
-produce(state, (draft) => { draft.list.push(item); });  // ✅ 草稿写法
+state.set('list', (list) => [...list, item]);                    // ✅ 路径 + updater
+produce(state, (draft) => ({ ...draft, list: [...draft.list, item] })); // ✅ 纯函数写法
 ```
 
 ### 5. 存在两份运行时

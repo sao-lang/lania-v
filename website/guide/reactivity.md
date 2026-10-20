@@ -4,19 +4,32 @@
 
 ## `createSignal()`
 
-Signal 是一个**可调用的 getter**，并在函数对象上挂载了写入方法：
+Signal 是一个**带 `.value` 的只读盒子**，写入方法挂在同一个对象上：
 
 ```ts
 import { createSignal } from '@lania-v/runtime';
 
 const count = createSignal(0);
 
-count();      // 0
-count.set(1); // 1
+count.value;      // 0
+count.set(1);     // 1
 count.set((value) => value + 1); // 2
 ```
 
-读取 `count()` 时，如果当前存在依赖收集上下文，当前 Signal 会被记录为依赖。
+读取 `count.value` 时，如果当前存在依赖收集上下文，当前 Signal 会被记录为依赖。
+
+对象型 signal 支持嵌套路径写入，并且**按路径精确订阅**（与 `createStore` 一致）：
+
+```ts
+const user = createSignal({ name: 'Ada', profile: { city: 'Paris' } });
+
+createEffect(() => console.log(user.value.name));          // 只订阅 ['name']
+createEffect(() => console.log(user.value.profile.city));  // 只订阅 ['profile', 'city']
+
+user.set('profile.city', 'Lyon'); // 只有第二个 effect 重跑
+```
+
+视图按路径缓存（`user.value.profile === user.value.profile`），深处写入仍然只读。
 
 ### `set()` 与 `setValue()`
 
@@ -58,8 +71,8 @@ Signal 使用 `Object.is()` 比较新旧值。`NaN` 与 `NaN` 视为相等，因
 const first = createSignal('Ada');
 const last = createSignal('Lovelace');
 
-const fullName = createMemo(() => `${first()} ${last()}`);
-fullName(); // 'Ada Lovelace'
+const fullName = createMemo(() => `${first.value} ${last.value}`);
+fullName.value; // 'Ada Lovelace'
 ```
 
 几点语义：
@@ -73,7 +86,7 @@ fullName(); // 'Ada Lovelace'
 
 ```ts
 const stop = createEffect(() => {
-  console.log('count =', count());
+  console.log('count =', count.value);
 });
 
 count.set(1); // 异步调度后执行 effect
@@ -84,7 +97,7 @@ Effect 可以返回清理函数：
 
 ```ts
 const stop = createEffect(() => {
-  const id = setInterval(() => console.log(count()), 1000);
+  const id = setInterval(() => console.log(count.value), 1000);
   return () => clearInterval(id);
 });
 ```
@@ -139,7 +152,7 @@ watch(form, (current, previous) => {
 const count = createSignal(0);
 const publicCount = readonly(count);
 
-publicCount();      // 0
+publicCount.value;      // 0
 publicCount.peek(); // 0
 // publicCount.set(1) // 类型错误
 ```
@@ -163,7 +176,7 @@ const deferredQuery = createDeferred(query, { timeoutMs: 200 });
 
 ```ts
 createEffect(() => {
-  const current = count();
+  const current = count.value;
   const snapshot = untrack(() => other());
   console.log(current, snapshot);
 });
@@ -264,7 +277,7 @@ const scope = createScope(() => {
   const count = createSignal(0);
 
   createEffect(() => {
-    console.log(count());
+    console.log(count.value);
   });
 
   return count;
@@ -298,18 +311,18 @@ cleanup(); // 手动移除
 
 ```tsx
 export default defineComponent(function Clock() {
-  const now = createSignal(Date.now());
+  const now = createSignal(Date.now.value);
   let timer: ReturnType<typeof setInterval> | undefined;
 
   onMount(() => {
-    timer = setInterval(() => now.set(Date.now()), 1000);
+    timer = setInterval(() => now.set(Date.now.value), 1000);
   });
 
   onCleanup(() => {
     if (timer) clearInterval(timer);
   });
 
-  return <time>{new Date(now()).toLocaleTimeString()}</time>;
+  return <time>{new Date(now.value).toLocaleTimeString()}</time>;
 });
 ```
 

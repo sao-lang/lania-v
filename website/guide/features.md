@@ -46,7 +46,7 @@
 | Scheduler | 分优先级队列、微任务 flush、批处理、`tick()` | [更新链路](/advanced/update-pipeline) |
 | `startTransition()` | 低优先级更新，可被打断 | [响应式基础](/guide/reactivity#低优先级更新-starttransition) |
 | `createStore()` | 基于 Signal 的深层对象，支持路径级订阅 | [状态管理](/guide/state) |
-| `produce()` | 以可变写法提交 Store 变更 | [状态管理](/guide/state#produce) |
+| `produce()` | 用纯函数计算下一个 Store 状态 | [状态管理](/guide/state#produce) |
 | `getStorePathSignal()` | 拿到某个稳定路径的只读 Signal | [状态管理](/guide/state#getstorepathsignal) |
 | `createSelector()` | 从列表里选出单个匹配项，避免全量失效 | [状态管理](/guide/state#createselector) |
 | `createResource()` | 异步数据源，带 pending / error / refetch | [异步与边界](/guide/async-and-boundaries#createresource) |

@@ -36,7 +36,7 @@ import { ENHANCED_COMPONENT_NAMES } from '@lania-v/shared';
 | --- | --- |
 | `T` | 泛型参数 |
 | `?` | 可选参数 |
-| `ReadonlySignal<T>` | 可调用、可 `peek()`，但没有 `set` |
+| `ReadonlySignal<T>` | 可 `.value` 读取、可 `peek()`，但没有 `set` |
 | `Scheduler` | 调度器实例，默认 `defaultScheduler` |
 | `Job` | 一个无参函数，由调度器执行 |
 | `EnhancedRenderable` | 可渲染值：`Node`、字符串、数字、布尔、`null`、数组、函数 |

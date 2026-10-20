@@ -33,8 +33,8 @@ const state = createStore(initialValue, scheduler?);
 
 | API | 作用 |
 | --- | --- |
-| `state.xxx` | 响应式读取；嵌套对象按路径惰性代理 |
-| `state.set(...)` | 写入 |
+| `state.xxx` | 响应式只读读取；任意深度的嵌套字段按路径订阅 |
+| `state.set(...)` | 唯一的写入入口 |
 | `state.peek()` | 读取当前原始快照，不建立订阅 |
 
 ### 读取
@@ -45,18 +45,31 @@ state.list.length;
 state.list[0];
 ```
 
-嵌套对象会按路径惰性代理。读取 `state.user.name` 会订阅路径 `['user', 'name']`，而不是整个 store。
+任意深度的字段都按路径精确订阅：读取 `state.user.name` 只订阅 `['user', 'name']`，不会因为兄弟字段变化而重跑。
 
 ### 写入
 
-```ts
-// 整体替换
-state.set({ user: { name: 'Grace', age: 45 }, list: [] });
+属性是**只读视图**，`state.user.name = 'Grace'` 会在运行时抛 `TypeError`，而不是静默失效：
 
-// 点路径写入
+```ts
+state.user.name = 'Grace';
+// TypeError: store.user.name is read-only.
+// Use store.set("user.name", value) to update the store.
+```
+
+所有写入都必须走 `set()`；`set` 一律是**整体替换**，局部更新用嵌套路径：
+
+```ts
+// 整体替换（未给出的字段会被丢弃）
+state.set({ user: { name: 'Grace' }, list: [] });
+
+// 点路径写入（推荐用于局部更新）
 state.set('user.name', 'Grace');
 
-// 分段路径写入
+// 数组路径
+state.set(['user', 'name'], 'Grace');
+
+// 分段路径
 state.set('user', 'name', 'Grace');
 
 // 路径 + updater
@@ -66,6 +79,15 @@ state.set('user.age', (age: number) => age + 1);
 state.set('list', (list: number[]) => [...list, 1]);
 state.set('list', 0, 99);
 state.set('list.0.title', 'updated');
+```
+
+嵌套写入不需要手动展开整个对象：
+
+```ts
+const state = createStore({ user: { profile: { city: 'Paris' } }, page: 1 });
+
+state.set('user.profile.city', 'Lyon');
+// 只有 user.profile.city 变化，page 与其它兄弟字段保持原值
 ```
 
 两个参数且首参是字符串时，首参按 `.` 拆成路径；三个及以上参数保持分段路径语义。
@@ -89,18 +111,22 @@ before !== after; // true
 
 ### 方法调用
 
-Store 中的方法会自动绑定到所属对象：
+Store 中的方法会自动绑定到所属对象，因此 `this` 指向正确路径，但 `this` 同样是只读视图：
 
 ```ts
 const state = createStore({
   count: 1,
   increment() {
-    this.count += 1;
+    // ❌ 编译与运行时都不允许：this 是只读视图
+    // this.count += 1;
+    this.set('count', (count: number) => count + 1);
   },
 });
 
 state.increment();
 ```
+
+方法里需要写入时，请显式调用 `set()`（如上）；这里的 `this.set` 会写入当前路径下的字段。
 
 ### `peek()`
 
@@ -109,6 +135,32 @@ const snapshot = state.peek();
 ```
 
 `peek()` 返回当前原始对象且不建立订阅，适合事件回调、日志等非渲染场景。
+
+### 其他状态方法
+
+| API | 作用 |
+| --- | --- |
+| `state.get('a.b')` | 按路径读取单个值（支持动态路径） |
+| `state.has('a.b')` | 路径是否存在 |
+| `state.keys()` / `state.entries()` | 浅层快照遍历 |
+| `state.update('a.b', fn)` | 路径更新，`fn` 必须返回新值 |
+| `state.delete('a.b')` | 删除路径 |
+| `state.patch({ ... })` | 显式浅合并（`set` 是整体替换） |
+| `state.reset()` | 恢复到创建时的初始值 |
+| `state.subscribe(fn)` | 任意变化时回调，返回取消订阅函数 |
+| `state.subscribe('a.b', fn)` | 只订阅某个路径 |
+| `state.derive(fn)` | 从 store 派生只读 memo |
+
+```ts
+const unsubscribe = state.subscribe('user.name', (next) => {
+  console.log('name is now', next);
+});
+
+state.update('user.age', (age: number) => age + 1);
+state.patch({ theme: 'dark' });   // 只覆盖给出的字段
+state.delete('user.nickname');
+unsubscribe();
+```
 
 ### `__raw`
 
@@ -130,7 +182,7 @@ state.set('user', 'name', 'Ada'); // 值没变，不会触发订阅者
 
 ## `produce()`
 
-`produce()` 用可变写法更新 Store：
+`produce()` 用**纯函数**计算下一个状态：`draft` 是只读快照，回调必须有返回值，返回值作为新状态整体写回。
 
 ```ts
 import { createStore, produce } from '@lania-v/runtime';
@@ -140,11 +192,18 @@ const state = createStore({
   user: { name: 'Ada' },
 });
 
-produce(state, (draft) => {
-  draft.list.push(1);
-  draft.user.name = 'Grace';
-});
+produce(state, (draft) => ({
+  ...draft,
+  list: [...draft.list, 1],
+  user: { ...draft.user, name: 'Grace' },
+}));
 ```
+
+约束：
+
+- `draft` 只读，回调内直接赋值/`push` 会抛错；
+- 必须返回新的状态对象，返回 `undefined` 会抛错；
+- 需要局部更新时，用 `state.set('path', value)` 更直接。
 
 实现细节：
 
@@ -258,12 +317,13 @@ export default defineComponent(function TodoApp() {
   });
 
   const add = () => {
-    const text = draft().trim();
+    const text = draft.value.trim();
     if (!text) return;
 
-    produce(state, (next) => {
-      next.todos.push({ id: crypto.randomUUID(), text, done: false });
-    });
+    produce(state, (previous) => ({
+      ...previous,
+      todos: [...previous.todos, { id: crypto.randomUUID(), text, done: false }],
+    }));
     draft.set('');
   };
 
@@ -284,7 +344,7 @@ export default defineComponent(function TodoApp() {
         <option value="done">Done</option>
       </select>
 
-      <Each items={visibleTodos()} key={(todo) => todo.id}>
+      <Each items={visibleTodos.value} key={(todo) => todo.id}>
         {(todo) => (
           <div className={isSelected(todo.id) ? 'row is-selected' : 'row'}>
             <input

@@ -150,7 +150,8 @@ const content = html`<strong>${title()}</strong>`;
 ```tsx
 <button onClick={() => count.set(1)} />
 <button onClick={{ handler: save, modifiers: { stop: true, prevent: true } }} />
-<button onClick={{ handler: save, options: { capture: true, passive: true } }} />
+<button onClick={{ handler: save, listener: { capture: true, passive: true } }} />
+<input onKeyDown={{ handler: submit, modifiers: { enter: true } }} />
 ```
 
 | 修饰符 | 行为 |
@@ -159,10 +160,13 @@ const content = html`<strong>${title()}</strong>`;
 | `prevent` | `preventDefault()` |
 | `self` | 仅当 `event.target === event.currentTarget` |
 | `enter` | 仅键盘 `Enter` |
-| `key:*` | 仅当 `event.key` 匹配 |
+| `key:*` / `keys: ['a', 'b']` | 仅当 `event.key` 匹配 |
 | `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下 |
+| `left` / `middle` / `right` | 仅对应鼠标键 |
 
-带 `options` 的监听不参与事件委托，以保留 `once` / `passive` / `capture` 语义。
+对象写法里的修饰符与后缀写法等价：`modifiers: { enter: true }` 会降级为 `key:enter`，`keys` 接受字符串字面量数组。
+
+带 `listener` 的监听不参与事件委托，以保留 `once` / `passive` / `capture` 语义。
 
 ### 双向绑定：`model`
 

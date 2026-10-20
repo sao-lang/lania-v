@@ -88,7 +88,7 @@ const visibleItems = createMemo(() =>
 <Each items={items().filter((item) => item.done)} />
 
 // 推荐
-<Each items={visibleItems()} />
+<Each items={visibleItems.value} />
 ```
 
 ## 列表

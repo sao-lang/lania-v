@@ -10,7 +10,7 @@ import { createSignal, defineComponent } from '@lania-v/runtime';
 export default defineComponent(function Counter() {
   const count = createSignal(0);
 
-  return <button onClick={() => count.set((value) => value + 1)}>count: {count()}</button>;
+  return <button onClick={() => count.set((value) => value + 1)}>count: {count.value}</button>;
 });
 ```
 
@@ -614,15 +614,15 @@ export default defineComponent(function CredentialField() {
   const account = createSignal('');
   const valid = createSignal(false);
 
-  useFormValue(() => account());
+  useFormValue(() => account.value);
 
   useFormValidity(() =>
-    valid() ? true : { valid: false, message: '请输入有效值' }
+    valid.value ? true : { valid: false, message: '请输入有效值' }
   );
 
   return (
     <input
-      value={account()}
+      value={account.value}
       onInput={(event) => account.set((event.target as HTMLInputElement).value)}
     />
   );

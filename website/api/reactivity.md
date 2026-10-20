@@ -32,28 +32,28 @@ import { createSignal } from '@lania-v/runtime';
 const count = createSignal(0);
 ```
 
-#### 为什么 Signal 是函数
+#### 为什么用 `.value` 读取
 
-Signal 返回的是**可调用的 getter**：
+Signal 返回的是一个只读盒子对象，读取路径是 `.value`：
 
 ```ts
-count(); // 0
+count.value; // 0
 ```
 
 这样做有两个直接好处：
 
-1. 读取动作可以被依赖收集系统感知；
-2. Signal 本身可以像普通值一样传递，不需要 `.value` 或解构。
+1. 读取动作可以被依赖收集系统感知（getter 每次访问都会收集依赖）；
+2. Signal 与其他状态 API 形态统一：`createStore` 用 `state.xxx`，signal 用 `sig.value`，写入都是 `set`。
 
 ```ts
-function useDouble(source: () => number) {
-  return createMemo(() => source() * 2);
+function useDouble(source: ReadonlySignal<number>) {
+  return createMemo(() => source.value * 2);
 }
 
 const double = useDouble(count);
 ```
 
-只要调用 `source()`，依赖关系就成立。
+只要访问 `.value`，依赖关系就成立。
 
 #### 读取语义
 
@@ -246,7 +246,7 @@ double = createComputedAccessor(() => this.count() * 2);
 | 缓存结果 | 每次调用重新计算 |
 | 有内部 Signal | 没有内部 Signal |
 | 依赖变化时重算 | 不参与调度 |
-| 返回 `ReadonlySignal` | 返回可调用句柄 |
+| 返回 `ReadonlySignal` | 返回 `ComputedAccessor`（`.value` 读取） |
 
 模板中的依赖由编译器静态注入，因此不需要句柄自己缓存。
 
@@ -663,8 +663,8 @@ pending(); // boolean
 `createStore()` 用“路径 + 版本 Signal”解决：
 
 - 读取 `state.user.name` 订阅 `['user', 'name']`；
-- 写入 `state.user.name` 只通知受影响的祖先 / 后代路径；
-- 路径代理按需创建。
+- 写入必须走 `set()`，只通知受影响的祖先 / 后代路径；
+- 路径视图按需创建并缓存，视图是只读的，属性赋值会直接报错。
 
 ### `createStore()`
 
@@ -693,17 +693,21 @@ state.list.length;
 ```
 
 - 读取原始值会订阅该路径；
-- 读取嵌套对象会返回代理，不会订阅父路径；
-- 方法调用会自动绑定到所属对象。
+- 读取嵌套对象会返回按路径缓存的只读视图，不会订阅父路径；
+- 方法调用会自动绑定到所属对象；
+- 属性是只读的，任何 `state.xxx = ...` 都会抛 `TypeError`。
 
 #### 写入
 
 ```ts
-// 整体替换
-state.set({ user: { name: 'Grace', age: 45 }, list: [] });
+// 整体替换（未给出的字段会被丢弃）
+state.set({ user: { name: 'Grace' }, list: [] });
 
 // 点路径写入
 state.set('user.name', 'Grace');
+
+// 数组路径
+state.set(['user', 'name'], 'Grace');
 
 // 分段路径写入
 state.set('user', 'name', 'Grace');
@@ -716,7 +720,9 @@ state.set('list', 0, 99);
 state.set('list.0.title', 'updated');
 ```
 
-两个参数且首参为字符串时按 `.` 拆分路径；三个及以上参数按分段路径处理。
+`set` 不合并：单参数一律整体替换，局部更新请用嵌套路径。路径不存在时会按需创建中间对象。
+
+两个参数且首参为字符串时按 `.` 拆分路径；首参为数组时按分段路径处理；三个及以上参数同样按分段路径处理。
 
 路径更新采用不可变策略：
 
@@ -736,14 +742,14 @@ state.user !== before; // true
 const state = createStore({
   count: 1,
   increment() {
-    this.count += 1;
+    this.set('count', (count: number) => count + 1);
   },
 });
 
 state.increment();
 ```
 
-代理会把方法绑定回当前路径，因此 `this` 指向正确对象。
+方法会绑定回当前路径，因此 `this` 指向正确对象；但 `this` 同样是只读视图，写入需要走 `set()`。
 
 #### `peek()`
 
@@ -766,24 +772,25 @@ const raw = state.user.__raw;
 ```ts
 produce<T extends object>(
   store: Store<T>,
-  recipe: (draft: T) => void
+  recipe: (draft: T) => T
 ): T
 ```
 
-用可变写法更新 Store：
+用纯函数计算下一个状态：
 
 ```ts
-produce(state, (draft) => {
-  draft.list.push(1);
-  draft.user.name = 'Grace';
-});
+produce(state, (draft) => ({
+  ...draft,
+  list: [...draft.list, 1],
+  user: { ...draft.user, name: 'Grace' },
+}));
 ```
 
-实现细节：
+约束：
 
-- 优先 `structuredClone()`；
-- 含函数 / 类实例时退回浅拷贝；
-- 浅拷贝时深层修改可能无法按路径精确通知，建议改用路径写入。
+- `draft` 是只读视图，回调内不能直接赋值或调用数组变更方法；
+- 回调必须有返回值，返回值作为新状态整体写回；
+- 需要局部更新时优先用 `state.set('path.to.value', next)`。
 
 ### `getStorePathSignal()`
 

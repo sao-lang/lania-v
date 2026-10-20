@@ -12,7 +12,7 @@
 ```ts
 const count = createSignal(0);
 
-count();
+count.value;
 count.set(1);
 count.update((value) => value + 1);
 ```
@@ -21,26 +21,26 @@ count.update((value) => value + 1);
 
 ```ts
 const count = createSignal(1);
-const doubled = createMemo(() => count() * 2);
+const doubled = createMemo(() => count.value * 2);
 ```
 
 在 `FC / .lania.tsx` 里，`createMemo` 声明的计算属性会被编译成组件实例上的**可读句柄字段**：
 
 ```ts
 const account = createSignal('');
-const accountMissing = createMemo(() => account().trim().length === 0);
+const accountMissing = createMemo(() => account.value.trim().length === 0);
 
 onMount(() => {
   // 裸引用拿到的是句柄本身，和 signal 一样是可调用对象
   console.log(accountMissing);
   // 取值统一写成调用形式
-  console.log(accountMissing());
+  console.log(accountMissing.value);
 });
 ```
 
 对应的实例字段形如 `protected accountMissing = createComputedAccessor(() => ...)`：
 
-- `this.accountMissing()` 读取派生值，`this.accountMissing.peek()` 跳过调用直接取值。
+- `this.accountMissing.value` 读取派生值，`this.accountMissing.peek()` 跳过调用直接取值。
 - `this.accountMissing` 不调用时得到的是句柄，而不是布尔值，便于把计算属性当参数传递。
 - 句柄不缓存，每次读取都重新求值；模板 updater 的订阅依赖由编译期静态注入，不依赖运行时调度。
 
@@ -49,7 +49,7 @@ onMount(() => {
 ```ts
 const count = createSignal(0);
 const stop = createEffect(() => {
-  console.log(count());
+  console.log(count.value);
 });
 
 stop();
@@ -321,20 +321,18 @@ start(() => {
 ```ts
 const state = createStore({ list: [] as number[] });
 
-produce(state, (draft) => {
-  draft.list.push(1);
-});
+produce(state, (draft) => ({ ...draft, list: [...draft.list, 1] }));
 ```
 
-`produce` 基于 `structuredClone` 生成草稿；含函数/类实例的数据请优先使用
-`state.set('path.to.value', next)` 的路径写法。
+`produce` 的回调必须是纯函数：`draft` 只读、必须有返回值，返回值作为新状态整体写回。
+局部更新请优先使用 `state.set('path.to.value', next)` 的路径写法。
 
 ### `createScope()`
 
 ```ts
 const scope = createScope(() => {
   const count = createSignal(0);
-  createEffect(() => console.log(count()));
+  createEffect(() => console.log(count.value));
   return count;
 });
 
@@ -619,11 +617,11 @@ export default defineComponent(function CredentialField() {
   const account = createSignal('');
 
   // 组件对外暴露的表单值
-  useFormValue(() => account());
+  useFormValue(() => account.value);
 
   return (
     <input
-      value={account()}
+      value={account.value}
       onInput={(event) => account.set(event.target.value)}
     />
   );
@@ -645,7 +643,7 @@ export default defineComponent(function CredentialField() {
 const valid = createSignal(false);
 
 useFormValidity(() =>
-  valid() ? true : { valid: false, message: '请输入有效值' }
+  valid.value ? true : { valid: false, message: '请输入有效值' }
 );
 ```
 
