@@ -76,13 +76,17 @@ const examplesSidebar = [
   },
 ];
 
+// GitHub Pages 项目站点部署在 https://sao-lang.github.io/lania-v/
+const base = '/lania-v/';
+
 export default defineConfig({
   lang: 'zh-CN',
   title: 'lania-v',
   description: '编译优先的细粒度 Web Components 框架',
+  base,
   cleanUrls: true,
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
     ['meta', { name: 'theme-color', content: '#7c3aed' }],
   ],
   themeConfig: {

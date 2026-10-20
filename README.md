@@ -144,6 +144,14 @@ npm run docs:preview          # 预览构建结果
 
 文档站包含：框架特性、编译模型、响应式、模板绑定、组件、增强组件、SSR、API 参考与示例。
 
+线上地址：<https://sao-lang.github.io/lania-v/>
+
+站点由 GitHub Actions（`.github/workflows/deploy-docs.yml`）在 `master`
+分支上自动构建并发布到 GitHub Pages：修改 `website/` 下的内容并推送即可更新，
+也可在 Actions 页面手动触发 `Deploy Docs`。由于是项目站点，VitePress 的
+`base` 固定为 `/lania-v/`；若仓库改名，需同步调整
+`website/.vitepress/config.ts` 中的 `base`。
+
 ## 文档索引
 
 - [文档导航](docs/README.md)
