@@ -34,6 +34,14 @@ const hashTemplateHtml = (html: string): string => {
   return (hash >>> 0).toString(16);
 };
 
+// hoist 名称：slotIndex 在全组件范围内唯一，用它做主键即可避免嵌套块重名；
+// path 只作为可读性后缀保留（可能重复，不参与唯一性）。
+const templateNamePrefix = (
+  path: number[],
+  slotIndex: number,
+  templateHash: string
+): string => `__when_slot_${slotIndex}_${path.join('_') || 'root'}_${templateHash}`;
+
 const normalizeStaticMode = (expression: string | null): 'retain' | 'remount' | undefined => {
   // 只接受编译期就能确定的字面量模式，其他表达式一律回退为未指定。
   return expression === '"retain"' || expression === '"remount"'
@@ -94,14 +102,28 @@ export const lowerWhenElement = (
 
   const branches = resolveWhenBranches(child);
   // truthy / fallback 分支都继续递归 lowering，但在这里保留增强组件的动态包裹语义。
-  const truthyTemplate = lowerTemplateChildren(branches.truthyChildren, [], 0, 0, 0, {
-    preserveChildrenOnlyEnhancedAsDynamic: true,
-  });
+  //
+  // 分支内部的 slot 编号必须接在外层 `When` 自己的 slotIndex 之后：分支模板会和
+  // `When` 生成的 IfSlot 一起进入同一份线性 slot 表，如果都从 0 开始就会撞号，
+  // 嵌套 `<When>` / `Each` 的 slot 会被外层的覆盖而永远不被注册。
+  const truthyTemplate = lowerTemplateChildren(
+    branches.truthyChildren,
+    [],
+    slotIndex + 1,
+    0,
+    0,
+    { preserveChildrenOnlyEnhancedAsDynamic: true }
+  );
   const fallbackTemplate =
     branches.fallbackChildren.length > 0
-      ? lowerTemplateChildren(branches.fallbackChildren, [], 0, 0, 0, {
-          preserveChildrenOnlyEnhancedAsDynamic: true,
-        })
+      ? lowerTemplateChildren(
+          branches.fallbackChildren,
+          [],
+          slotIndex + 1 + truthyTemplate.nextSlotIndex - (slotIndex + 1),
+          0,
+          0,
+          { preserveChildrenOnlyEnhancedAsDynamic: true }
+        )
       : null;
   const fallbackExpression = getAttributeExpression(child, 'fallback');
   const modeExpression = getAttributeExpression(child, 'mode');
@@ -111,8 +133,13 @@ export const lowerWhenElement = (
     (fallbackExpression ? renderStaticTemplateFromExpression(fallbackExpression) ?? undefined : undefined);
   const mode = normalizeStaticMode(modeExpression);
   // hoist 名称带上 path + slot + html hash，尽量保持稳定且可避免冲突。
+  //
+  // 嵌套在别的 block 里的 `When`，其 path 是相对当前 block 内部模板的局部坐标，
+  // 不同分支可能出现相同的 `path + slotIndex`。这里额外并入 HTML hash，
+  // 并在 hash 冲突时再退让到父路径，保证同一模块内不会出现重复声明。
   const templateHash = hashTemplateHtml(truthyTemplate.staticHtml);
   const fallbackHash = fallbackTemplateHtml ? hashTemplateHtml(fallbackTemplateHtml) : null;
+  const namePrefix = templateNamePrefix(path, slotIndex, templateHash);
 
   return {
     type: 'IfIR',
@@ -121,12 +148,12 @@ export const lowerWhenElement = (
     expression: whenExpression,
     mode,
     templateHtml: truthyTemplate.staticHtml,
-    hoistName: `__when_slot_${path.join('_') || 'root'}_${slotIndex}_${templateHash}`,
+    hoistName: namePrefix,
     children: truthyTemplate.nodes,
     fallbackTemplateHtml,
     fallbackChildren: fallbackTemplate?.nodes,
     fallbackHoistName: fallbackTemplateHtml
-      ? `__when_fallback_slot_${path.join('_') || 'root'}_${slotIndex}_${fallbackHash ?? ''}`
+      ? `__when_fallback_slot_${slotIndex}_${path.join('_') || 'root'}_${fallbackHash ?? ''}`
       : undefined,
   };
 };

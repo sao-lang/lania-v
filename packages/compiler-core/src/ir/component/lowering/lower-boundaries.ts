@@ -58,16 +58,43 @@ const getTransitionPayloadComponentConfig = (
   return componentName === 'TransitionGroup' ? { tagPropName: 'tag' } : {};
 };
 
+const collectMaxSlotIndex = (node: LowerTemplateResult['nodes'][number]): number => {
+  // 块内部可能已经消耗了若干 slot（块内 `<When>` / `<Each>` / 文本 / 属性）。
+  // 父级游标必须跳过这些编号，否则后续兄弟节点会复用同一 slotIndex 而互相覆盖。
+  let max = 'slotIndex' in node ? node.slotIndex : -1;
+
+  const visit = (current: unknown): void => {
+    if (!current || typeof current !== 'object') {
+      return;
+    }
+
+    const candidate = current as { slotIndex?: number; children?: unknown[]; fallbackChildren?: unknown[] };
+
+    if (typeof candidate.slotIndex === 'number') {
+      max = Math.max(max, candidate.slotIndex);
+    }
+
+    candidate.children?.forEach(visit);
+    candidate.fallbackChildren?.forEach(visit);
+  };
+
+  visit(node);
+
+  return max;
+};
+
 const createSingleSlotLoweringResult = (
   node: LowerTemplateResult['nodes'][number],
   slotIndex: number,
-  nextBoundaryIndex: number
+  nextBoundaryIndex: number,
+  occupiedSlotIndex = slotIndex
 ): LowerTemplateResult => {
   // 若某个特殊节点本身只占一个 slot，这里把通用返回结构封装成统一形态。
+  // `occupiedSlotIndex` 用来把块内部已消耗的编号一并跳过，避免兄弟节点复用。
   return {
     nodes: [node],
     staticHtml: `<!--__LANIA_SLOT_${slotIndex}__-->`,
-    nextSlotIndex: slotIndex + 1,
+    nextSlotIndex: Math.max(slotIndex, occupiedSlotIndex) + 1,
     nextBoundaryIndex,
     renderedRootCount: 1,
   };
@@ -330,7 +357,12 @@ export const lowerEnhancedComponent = (
               lowerTemplateChildren
             );
       return whenNode
-        ? createSingleSlotLoweringResult(whenNode, context.slotIndex, context.boundaryIndex)
+        ? createSingleSlotLoweringResult(
+            whenNode,
+            context.slotIndex,
+            context.boundaryIndex,
+            collectMaxSlotIndex(whenNode)
+          )
         : null;
     }
     case 'ListIR': {

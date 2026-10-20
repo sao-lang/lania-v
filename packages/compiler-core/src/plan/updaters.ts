@@ -264,6 +264,26 @@ export const generateComponentUpdaters = (
   ];
   // 最终这份 updaters 列表就是代码生成阶段的“执行计划真相源”，
   // slot、computed、effect 都被压平成统一描述，便于后续按 phase/kind 分发。
+  //
+  // 名称必须全局唯一：嵌套 block 内元素用的是块内局部 path，
+  // 与其它分支同名属性会生成相同的 `updateAttr_x_y_class`，
+  // 这里统一按首次出现顺序追加序号去重。
+  const usedUpdaterNames = new Set<string>();
+  updaters.forEach((updater) => {
+    if (!usedUpdaterNames.has(updater.name)) {
+      usedUpdaterNames.add(updater.name);
+      return;
+    }
+
+    let suffix = 2;
+    let candidate = `${updater.name}_${suffix}`;
+    while (usedUpdaterNames.has(candidate)) {
+      suffix += 1;
+      candidate = `${updater.name}_${suffix}`;
+    }
+    usedUpdaterNames.add(candidate);
+    updater.name = candidate;
+  });
 
   return {
     updaters,

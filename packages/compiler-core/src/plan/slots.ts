@@ -97,9 +97,15 @@ const getMaxTemplateSlotIndex = (nodes: TemplateIRNode[]): number => {
       return;
     }
 
+    if (node.type === 'IfIR') {
+      // 条件块只有自身在根模板里占 slot；块内子树使用块自己的局部坐标系
+      // （path 与 slot 都相对块模板），不能混进根模板的 slot 分配。
+      max = Math.max(max, node.slotIndex);
+      return;
+    }
+
     if (
       node.type === 'ListIR' ||
-      node.type === 'IfIR' ||
       node.type === 'TeleportIR' ||
       node.type === 'DynamicIR' ||
       node.type === 'BoundaryIR' ||
@@ -107,6 +113,7 @@ const getMaxTemplateSlotIndex = (nodes: TemplateIRNode[]): number => {
       node.type === 'KeepAliveIR' ||
       node.type === 'StaticComponentIR'
     ) {
+      // 同上：这些 block 的内部子树同样使用各自的局部坐标系。
       max = Math.max(max, node.slotIndex);
       return;
     }
@@ -239,6 +246,8 @@ const allocateTemplateSlots = (
         expression: node.expression,
         updater: `updateIfSlot${node.slotIndex}`,
       });
+      // 块内子树使用该块自己的局部坐标系（path 与 slot 都相对块模板），
+      // 由块 payload 携带并在运行时单独分配，不进入根模板的线性 slot 表。
       return;
     }
 

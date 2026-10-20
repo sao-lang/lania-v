@@ -79,9 +79,38 @@ export const collectChildPayloadHoists = (
   return hoists;
 };
 
+/**
+ * `storeBindingMap` 的 value 形如 `this.form, ["passwordVisible"]`，
+ * 这里还原成源码里实际书写的访问链 `this.form.passwordVisible` 再与表达式比对。
+ * 无法静态还原（路径为空或格式异常）时返回 false，交由调用方继续其它匹配。
+ */
+const matchesStoreBinding = (expression: string, binding: string): boolean => {
+  const match = /^(.*?),\s*(\[.*\])$/s.exec(binding.trim());
+  if (!match) {
+    return false;
+  }
+
+  const target = match[1]!.trim();
+  let segments: unknown;
+  try {
+    segments = JSON.parse(match[2]!);
+  } catch {
+    return false;
+  }
+  if (!Array.isArray(segments) || segments.length === 0) {
+    return false;
+  }
+
+  const accessPath = segments
+    .map((segment) => (typeof segment === 'number' ? `[${segment}]` : `.${segment}`))
+    .join('');
+  return expression.includes(`${target}${accessPath}`);
+};
+
 export const collectChildPayloadDependencyKeys = (
   nodes: readonly TemplateIRNode[],
-  signalBindingMap: Readonly<Record<string, string>>
+  signalBindingMap: Readonly<Record<string, string>>,
+  storeBindingMap: Readonly<Record<string, string>> = {}
 ): string[] => {
   const keys = new Set<string>();
   const tryCollect = (expression: string | undefined): void => {
@@ -91,6 +120,14 @@ export const collectChildPayloadDependencyKeys = (
     // 这里先用“字符串包含”做保守收集，目标是尽量别漏依赖，而不是做精确语义分析。
     Object.keys(signalBindingMap).forEach((key) => {
       if (expression.includes(key)) {
+        keys.add(key);
+      }
+    });
+    // store 依赖的 key 形如 `store:form:passwordVisible`，表达式里出现的是
+    // `this.form.passwordVisible`，因此不能直接按 key 子串匹配，需要拆成
+    // “实例字段 + 路径”再回到表达式里查找。
+    Object.entries(storeBindingMap).forEach(([key, binding]) => {
+      if (matchesStoreBinding(expression, binding)) {
         keys.add(key);
       }
     });
@@ -105,10 +142,10 @@ export const collectChildPayloadDependencyKeys = (
       case 'IfIR':
         // 条件表达式和两个分支内部都可能继续访问响应式值。
         tryCollect(node.expression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap).forEach((key) =>
+        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
           keys.add(key)
         );
-        collectChildPayloadDependencyKeys(node.fallbackChildren ?? [], signalBindingMap).forEach((key) =>
+        collectChildPayloadDependencyKeys(node.fallbackChildren ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
           keys.add(key)
         );
         return;
@@ -119,32 +156,32 @@ export const collectChildPayloadDependencyKeys = (
       case 'DynamicIR':
         tryCollect(node.componentExpression);
         tryCollect(node.propsExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap).forEach((key) =>
+        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
           keys.add(key)
         );
         return;
       case 'BoundaryIR':
       case 'TransitionIR':
         tryCollect(node.payloadExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap).forEach((key) =>
+        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
           keys.add(key)
         );
         return;
       case 'TeleportIR':
         tryCollect(node.targetExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap).forEach((key) =>
+        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
           keys.add(key)
         );
         return;
       case 'KeepAliveIR':
         tryCollect(node.payloadExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap).forEach((key) =>
+        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
           keys.add(key)
         );
         return;
       case 'ElementIR':
         // 普通元素自己没有 block payload，但其内部动态子节点仍可能继续引用依赖。
-        collectChildPayloadDependencyKeys(node.children, signalBindingMap).forEach((key) => keys.add(key));
+        collectChildPayloadDependencyKeys(node.children, signalBindingMap, storeBindingMap).forEach((key) => keys.add(key));
         return;
       default:
         return;

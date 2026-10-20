@@ -3,6 +3,7 @@ import {
   collectChildPayloadHoists,
   renderChildPayloadBindings,
 } from './payload';
+import type { TemplateIRNode } from '../../ir/component';
 import type {
   RenderCodegenOptions,
   RenderCodegenResult,
@@ -117,15 +118,54 @@ export const generateRenderCode = ({
   };
   // 所有 hoist 在这里一次性铺平，后续方法体只引用名字，不再关心模板来源细节。
   // 所有需要复用的静态 HTML 模板都在方法外 hoist，避免每次实例化时重复创建 template。
+  //
+  // 同一条条件绑定可能同时出现在顶层与嵌套收集结果中，这里按 hoist 名去重，
+  // 避免生成重复的 const 声明（esbuild / tsc 都会直接报错）。
+  const emittedHoistNames = new Set<string>([hoistName]);
+  const uniqueConditionHoists = conditionBindings.filter((binding) => {
+    if (emittedHoistNames.has(binding.hoistName)) {
+      return false;
+    }
+    emittedHoistNames.add(binding.hoistName);
+    return true;
+  });
+  // 子 payload 的 hoist 收集必须与上面的主 hoist 共享同一份去重集合：
+  // 嵌套 block 的模板名会同时出现在 `conditionBindings` 与 children 里，
+  // 两边各自去重仍会产生重复的 const 声明。
+  const collectUniqueChildPayloadHoists = (nodes: readonly TemplateIRNode[]): string[] =>
+    collectChildPayloadHoists(nodes, emittedHoistNames);
+
+  // 其它 binding 类型（list / dynamic / boundary / transition / keepAlive / teleport）
+  // 也会 hoist 各自的模板名，先统一登记，后续子 payload 收集才不会重复。
+  const rememberHoist = (name: string | undefined): void => {
+    if (name) {
+      emittedHoistNames.add(name);
+    }
+  };
+  listBindings.forEach((binding) => {
+    rememberHoist(binding.fallbackHoistName);
+    rememberHoist(binding.keyedItemHoistName);
+    rememberHoist(binding.itemTemplateHoistName);
+  });
+  [...dynamicBindings, ...boundaryBindings, ...transitionBindings, ...keepAliveBindings, ...teleportBindings].forEach(
+    (binding) => rememberHoist(binding.hoistName)
+  );
   const hoists = [
     `const ${hoistName} = createStaticTemplate(${JSON.stringify(staticHtml)});`,
-    ...conditionBindings.map(
+    ...uniqueConditionHoists.map(
       (binding) =>
         `const ${binding.hoistName} = createStaticTemplate(${JSON.stringify(binding.templateHtml)});
 const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clone().childNodes];`
     ),
-    ...conditionBindings
+    ...uniqueConditionHoists
       .filter((binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName)
+      .filter((binding) => {
+        if (emittedHoistNames.has(binding.fallbackHoistName!)) {
+          return false;
+        }
+        emittedHoistNames.add(binding.fallbackHoistName!);
+        return true;
+      })
       .map(
         (binding) =>
           `const ${binding.fallbackHoistName} = createStaticTemplate(${JSON.stringify(binding.fallbackTemplateHtml)});
@@ -189,17 +229,17 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
         `const ${binding.hoistName} = createStaticTemplate(${JSON.stringify(binding.templateHtml)});
 const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clone().childNodes];`
     ),
-    ...collectChildPayloadHoists(
+    ...collectUniqueChildPayloadHoists(
       conditionBindings.flatMap((binding) => [
         ...(binding.children ?? []),
         ...(binding.fallbackChildren ?? []),
       ])
     ),
-    ...collectChildPayloadHoists(dynamicBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectChildPayloadHoists(boundaryBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectChildPayloadHoists(transitionBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectChildPayloadHoists(keepAliveBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectChildPayloadHoists(teleportBindings.flatMap((binding) => binding.children ?? [])),
+    ...collectUniqueChildPayloadHoists(dynamicBindings.flatMap((binding) => binding.children ?? [])),
+    ...collectUniqueChildPayloadHoists(boundaryBindings.flatMap((binding) => binding.children ?? [])),
+    ...collectUniqueChildPayloadHoists(transitionBindings.flatMap((binding) => binding.children ?? [])),
+    ...collectUniqueChildPayloadHoists(keepAliveBindings.flatMap((binding) => binding.children ?? [])),
+    ...collectUniqueChildPayloadHoists(teleportBindings.flatMap((binding) => binding.children ?? [])),
   ];
 
   // 以下各组声明负责把“编译期 slot 规划”翻译成“运行时 slot 实例化代码”。
@@ -417,7 +457,8 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
         ...updater.dependencies,
         ...collectChildPayloadDependencyKeys(
           [...(binding.children ?? []), ...(binding.fallbackChildren ?? [])],
-          signalBindingMap
+          signalBindingMap,
+          storeBindingMap
         ),
       ];
       return createRuntimeUpdaterDeclaration(
@@ -441,7 +482,7 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap),
+          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -464,7 +505,7 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap),
+          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -486,7 +527,7 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap),
+          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -508,7 +549,7 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap),
+          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -530,7 +571,7 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap),
+          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,

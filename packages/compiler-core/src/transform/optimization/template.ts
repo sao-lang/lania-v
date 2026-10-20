@@ -319,6 +319,9 @@ export const collectUsedSlotIndices = (nodes: TemplateIRNode[], used = new Set<n
     ) {
       // 这些节点都自带主 slot，可直接纳入 packing 候选集。
       used.add(node.slotIndex);
+
+      // 块（含 IfIR）内部的节点使用该块自己的局部坐标系，由块 payload 承载，
+      // 不参与根模板的 slot packing，否则会把内层编号压成外层序号造成冲突。
       return;
     }
 
@@ -356,10 +359,14 @@ export const applySlotPacking = (
       node.type === 'TeleportIR' ||
       node.type === 'KeepAliveIR'
     ) {
-      return {
+      // 条件块分支内部使用独立的局部坐标系（path 从 0 开始、slot 独立编号），
+      // 不参与根模板的 packing 重映射，因此这里不再递归重映射其子树。
+      const remapped = {
         ...node,
         slotIndex: slotPackingMap[node.slotIndex] ?? node.slotIndex,
-      };
+      } as TemplateIRNode;
+
+      return remapped;
     }
     // 这些节点直接持有主 slot，因此优先映射它们自己的索引。
 

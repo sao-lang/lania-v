@@ -29,8 +29,11 @@ export const collectTemplateSignalDependencies = (
           return analyzeExpression(node.expression);
           // `IfIR` 既依赖条件表达式，也依赖 truthy/fallback 两侧子树里的表达式。
         case 'IfIR':
+          // `IfIR` 既依赖条件表达式，也依赖 truthy/fallback 两侧子树里的表达式。
+          // 真分支承载了 `When` 内的全部 DOM，漏掉它会让块内绑定完全失去依赖订阅。
           return mergeDependencies(
             analyzeExpression(node.expression),
+            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : [],
             node.fallbackChildren
               ? collectTemplateSignalDependencies(node.fallbackChildren, analyzeExpression)
               : []

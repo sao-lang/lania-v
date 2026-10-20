@@ -15,6 +15,8 @@ import type {
 import { isBoundaryPayload, type BoundaryPayload } from '@lania-v/shared';
 
 export const SLOT_MARKER_PATTERN = /^__LANIA_SLOT_(\d+)_(START|END)__(?::([\s\S]+))?$/;
+// 编译期块锚点：`<!--__LANIA_SLOT_N__-->`，仅用于客户端首次挂载时定位块位置。
+export const BLOCK_ANCHOR_PATTERN = /^__LANIA_SLOT_\d+__$/;
 export const BOUNDARY_MARKER_PATTERN = /^__LANIA_BOUNDARY_([^_]+)_(START|END)__(?::([^:]+)(?::([\s\S]+))?)?$/;
 export const TELEPORT_CONTAINER_PATTERN = /^__LANIA_TELEPORT_CONTAINER_(\d+)_(START|END)__(?::([\s\S]+))?$/;
 export const SUSPENSE_PATCH_PATTERN = /^__LANIA_SUSPENSE_PATCH_([^_]+)_(START|END)__(?::([\s\S]+))?$/;

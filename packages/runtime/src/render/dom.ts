@@ -14,6 +14,7 @@
  * 后续 slot 挂载、文本接管、boundary 接管都依赖这里给出的稳定节点定位结果。
  */
 import {
+  BLOCK_ANCHOR_PATTERN,
   BOUNDARY_MARKER_PATTERN,
   TELEPORT_CONTAINER_PATTERN,
   parseBoundaryMarker,
@@ -221,6 +222,18 @@ const getLogicalChildNode = (
 
       const marker = parseSlotMarker(candidate.data);
       const record = marker ? hydrationSlots.get(marker.index) : undefined;
+
+      // 编译期块锚点是 `<!--__LANIA_SLOT_N__-->`（没有 START/END 后缀），
+      // 它不参与 hydration marker 协议，但在模板坐标系里占一个逻辑位置。
+      if (!marker && BLOCK_ANCHOR_PATTERN.test(candidate.data.trim())) {
+        if (logicalCursor === logicalIndex) {
+          return candidate;
+        }
+
+        logicalCursor += 1;
+        cursor += 1;
+        continue;
+      }
 
       if (marker?.position === 'start' && record?.start === candidate) {
         if (logicalCursor === logicalIndex) {

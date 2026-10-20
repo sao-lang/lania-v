@@ -80,18 +80,9 @@ export const rebuildRenderPlan = (nodes: TemplateIRNode[]) => {
 
         if (node.type === 'IfIR') {
           // 条件块需要保留主模板、fallback 模板及其子树绑定，便于后续整块切换。
-          conditionBindings.push({
-            slotIndex: node.slotIndex,
-            path: node.path,
-            expression: node.expression,
-            mode: node.mode,
-            templateHtml: node.templateHtml,
-            hoistName: node.hoistName,
-            children: node.children,
-            fallbackTemplateHtml: node.fallbackTemplateHtml,
-            fallbackHoistName: node.fallbackHoistName,
-            fallbackChildren: node.fallbackChildren,
-          });
+          // 块内子树绑定属于块模板的局部坐标系，交由 payload 的 `truthyBindings` /
+          // `falsyBindings` 承载，这里只登记块自身。
+          collectConditionBinding(node);
           return `<!--__LANIA_SLOT_${node.slotIndex}__-->`;
         }
 
@@ -173,8 +164,84 @@ export const rebuildRenderPlan = (nodes: TemplateIRNode[]) => {
       .join('');
   };
 
+  // 外层 `IfIR` 的 templateHtml 已经包含嵌套 block 的占位锚点，
+  // 这里只补充它们的绑定记录，不回填骨架字符串。
+  //
+  // 去重按 slotIndex 进行：`renderNodes` 收集顶层 block，
+  // `collectNestedBindings` 又会在父 block 的 children 里再次遇到同一个节点，
+  // 不去重会生成重复的 hoist 常量声明。
+  const collectedSlotIndices = new Set<number>();
+  const collectConditionBinding = (node: Extract<TemplateIRNode, { type: 'IfIR' }>): void => {
+    if (collectedSlotIndices.has(node.slotIndex)) {
+      return;
+    }
+    collectedSlotIndices.add(node.slotIndex);
+    conditionBindings.push({
+      slotIndex: node.slotIndex,
+      path: node.path,
+      expression: node.expression,
+      mode: node.mode,
+      templateHtml: node.templateHtml,
+      hoistName: node.hoistName,
+      children: node.children,
+      fallbackTemplateHtml: node.fallbackTemplateHtml,
+      fallbackHoistName: node.fallbackHoistName,
+      fallbackChildren: node.fallbackChildren,
+    });
+  };
+
+  // 仅补齐“没有 block 包裹但确实存在于根模板里”的绑定。
+  // 块（IfIR/ListIR/DynamicIR/BoundaryIR/TransitionIR/KeepAliveIR/TeleportIR）内部的节点
+  // 使用块自己的局部坐标系（path 从 0 开始），它们由块 payload 的 `bindings` 承载，
+  // 绝不能登记成根级绑定，否则 `resolveTextSlotNode` 会按错误的 path 找节点。
+  function collectNestedBindings(currentNodes: TemplateIRNode[]): void {
+    currentNodes.forEach((node) => {
+      if (node.type === 'IfIR') {
+        // 块自身已由 `renderNodes`（顶层）或父块 payload（嵌套）登记，这里不再重复登记，
+        // 也不下钻其子树：子树绑定属于块模板的局部坐标系。
+        return;
+      }
+
+      if (node.type === 'ListIR') {
+        return;
+      }
+
+      if (node.type === 'ExpressionIR') {
+        if (!collectedSlotIndices.has(node.slotIndex)) {
+          collectedSlotIndices.add(node.slotIndex);
+          textBindings.push({
+            slotIndex: node.slotIndex,
+            path: node.path,
+            expression: node.expression,
+          });
+        }
+        return;
+      }
+
+      if ('children' in node && Array.isArray(node.children)) {
+        collectNestedBindings(node.children);
+      }
+    });
+  }
+
+  // 先渲染骨架（同时收集顶层绑定），再补齐嵌套 block 的绑定。
+  const staticHtml = renderNodes(nodes);
+  // renderNodes 已经登记过顶层绑定，这里先同步一次已用 slot 集合。
+  [
+    ...textBindings,
+    ...componentBindings,
+    ...listBindings,
+    ...conditionBindings,
+    ...dynamicBindings,
+    ...boundaryBindings,
+    ...transitionBindings,
+    ...keepAliveBindings,
+    ...teleportBindings,
+  ].forEach((binding) => collectedSlotIndices.add(binding.slotIndex));
+  collectNestedBindings(nodes);
+
   return {
-    staticHtml: renderNodes(nodes),
+    staticHtml,
     textBindings,
     componentBindings,
     listBindings,
