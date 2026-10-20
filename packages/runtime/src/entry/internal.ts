@@ -36,3 +36,6 @@ export {
   withRuntimeScope,
   withDomHost,
 } from '../component/host/function-component';
+
+// 编译器产物用它把 `store.path` 的精确订阅直接挂到 updater 的 deps 上。
+export { getStorePathSignal } from '../reactivity/store';

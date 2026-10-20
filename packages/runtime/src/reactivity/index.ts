@@ -27,5 +27,6 @@ export {
   type Signal,
   type SignalSetter,
   type SignalSource,
+  type WatchSource,
   type WatchStopHandle,
 } from './signal';

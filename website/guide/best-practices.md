@@ -274,7 +274,7 @@ style={{ width: width() }}          // 会输出 width: 300;，无效
 
 - 把读取显式提取为 `createMemo()`；
 - 把 Store 路径写入改为稳定路径；
-- 用 `getStorePathSignal()` 手动订阅。
+- 用 `watch(() => store.path, cb)` 手动订阅路径。
 
 ## 性能
 

@@ -342,7 +342,7 @@ interface WatchOptions {
 }
 
 watch<T, Immediate extends boolean = false>(
-  source: SignalSource<T>,
+  source: WatchSource<T>,
   callback: (
     current: T,
     previous: Immediate extends true ? T | undefined : T
@@ -352,7 +352,7 @@ watch<T, Immediate extends boolean = false>(
 ): WatchStopHandle
 
 watch<T extends readonly unknown[], Immediate extends boolean = false>(
-  sources: { [K in keyof T]: SignalSource<T[K]> },
+  sources: { [K in keyof T]: WatchSource<T[K]> },
   callback: (
     current: T,
     previous: Immediate extends true ? T | undefined : T
@@ -362,9 +362,16 @@ watch<T extends readonly unknown[], Immediate extends boolean = false>(
 ): WatchStopHandle
 ```
 
+`WatchSource<T>` 可以是 signal，也可以是返回值的 getter：
+
 ```ts
 const stop = watch(count, (current, previous) => {
   console.log(`${previous} -> ${current}`);
+});
+
+// getter：自动追踪内部读到的 signal 与 store 路径
+watch(() => form.status, (current, previous) => {
+  console.log(previous, '->', current);
 });
 ```
 
@@ -375,7 +382,7 @@ watch(count, (current, previous) => {
   console.log(current, previous);
 }, { immediate: true });
 
-watch(form, (current, previous) => {
+watch(() => ({ status: form.status, account: form.account }), (current, previous) => {
   console.log(current, previous);
 }, { deep: true });
 ```
@@ -387,7 +394,7 @@ watch(form, (current, previous) => {
 | `immediate` | 创建时同步执行一次回调，首次 `previous` 为 `undefined` |
 | `deep` | 按值比较新旧快照，内容没变时不回调；`previous` 是上一次快照的深拷贝 |
 
-`deep` 的比较范围限于普通对象与数组，DOM 节点、类实例按引用比较。
+getter 源默认按值比较（`Object.is` + 浅层结构比较），所以 `form.status` 写入相同值不会触发回调。`deep` 的比较范围限于普通对象与数组，DOM 节点、类实例按引用比较。
 
 与 `createEffect()` 的区别：
 
@@ -792,26 +799,31 @@ produce(state, (draft) => ({
 - 回调必须有返回值，返回值作为新状态整体写回；
 - 需要局部更新时优先用 `state.set('path.to.value', next)`。
 
-### `getStorePathSignal()`
+### 按路径订阅
+
+Store 的读取本身就是细粒度的：读到哪条路径，就只订阅那条路径。
 
 ```ts
-getStorePathSignal(
-  store: unknown,
-  path: readonly StorePathSegment[]
-): Signal<number>
+const state = createStore({ user: { name: 'Ada' }, count: 0 });
+
+// 只在 state.user.name 变化时触发
+watch(
+  () => state.user.name,
+  (current, previous) => {
+    console.log(previous, '->', current);
+  }
+);
 ```
 
-把某条路径的版本 Signal 拿出来：
+同样的读取放进 `createEffect` / `createMemo` 里会自动建立依赖，不需要额外的路径 API：
 
 ```ts
-const nameSignal = getStorePathSignal(state, ['user', 'name']);
-
 createEffect(() => {
-  console.log(nameSignal());
+  console.log(state.user.name);
 });
 ```
 
-适合 composable、手动订阅和编译器无法静态分析的场景。
+`watch` 的 getter 形式按值比较：写入相同的值不会触发回调。需要比较整个对象时可加 `{ deep: true }`。
 
 ## Resource
 

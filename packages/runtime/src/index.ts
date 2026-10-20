@@ -43,7 +43,17 @@ export * from './reactivity/owner';
 export * from './reactivity/resource';
 export * from './reactivity/scheduler';
 export * from './reactivity/selector';
-export * from './reactivity/store';
+export {
+  // `getStorePathSignal` 只供编译器产物挂接依赖，不再对外暴露：
+  // 用户侧应写 `watch(() => store.path, cb)`，语义等价且更直观。
+  createStore,
+  produce,
+  type Store,
+  type StorePathSegment,
+  type StorePathUpdater,
+  type StoreSetter,
+  type StoreUpdater,
+} from './reactivity/store';
 export * from './reactivity/transition';
 export * from './render';
 export * from './dev/hmr';
@@ -58,9 +68,9 @@ export type {
 } from './entry/jsx-runtime';
 import {
   watch as reactiveWatch,
-  type SignalSource,
   type WatchCallback,
   type WatchOptions,
+  type WatchSource,
   type WatchStopHandle,
 } from './reactivity/signal';
 export {
@@ -81,22 +91,23 @@ export {
   type SignalSource,
   type WatchCallback,
   type WatchOptions,
+  type WatchSource,
   type WatchStopHandle,
 } from './reactivity/signal';
 export function watch<T, Immediate extends boolean = false>(
-  source: SignalSource<T>,
+  source: WatchSource<T>,
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
   scheduler?: import('./reactivity/scheduler').Scheduler
 ): WatchStopHandle;
 export function watch<T extends readonly unknown[], Immediate extends boolean = false>(
-  sources: { [K in keyof T]: SignalSource<T[K]> },
+  sources: { [K in keyof T]: WatchSource<T[K]> },
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
   scheduler?: import('./reactivity/scheduler').Scheduler
 ): WatchStopHandle;
 export function watch(
-  sourceOrSourceKey: SignalSource<unknown> | readonly SignalSource<unknown>[],
+  sourceOrSourceKey: WatchSource<unknown> | readonly WatchSource<unknown>[],
   callback:
     | ((current: unknown, previous: unknown | undefined) => void)
     | ((current: unknown[], previous: unknown[] | undefined) => void),

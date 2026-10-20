@@ -248,6 +248,15 @@ const applyPathValue = (
 
 export type SignalSource<T> = Signal<T> | ReadonlySignal<T>;
 
+/**
+ * `watch` 接受的源：既可以是 signal 对象，也可以是返回值的 getter。
+ *
+ * getter 形式（`watch(() => store.status, cb)`）会在每次重算时重新收集依赖，
+ * 因此可以自然表达 `store.a` 这种路径读取，不需要额外的路径 API。
+ */
+export type WatchSource<T> = SignalSource<T> | (() => T);
+
+
 export type ReadonlySignal<T> = {
   readonly value: T;
   peek: () => T;
@@ -802,28 +811,123 @@ const cloneWatchSnapshot = <T>(value: T): T => {
   return value;
 };
 
+const isSignalLike = (value: unknown): value is ReadonlySignal<unknown> => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  // `updaters` 实际是 CompactJobSet 这类自定义集合，不能用 `instanceof Set` 判定。
+  const updaters = (value as { updaters?: unknown }).updaters;
+  return (
+    typeof (value as ReadonlySignal<unknown>).peek === 'function' &&
+    typeof updaters === 'object' &&
+    updaters !== null &&
+    typeof (updaters as Set<unknown>).add === 'function' &&
+    typeof (updaters as Set<unknown>).delete === 'function'
+  );
+};
+
+/**
+ * 把 `watch` 的源归一成“读取 + 订阅”两件事。
+ *
+ * signal 源直接读 `.value` / `.peek`；getter 源则需要在追踪上下文中执行一次，
+ * 才能把 `store.status` 这类路径读取转换为具体的 signal 依赖。
+ */
+interface NormalizedWatchSource {
+  peek: () => unknown;
+  subscribe: (job: Job) => void;
+  unsubscribe: (job: Job) => void;
+  /** getter 源按值去重；signal 源沿用 signal 自身的相等性语义。 */
+  valueCompared: boolean;
+}
+
+const normalizeWatchSource = (source: WatchSource<unknown>): NormalizedWatchSource => {
+  if (isSignalLike(source)) {
+    const signal = source as Signal<unknown>;
+    return {
+      peek: () => signal.peek(),
+      subscribe: (job) => signal.updaters.add(job),
+      unsubscribe: (job) => signal.updaters.delete(job),
+      valueCompared: false,
+    };
+  }
+
+  if (typeof source !== 'function') {
+    throw new TypeError('watch() expects a signal or a getter function as its source.');
+  }
+
+  const getter = source as () => unknown;
+  // getter 的依赖集合在每次重算时都可能变化（例如三元分支切换），
+  // 因此 getter 每次取值都用 trackSignals 重新收集，再同步订阅关系。
+  let trackedDeps = new Set<Signal<any>>();
+  let subscribedJob: Job | null = null;
+
+  const syncSubscriptions = (deps: Set<Signal<any>>): void => {
+    if (!subscribedJob) {
+      trackedDeps = deps;
+      return;
+    }
+
+    for (const dep of trackedDeps) {
+      if (!deps.has(dep)) {
+        dep.updaters.delete(subscribedJob);
+      }
+    }
+    for (const dep of deps) {
+      if (!trackedDeps.has(dep)) {
+        dep.updaters.add(subscribedJob);
+      }
+    }
+    trackedDeps = deps;
+  };
+
+  return {
+    peek: () =>
+      untrack(() => {
+        // 首次取值发生在订阅前，用 untrack 避免污染外层正在进行的依赖收集。
+        const { value, deps } = trackSignals(getter);
+        syncSubscriptions(deps);
+        return value;
+      }),
+    subscribe: (job) => {
+      subscribedJob = job;
+      for (const dep of trackedDeps) {
+        dep.updaters.add(job);
+      }
+    },
+    unsubscribe: (job) => {
+      for (const dep of trackedDeps) {
+        dep.updaters.delete(job);
+      }
+      subscribedJob = null;
+    },
+    valueCompared: true,
+  };
+};
+
 export function watch<T, Immediate extends boolean = false>(
-  source: SignalSource<T>,
+  source: WatchSource<T>,
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle;
 export function watch<T extends readonly unknown[], Immediate extends boolean = false>(
-  sources: { [K in keyof T]: SignalSource<T[K]> },
+  sources: { [K in keyof T]: WatchSource<T[K]> },
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle;
 export function watch<T>(
-  source: SignalSource<T> | readonly SignalSource<unknown>[],
+  source: WatchSource<T> | readonly WatchSource<unknown>[],
   callback:
     | ((current: T, previous: T | undefined) => void)
     | ((current: T[], previous: T[] | undefined) => void),
   options: WatchOptions = {},
   scheduler: Scheduler = defaultScheduler
 ): WatchStopHandle {
-  const sources = Array.isArray(source) ? source : [source];
+  const rawSources = Array.isArray(source) ? source : [source];
   const isMultiSource = Array.isArray(source);
+  const sources = rawSources.map((entry) => normalizeWatchSource(entry as WatchSource<unknown>));
   const { immediate = false, deep = false } = options;
   const takeSnapshot = (value: unknown): unknown =>
     deep ? cloneWatchSnapshot(value) : value;
@@ -850,6 +954,25 @@ export function watch<T>(
     // 避免对象型 signal 的 `.value` 返回路径视图造成“永远不相等”的误判。
     const nextValues = sources.map((entry) => entry.peek());
 
+    if (sources.some((entry) => entry.valueCompared)) {
+      // getter 源按「值」语义去重：store 写入相同值时版本号仍会自增，
+      // 若不去重会把无变化的通知也当作一次变更回调出去。
+      // 返回新对象字面量的 getter 用 `Object.is` 永远不相等，这里退回浅层结构化比较。
+      const unchanged = nextValues.every((next, index) => {
+        if (!sources[index]!.valueCompared) {
+          return true;
+        }
+
+        const previous = previousValues[index];
+        return Object.is(next, previous) || isDeepEqual(next, previous);
+      });
+
+      if (unchanged) {
+        previousValues = nextValues.map(takeSnapshot);
+        return;
+      }
+    }
+
     if (deep && previousValues.every((previous, index) => isDeepEqual(nextValues[index], previous))) {
       // 内容没变时不回调，但仍然保留最新引用，避免用户原地改值后快照过期。
       previousValues = nextValues.map(takeSnapshot);
@@ -867,7 +990,7 @@ export function watch<T>(
   };
 
   for (const entry of sources) {
-    entry.updaters.add(scheduleWatch);
+    entry.subscribe(scheduleWatch);
   }
 
   if (immediate) {
@@ -877,7 +1000,7 @@ export function watch<T>(
 
   return () => {
     for (const entry of sources) {
-      entry.updaters.delete(scheduleWatch);
+      entry.unsubscribe(scheduleWatch);
     }
   };
 }

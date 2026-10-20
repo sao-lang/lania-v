@@ -46,7 +46,6 @@ const TSX_RUNTIME_BINDINGS = [
   'untrack',
   'createDeferred',
   'createStore',
-  'getStorePathSignal',
   'createResource',
   'lazy',
   'onMount',
@@ -142,6 +141,9 @@ const TSX_ADVANCED_RUNTIME_BINDINGS = [
   'linkTrackedSignals',
   'isTracking',
 ] as const;
+
+// 编译器产物专用的内部能力：不走公共 API，避免把实现细节写进用户可见的导入面。
+const TSX_INTERNAL_RUNTIME_BINDINGS = ['getStorePathSignal'] as const;
 
 // 这一小步属于生成结果收口，不改业务语义，只修正打印器对对象字面量箭头函数的包裹形式。
 const normalizeModelObjectUpdaters = (code: string): string => {
@@ -248,6 +250,10 @@ const createLaniaTsxModuleCode = (
   advancedBindings: readonly string[] = TSX_ADVANCED_RUNTIME_BINDINGS
 ): string => {
   const exportedNames = classNames.length > 0 ? classNames : [className];
+  // 仅当生成代码真的引用了内部能力时才注入对应 import，避免每个产物都多一条无用依赖。
+  const internalBindings = TSX_INTERNAL_RUNTIME_BINDINGS.filter((binding) =>
+    classCode.includes(`${binding}(`)
+  );
 
   return [
     createRuntimeBindingBlock('__lania', '@lania-v/runtime', runtimeBindings),
@@ -256,6 +262,9 @@ const createLaniaTsxModuleCode = (
       '@lania-v/runtime/advanced',
       advancedBindings
     ),
+    ...(internalBindings.length > 0
+      ? [createRuntimeBindingBlock('__laniaInternal', '@lania-v/runtime/internal', internalBindings)]
+      : []),
     '',
     classCode,
     '',

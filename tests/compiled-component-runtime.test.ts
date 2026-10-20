@@ -5,6 +5,7 @@ import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
 import * as advanced from '@lania-v/runtime/advanced';
+import * as runtimeInternal from '@lania-v/runtime/internal';
 import { mountComponent } from '@lania-v/runtime';
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
@@ -37,6 +38,9 @@ const loadComponent = (source: string): any => {
     }
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternal;
     }
     throw new Error(`Unexpected import: ${id}`);
   };

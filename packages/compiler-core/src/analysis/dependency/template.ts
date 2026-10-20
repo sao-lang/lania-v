@@ -61,8 +61,12 @@ export const collectTemplateSignalDependencies = (
           );
         case 'BoundaryIR':
         case 'TransitionIR':
-          // 这里当前只继续向子树递归，不分析 payload 本身；payload 依赖由其它分析层负责。
-          return collectTemplateSignalDependencies(node.children, analyzeExpression);
+          // payload 表达式本身（如 suspense 的 fallback 判定、transition 的 name）同样读取响应式值，
+          // 只递归子树会漏掉这部分依赖，导致 payload 变化后块不更新。
+          return mergeDependencies(
+            analyzeExpression(node.payloadExpression),
+            collectTemplateSignalDependencies(node.children, analyzeExpression)
+          );
         default:
           return [];
       }

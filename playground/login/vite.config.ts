@@ -30,6 +30,12 @@ export default defineConfig({
         ),
       },
       {
+        find: '@lania-v/runtime/internal',
+        replacement: fileURLToPath(
+          new URL('../../packages/runtime/src/entry/internal.ts', import.meta.url)
+        ),
+      },
+      {
         find: '@lania-v/runtime',
         replacement: fileURLToPath(
           new URL('../../packages/runtime/src', import.meta.url)

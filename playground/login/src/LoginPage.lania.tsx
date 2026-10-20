@@ -2,7 +2,6 @@ import {
   createMemo,
   createStore,
   defineComponent,
-  getStorePathSignal,
   onCleanup,
   onMount,
   useFormValue,
@@ -206,10 +205,14 @@ export default defineComponent(function LoginPage() {
     console.log('[login] mounted', { authenticated: session.current !== null });
   });
 
-  // 只在状态真正变化时打点，避免订阅整份 store 后每次输入都重复输出。
-  watch(getStorePathSignal(form, ['status']), (current, previous) => {
-    console.log('[login] status', previous, '->', current);
-  });
+  // 只在状态真正变化时打点：getter 形式的 watch 会精确追踪 form.status 这一条路径，
+  // 写输入框（其它字段）不会触发。
+  watch(
+    () => form.status,
+    (current, previous) => {
+      console.log('[login] status', previous, '->', current);
+    }
+  );
 
   onCleanup(() => {
     console.log('[login] unmounted');

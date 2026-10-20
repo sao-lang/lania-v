@@ -47,7 +47,7 @@
 | `startTransition()` | 低优先级更新，可被打断 | [响应式基础](/guide/reactivity#低优先级更新-starttransition) |
 | `createStore()` | 基于 Signal 的深层对象，支持路径级订阅 | [状态管理](/guide/state) |
 | `produce()` | 用纯函数计算下一个 Store 状态 | [状态管理](/guide/state#produce) |
-| `getStorePathSignal()` | 拿到某个稳定路径的只读 Signal | [状态管理](/guide/state#getstorepathsignal) |
+| `watch()` getter 源 | 按路径观察 Store 变化 | [状态管理](/guide/state#按路径订阅) |
 | `createSelector()` | 从列表里选出单个匹配项，避免全量失效 | [状态管理](/guide/state#createselector) |
 | `createResource()` | 异步数据源，带 pending / error / refetch | [异步与边界](/guide/async-and-boundaries#createresource) |
 | Owner / Scope | 作用域清理，组件卸载时统一释放 effect | [响应式 API](/api/reactivity#owner-scope) |

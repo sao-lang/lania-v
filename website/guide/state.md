@@ -211,24 +211,35 @@ produce(state, (draft) => ({
 - 数据包含函数 / 类实例等不可克隆值时退回浅拷贝；
 - 退回浅拷贝时，深层修改可能不会按路径精确通知，建议改用路径写法。
 
-## `getStorePathSignal()`
+## 按路径订阅
 
-如果需要把某条路径当作独立 Signal 使用：
+Store 的读取本身就是路径级的：读到哪条路径，就只订阅那条路径。
 
 ```ts
-import { createStore, getStorePathSignal, createEffect } from '@lania-v/runtime';
+import { createStore, createEffect, watch } from '@lania-v/runtime';
 
-const state = createStore({ user: { name: 'Ada' } });
-const nameSignal = getStorePathSignal(state, ['user', 'name']);
+const state = createStore({ user: { name: 'Ada' }, count: 0 });
 
 createEffect(() => {
-  console.log(nameSignal());
+  console.log(state.user.name);
 });
 
 state.set('user.name', 'Grace'); // effect 触发
+state.set('count', 1);           // 不触发
 ```
 
-这在编写 composable 或需要手动订阅路径时很有用。
+需要新旧值时用 `watch` 的 getter 形式：
+
+```ts
+watch(
+  () => state.user.name,
+  (current, previous) => {
+    console.log(previous, '->', current);
+  }
+);
+```
+
+这在编写 composable 或需要手动订阅路径时很有用，不需要额外的路径 API。
 
 ## `createSelector()`
 
