@@ -197,8 +197,8 @@ buttonRef?.focus();
 
 这 4 个 API 面向 `FC / TSX` 主路径，提供函数组件内部更清晰的访问面：
 
-- `bindProps(props)`：得到普通属性视图
-- `bindHandlers(props)`：得到父组件传下来的回调型输入视图
+- `bindProps()`：得到当前组件的普通属性视图
+- `bindHandlers()`：得到父组件传下来的回调型输入视图
 - `bindSlots(props?)`：读取默认槽和具名槽；编译后从 `props.children` 读取
 - `createExpose(props, exposed)`：显式定义函数组件暴露给父组件 ref 的公开面
 
@@ -219,8 +219,9 @@ type PanelProps = {
 };
 
 const Panel = defineComponent((props: PanelProps) => {
-  const p = bindProps(props);
-  const h = bindHandlers(props);
+  // 无需把 props 传进来：无参调用即可拿到当前组件的属性与回调
+  const p = bindProps<PanelProps>();
+  const h = bindHandlers<PanelProps>();
   const slots = bindSlots();
   const inputRef = createRef<HTMLInputElement>();
 
@@ -250,6 +251,9 @@ const Panel = defineComponent((props: PanelProps) => {
 说明：
 
 - `bindProps()` 和 `bindHandlers()` 不替代原始 `props`，只是补一个分流后的访问视图。
+- 两个 API 都不接受参数：编译产物会改写成内部工厂
+  `createBoundProps(this.props)` / `createBoundHandlers(this.props)`，
+  未编译的函数组件由 JSX 运行时提供当前 props；组件上下文之外调用会直接报错。
 - `bindHandlers()` 和 `emit()` 不是一回事：前者是父传回调输入，后者是组件对外事件输出。
 - `bindSlots()` 覆盖默认槽、具名槽和 fallback；`render()` / `renderDefault()`
   支持额外参数，会透传给函数型 slot（scoped slot 运行时基础）。

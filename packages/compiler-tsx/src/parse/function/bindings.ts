@@ -191,6 +191,25 @@ const createBindingTransformer = (
           );
         }
 
+        // `bindProps()` / `bindHandlers()` 对外只保留无参签名，编译产物换用内部工厂，
+        // 由编译器把构造期 props 快照传进去。
+        if (
+          (node.expression.text === 'bindProps' ||
+            node.expression.text === 'bindHandlers') &&
+          bindings.propAlias
+        ) {
+          return ts.factory.updateCallExpression(
+            node,
+            ts.factory.createIdentifier(
+              node.expression.text === 'bindProps'
+                ? 'createBoundProps'
+                : 'createBoundHandlers'
+            ),
+            node.typeArguments,
+            [ts.factory.createPropertyAccessExpression(ts.factory.createThis(), 'props')]
+          );
+        }
+
         if (bindings.computedNames.has(node.expression.text)) {
           // computed 在实例模型里是 memo 字段，读取与 signal 一样保留调用括号。
           return ts.factory.updateCallExpression(
@@ -390,7 +409,7 @@ const createBindingTransformer = (
         );
       }
 
-      // 整体引用 props（如 `bindProps(props)`、`createExpose(props, ...)`）时，
+      // 整体引用 props（如 `createExpose(props, ...)`）时，
       // 实例模型里没有原始形参，改用构造期由宿主注入的 `this.props` 快照。
       if (
         ts.isIdentifier(node) &&

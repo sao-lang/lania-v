@@ -13,7 +13,7 @@ import { SlotTable } from '../../dom/slot-table';
 import { adoptStyles, registerAppliedStyleTexts, type StaticStyles } from '../styles';
 import type { Slot } from '../../dom/slots';
 import type { Updater } from '../../dom/updaters';
-import { withContextHost } from './function-component';
+import { withComponentProps, withContextHost } from './function-component';
 import { attachDeclarativeShadowRoot } from '../../render/dsd';
 
 /**
@@ -337,7 +337,18 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     const setup = (this as { __laniaSetup?: () => void }).__laniaSetup;
 
     if (typeof setup === 'function') {
-      setup.call(this);
+      // setup 重跑会重建实例 props，用 getter 保证 `bindProps()` / `bindHandlers()`
+      // 在本次重跑中读到的是最新快照。
+      const props = (this as { props?: object }).props;
+
+      if (props) {
+        withComponentProps(
+          () => (this as { props?: object }).props ?? props,
+          () => setup.call(this)
+        );
+      } else {
+        setup.call(this);
+      }
     }
 
     const root = this.renderRoot as Node & { replaceChildren?: () => void };

@@ -29,6 +29,8 @@ export {
   bindHandlers,
   bindProps,
   bindSlots,
+  createBoundHandlers,
+  createBoundProps,
   createExpose,
   createComponentElement,
   createComponentPropsSnapshot,

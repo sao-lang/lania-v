@@ -440,14 +440,15 @@ describe('function component runtime helpers', () => {
   });
 
   it('splits function component props and handlers into dedicated views', () => {
-    const Child = defineComponent((props: {
+    type PanelProps = {
       title: string;
       count: number;
       onToggle?: () => void;
       onSubmit?: { handler: () => void };
-    }) => {
-      const p = bindProps(props);
-      const h = bindHandlers(props);
+    };
+    const Child = defineComponent((_props: PanelProps) => {
+      const p = bindProps<PanelProps>();
+      const h = bindHandlers<PanelProps>();
 
       return {
         propKeys: Object.keys(p).sort(),
@@ -484,6 +485,43 @@ describe('function component runtime helpers', () => {
     expect(first.onToggle).toBe(onToggle);
     expect(first.onSubmit).toBe(onSubmit);
     expect(first.hasHandlerInProps).toBe(false);
+  });
+
+  it('binds props and handlers without passing props explicitly', () => {
+    type ChildProps = {
+      title: string;
+      onPick?: () => void;
+    };
+    const Child = defineComponent((_props: ChildProps) => {
+      const p = bindProps<ChildProps>();
+      const h = bindHandlers<ChildProps>();
+
+      return {
+        propKeys: Object.keys(p).sort(),
+        handlerKeys: Object.keys(h).sort(),
+        title: p.title,
+        onPick: h.onPick,
+      } as const;
+    });
+    const onPick = vi.fn();
+
+    const result = jsx(Child, { title: 'Ada', onPick }) as {
+      propKeys: string[];
+      handlerKeys: string[];
+      title: string;
+      onPick?: () => void;
+    };
+
+    expect(result.propKeys).toEqual(['key', 'title']);
+    expect(result.handlerKeys).toEqual(['onPick']);
+    expect(result.title).toBe('Ada');
+    result.onPick?.();
+    expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a clear error when bind helpers run outside a component context', () => {
+    expect(() => bindProps()).toThrowError(/while a component is being set up/);
+    expect(() => bindHandlers()).toThrowError(/while a component is being set up/);
   });
 
   it('reads default and named slots through bindSlots', () => {

@@ -204,7 +204,7 @@ const createComponentDeclaration = (
 
   // 组件字段初始化发生在构造期，此时宿主还没机会逐项写 props。
   // 这里注入一个最靠前的 `props` 字段，承接构造期注入的 props 快照，
-  // 让 `bindProps(props)` 这类整体引用在编译产物里仍然可用。
+  // 让 `createExpose(props, ...)` 这类整体引用在编译产物里仍然可用。
   const setupBindings = functionProps.propAlias
     ? [
         {

@@ -304,13 +304,13 @@ LazyPanel.resolved(); // 组件或 null
 ### `bindProps()`
 
 ```ts
-bindProps<T extends object>(props: T): BoundProps<T>
+bindProps<T extends object>(): BoundProps<T>
 ```
 
-返回**排除了 `onXxx` handler** 的只读视图。
+返回**排除了 `onXxx` handler** 的只读视图，自动取当前组件的 props，不接受参数。
 
 ```tsx
-const p = bindProps(props);
+const p = bindProps<PanelProps>();
 
 return <h1>{p.title}</h1>;
 ```
@@ -320,18 +320,20 @@ return <h1>{p.title}</h1>;
 - 不复制原对象；
 - 属性值是 getter，始终回读原始 props；
 - 视图对象只创建一次；
-- 原始 `props` 仍然可用。
+- 原始 `props` 仍然可用；
+- 编译产物会改写成内部工厂 `createBoundProps(this.props)`，
+  函数组件则由 JSX 运行时提供当前 props。
 
 ### `bindHandlers()`
 
 ```ts
-bindHandlers<T extends object>(props: T): BoundHandlers<T>
+bindHandlers<T extends object>(): BoundHandlers<T>
 ```
 
-返回只包含 handler 的只读视图：
+返回只包含 handler 的只读视图，同样不接受参数：
 
 ```tsx
-const h = bindHandlers(props);
+const h = bindHandlers<PanelProps>();
 
 return <button onClick={() => h.onToggle?.()}>toggle</button>;
 ```

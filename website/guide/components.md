@@ -467,14 +467,16 @@ panelRef?.focusInput();
 
 ## `bindProps()` 与 `bindHandlers()`
 
-普通属性与回调属性在同一个 `props` 上。`bindProps()` / `bindHandlers()` 提供分流视图：
+普通属性与回调属性在同一个 `props` 上。`bindProps()` / `bindHandlers()` 提供分流视图，
+**不需要把 `props` 传进去**，直接调用即可拿到当前组件的属性与回调：
 
 ```tsx
 import { bindHandlers, bindProps, defineComponent } from '@lania-v/runtime';
 
-export default defineComponent(function Panel(props: PanelProps) {
-  const p = bindProps(props);   // 只有普通属性
-  const h = bindHandlers(props); // 只有 onXxx 回调
+export default defineComponent(function Panel(_props: PanelProps) {
+  // 形参仍需保留，编译器据此推导 prop 名单；但不用再传给 bind 辅助函数。
+  const p = bindProps<PanelProps>();   // 只有普通属性
+  const h = bindHandlers<PanelProps>(); // 只有 onXxx 回调
 
   return (
     <button onClick={() => h.onToggle?.()}>
@@ -486,6 +488,11 @@ export default defineComponent(function Panel(props: PanelProps) {
 
 注意：
 
+- 两个 API 都不接受参数，编译产物会改写成内部工厂
+  `createBoundProps(this.props)` / `createBoundHandlers(this.props)`，
+  因此手动创建元素、SSR 升级与 HMR 重跑 `setup` 都能拿到实例快照；
+- 未编译的函数组件走 JSX 运行时提供的当前 props 上下文；
+- 在组件上下文之外调用会直接报错；
 - 视图是只读的，不会复制 `props`；
 - `bindHandlers()` 是**父传回调输入**，不是 `emit()`；
 - handler 的识别优先使用编译期写入的 `handlerKeys`，缺失时才按 `onXxx` 推断。

@@ -62,6 +62,8 @@ const TSX_RUNTIME_BINDINGS = [
   'provideContext',
   'getComponentCreationProps',
   'createComponentPropsSnapshot',
+  'createBoundProps',
+  'createBoundHandlers',
   'parsePropAttributeValue',
   'reflectPropAttribute',
   'validatePropValue',

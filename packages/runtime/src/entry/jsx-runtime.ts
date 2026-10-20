@@ -21,6 +21,7 @@ import {
   createComponentElement,
   isComponentElementConstructor,
   registerFunctionComponentRenderResult,
+  withComponentProps,
   withRuntimeScope,
 } from '../component/host/function-component';
 import {
@@ -709,7 +710,8 @@ export const jsx = (
       slotContent: functionProps.children,
       functionComponentCleanups: cleanups,
     },
-    () => type(functionProps)
+    // 组件体内可以无参调用 `bindProps()` / `bindHandlers()`，这里把本次入参设为当前上下文。
+    () => withComponentProps(functionProps, () => type(functionProps))
   );
   registerFunctionComponentRenderResult(result, cleanups);
   return result;

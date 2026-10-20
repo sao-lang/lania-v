@@ -32,8 +32,8 @@ type BindingPanelProps = {
 };
 
 const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelProps) {
-  const p = bindProps(props);
-  const h = bindHandlers(props);
+  const p = bindProps<BindingPanelProps>();
+  const h = bindHandlers<BindingPanelProps>();
   const slots = bindSlots();
   const inputRef = createRef<HTMLInputElement>();
   // 编译组件里本地引用会被改写成 `this.xxx`，因此这里用箭头函数保留组件 `this`。
@@ -64,14 +64,14 @@ const BindingPanel = defineComponent(function BindingPanel(props: BindingPanelPr
       }}
     >
       <div>
-        <p className="summary">bindProps(props)</p>
+        <p className="summary">bindProps()</p>
         <p className="empty">
           keys: {Object.keys(p).join(', ') || '(empty)'}
         </p>
       </div>
 
       <div>
-        <p className="summary">bindHandlers(props)</p>
+        <p className="summary">bindHandlers()</p>
         <p className="empty">
           keys: {Object.keys(h).join(', ') || '(empty)'}
         </p>

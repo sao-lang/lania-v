@@ -152,8 +152,50 @@ type FunctionComponentBindingState = {
   handlersView?: object;
 };
 
+type ComponentPropsContext = {
+  /** 构造期直接持有 props；实例快照生成后会原地替换。 */
+  props?: object;
+  /** 延迟读取：HMR 重跑 setup 时实例 props 会被整体重建。 */
+  resolve?: () => object;
+};
+
 const FUNCTION_COMPONENT_BINDING_METADATA = Symbol('lania.function-component.binding-metadata');
 const functionComponentBindingStates = new WeakMap<object, FunctionComponentBindingState>();
+
+// `bindProps()` / `bindHandlers()` 无参调用时从这里取当前组件的 props。
+// 函数组件由 JSX 入口在调用前入栈，编译产物由编译器补 `this.props`，
+// 构造期与 HMR 重挂载也会各自提供一个上下文。
+const componentPropsContextStack: ComponentPropsContext[] = [];
+
+const readComponentPropsContext = (context: ComponentPropsContext): object | null => {
+  return (context.resolve ? context.resolve() : context.props) ?? null;
+};
+
+/**
+ * 在指定 props 上下文中执行 `run()`。
+ *
+ * 传函数时按调用时刻取值，适合实例 props 可能被重建的场景（HMR）。
+ */
+export const withComponentProps = <T>(source: object | (() => object), run: () => T): T => {
+  const context: ComponentPropsContext =
+    typeof source === 'function'
+      ? { resolve: source as () => object }
+      : { props: source };
+
+  componentPropsContextStack.push(context);
+
+  try {
+    return run();
+  } finally {
+    componentPropsContextStack.pop();
+  }
+};
+
+const getCurrentComponentProps = (): object | null => {
+  const context = componentPropsContextStack[componentPropsContextStack.length - 1];
+  return context ? readComponentPropsContext(context) : null;
+};
+
 const renderableCleanupRegistry = new WeakMap<Node, Set<FunctionComponentCleanup>>();
 
 // 以“原始 slot anchor 节点”为键记录重定向目标。
@@ -378,7 +420,26 @@ export const registerFunctionComponentRenderResult = (
   });
 };
 
-export const bindProps = <T extends object>(props: T): BoundProps<T> => {
+const requireComponentProps = (apiName: 'bindProps' | 'bindHandlers'): object => {
+  const props = getCurrentComponentProps();
+
+  if (!props) {
+    throw new Error(
+      `${apiName}() must be called while a component is being set up; ` +
+        'no component props context is active.'
+    );
+  }
+
+  return props;
+};
+
+/**
+ * 基于指定 props 创建普通属性视图。
+ *
+ * 编译器会把零参 `bindProps()` 重写成 `createBoundProps(this.props)`，
+ * 业务代码不需要、也不应该直接调用它。
+ */
+export const createBoundProps = <T extends object>(props: T): BoundProps<T> => {
   const state = getFunctionComponentBindingState(props);
   if (!state.propsView) {
     // props/handlers 分成两套只读代理视图：
@@ -391,7 +452,12 @@ export const bindProps = <T extends object>(props: T): BoundProps<T> => {
   return state.propsView as BoundProps<T>;
 };
 
-export const bindHandlers = <T extends object>(props: T): BoundHandlers<T> => {
+/**
+ * 基于指定 props 创建回调视图。
+ *
+ * 同 `createBoundProps()`：编译器内部使用，业务代码请调用 `bindHandlers()`。
+ */
+export const createBoundHandlers = <T extends object>(props: T): BoundHandlers<T> => {
   const state = getFunctionComponentBindingState(props);
   if (!state.handlersView) {
     // handlers 视图与 props 视图共享同一份源对象，只是 key 过滤条件相反。
@@ -399,6 +465,16 @@ export const bindHandlers = <T extends object>(props: T): BoundHandlers<T> => {
   }
 
   return state.handlersView as BoundHandlers<T>;
+};
+
+/** 读取当前组件的普通属性视图（排除了 `onXxx` 回调）。 */
+export const bindProps = <T extends object = Record<string, any>>(): BoundProps<T> => {
+  return createBoundProps(requireComponentProps('bindProps')) as BoundProps<T>;
+};
+
+/** 读取当前组件的回调视图（只包含 `onXxx` 回调）。 */
+export const bindHandlers = <T extends object = Record<string, any>>(): BoundHandlers<T> => {
+  return createBoundHandlers(requireComponentProps('bindHandlers')) as BoundHandlers<T>;
 };
 
 export const bindSlots = (props?: { children?: unknown }): SlotBindings => {
@@ -643,9 +719,25 @@ export const createComponentPropsSnapshot = (
   }
 
   // handler 分流结果挂在原始入参上，快照对象需要继承同一份 metadata。
-  const metadata = getFunctionComponentBindingMetadata(incoming);
+  // 手动创建或 SSR 升级时构造期没有入参，回落到编译期生成的静态 handlerKeys，
+  // 保证仅声明、尚未赋值的回调也能被 bindHandlers() 分到事件视图。
+  const declaredHandlerKeys = (
+    instance.constructor as ComponentElementConstructor
+  ).handlerKeys;
+  const metadata =
+    getFunctionComponentBindingMetadata(incoming) ??
+    (declaredHandlerKeys && declaredHandlerKeys.length > 0
+      ? { handlerKeys: declaredHandlerKeys }
+      : undefined);
   if (metadata) {
     attachFunctionComponentBindingMetadata(snapshot, metadata);
+  }
+
+  // 快照建好后接管当前构造期的 props 上下文，后续字段里的 `bindProps()`
+  // 读到的就是能回读实例 signal 的快照，而不是构造期入参。
+  const context = componentPropsContextStack[componentPropsContextStack.length - 1];
+  if (context && context.props === incoming) {
+    context.props = snapshot;
   }
 
   return snapshot;
@@ -655,11 +747,14 @@ const createElementWithProps = <T>(
   props: Record<string, unknown>,
   create: () => T
 ): T => {
+  const propsContext: ComponentPropsContext = { props };
   componentCreationPropsStack.push(props);
+  componentPropsContextStack.push(propsContext);
 
   try {
     return create();
   } finally {
+    componentPropsContextStack.pop();
     componentCreationPropsStack.pop();
   }
 };

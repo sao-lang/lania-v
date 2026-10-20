@@ -201,9 +201,9 @@ type BindingPanelProps = {
   children?: unknown;
 };
 
-export default defineComponent(function BindingPanel(props: BindingPanelProps) {
-  const p = bindProps(props);
-  const h = bindHandlers(props);
+export default defineComponent(function BindingPanel(_props: BindingPanelProps) {
+  const p = bindProps<BindingPanelProps>();
+  const h = bindHandlers<BindingPanelProps>();
   const slots = bindSlots();
 
   return (
@@ -261,6 +261,62 @@ export default defineComponent(function BindingPanel(props: BindingPanelProps) {
     expect(element.shadowRoot?.querySelector('.footer')?.textContent).toBe(
       'missing'
     );
+
+    element.remove();
+  });
+
+  it('resolves zero-argument bindProps and bindHandlers in compiled components', async () => {
+    const ZeroArgPanel = loadComponent(`
+import { bindHandlers, bindProps, defineComponent } from '@lania-v/runtime';
+
+type ZeroArgPanelProps = {
+  title: string;
+  onToggle?: () => void;
+};
+
+export default defineComponent(function ZeroArgPanel(_props: ZeroArgPanelProps) {
+  const p = bindProps<ZeroArgPanelProps>();
+  const h = bindHandlers<ZeroArgPanelProps>();
+
+  return (
+    <section>
+      <span className="prop">{String(p.title)}</span>
+      <span className="handlers">{Object.keys(h).join(',')}</span>
+      <button className="toggle" onClick={() => h.onToggle?.()}>toggle</button>
+    </section>
+  );
+});
+`);
+
+    // 手动建元素不会有 createComponentElement 的构造期 props，用来验证编译器确实补了 `this.props`。
+    const tagName = runtime.getComponentTagName(ZeroArgPanel);
+    expect(tagName).toBeTruthy();
+    runtime.createComponentElement(ZeroArgPanel);
+
+    let toggles = 0;
+    const element = document.createElement(tagName!) as HTMLElement & {
+      title?: string;
+      onToggle?: () => void;
+    };
+
+    document.body.append(element);
+    element.title = 'A';
+    element.onToggle = () => {
+      toggles += 1;
+    };
+    await flush();
+
+    expect(element.shadowRoot?.querySelector('.prop')?.textContent).toBe('A');
+    expect(element.shadowRoot?.querySelector('.handlers')?.textContent).toBe(
+      'onToggle'
+    );
+
+    (element.shadowRoot?.querySelector('.toggle') as HTMLButtonElement).click();
+    expect(toggles).toBe(1);
+
+    element.title = 'B';
+    await flush();
+    expect(element.shadowRoot?.querySelector('.prop')?.textContent).toBe('B');
 
     element.remove();
   });

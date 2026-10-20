@@ -74,8 +74,8 @@
 这次补的是这 4 个 API：
 
 ```ts
-bindProps(props)
-bindHandlers(props)
+bindProps()
+bindHandlers()
 bindSlots(props?)
 createExpose(props, exposed)
 ```
@@ -91,8 +91,9 @@ type PanelProps = {
 };
 
 const Panel = defineComponent((props: PanelProps) => {
-  const p = bindProps(props);
-  const h = bindHandlers(props);
+  // 不需要把 props 传进来，直接调用即可拿到普通属性与回调
+  const p = bindProps<PanelProps>();
+  const h = bindHandlers<PanelProps>();
   const slots = bindSlots();
 
   createExpose(props, {
@@ -125,15 +126,18 @@ const Panel = defineComponent((props: PanelProps) => {
 建议签名：
 
 ```ts
-export function bindProps<T extends object>(
-  props: T
-): BoundProps<T>;
+export function bindProps<T extends object>(): BoundProps<T>;
 ```
 
 现在的实现语义：
 
-- `bindProps(props)` 返回的是排掉 handler 之后的视图
-- 它和 `bindHandlers(props)` 共享同一份内部分类结果
+- `bindProps()` 返回的是排掉 handler 之后的视图，不接受任何参数
+- 始终读取当前组件的 props：
+  - 未编译的函数组件由 JSX 运行时在调用组件时注入上下文；
+  - 编译产物由编译器改写成内部工厂 `createBoundProps(this.props)`；
+  - 构造期与 HMR 重跑 `setup` 期间也能拿到实例 props 快照。
+- 组件上下文之外调用会直接报错
+- 它和 `bindHandlers()` 共享同一份内部分类结果
 - 现在走的是轻量视图，不是上来就深拷贝
 
 ### 5.2 `bindHandlers()`
@@ -149,14 +153,12 @@ export function bindProps<T extends object>(
 建议签名：
 
 ```ts
-export function bindHandlers<T extends object>(
-  props: T
-): BoundHandlers<T>;
+export function bindHandlers<T extends object>(): BoundHandlers<T>;
 ```
 
 现在的实现语义：
 
-- `bindHandlers(props)` 返回从 `props` 自动分出来的 handler 视图
+- `bindHandlers()` 返回从当前组件 props 自动分出来的 handler 视图，不接受任何参数
 - 这个视图只负责读和调，不负责事件派发
 - 用起来和 `props.onXxx` 没行为差异，只是更好收口
 - `bindHandlers()` 与 `emit()` 不冲突：
@@ -166,7 +168,7 @@ export function bindHandlers<T extends object>(
 推荐主路径还是这样：
 
 ```ts
-const h = bindHandlers(props);
+const h = bindHandlers();
 h.onToggle?.();
 props.onToggle?.();
 ```
@@ -331,9 +333,11 @@ this.emit('submit', '42');
 
 现在的做法：
 
-- 函数组件本来就直接收到 `props`
+- 函数组件本来就直接收到 `props`，runtime 在调用组件前把它设为当前 props 上下文
+- 直接从上下文取 props；编译器会把 `.lania.tsx` 里的调用改写成
+  `createBoundProps(this.props)`，覆盖手动创建 / SSR 升级 / HMR 场景
 - runtime 会基于 `props` 和内部 handler 分类结果建一个视图
-- 整体是纯 runtime 落地
+- 整体是纯 runtime 落地，编译器只补一个实参
 
 ### 8.2 `bindHandlers()`
 
@@ -342,8 +346,10 @@ this.emit('submit', '42');
 现在的做法：
 
 - 父传回调本来就在 `props` 上
-- `bindHandlers()` 直接复用和 `bindProps()` 同一份分流结果
+- `bindHandlers()` 与 `bindProps()` 共用同一份 props 上下文解析
+- 直接复用和 `bindProps()` 同一份分流结果
 - 优先走内部 metadata，缺失时再回退到 `onXxx` 规则
+- 手动创建的元素会从类上的 `static handlerKeys` 补齐 metadata，回调尚未赋值也能稳定分流
 
 当前约束：
 
@@ -467,8 +473,8 @@ this.emit('submit', '42');
 用户侧不传 key，所以类型设计也跟着自动分流走：
 
 ```ts
-const p = bindProps(props);
-const h = bindHandlers(props);
+const p = bindProps<PanelProps>();
+const h = bindHandlers<PanelProps>();
 ```
 
 类型层的目标：
@@ -551,9 +557,12 @@ const panelRef = createRef<{ open(): void; close(): void }>();
    - `onToggle` 这类函数值不会被误当成 signal 的 updater 回调执行。
 3. 类上生成 `static handlerKeys`，`createComponentElement()` 在构造前挂 metadata：
    - `bindHandlers()` 即使当前 handler 为空也能拿到稳定的 key 集合。
-4. 编译器把零参 `bindSlots()` 改写成 `bindSlots(this.props)`：
-   - 插槽内容从 `children` prop 读取；
-   - 父组件 `children={object}` 的具名/默认槽都能命中。
+4. 编译器改写零参调用：
+   - `bindSlots()` → `bindSlots(this.props)`，插槽内容从 `children` prop 读取，
+     父组件 `children={object}` 的具名/默认槽都能命中；
+   - `bindProps()` → `createBoundProps(this.props)`、`bindHandlers()` →
+     `createBoundHandlers(this.props)`，业务侧签名保持无参；
+   - 手动 `document.createElement()` 与 SSR 升级时同样能拿到构造期 props 快照。
 
 对应测试在 `tests/compiled-component-runtime.test.ts`，走真实编译 + CommonJS 求值 + jsdom。
 
@@ -598,9 +607,9 @@ const panelRef = createRef<{ open(): void; close(): void }>();
 推荐组合就是：
 
 ```ts
-bindProps(props)
-bindHandlers(props)
-bindSlots(props)
+bindProps()
+bindHandlers()
+bindSlots()
 createExpose(props, exposed)
 ```
 

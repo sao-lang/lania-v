@@ -31,6 +31,7 @@ export {
   getCurrentRuntimeScope,
   getDomHostRedirect,
   registerDomHostRedirect,
+  withComponentProps,
   withContextHost,
   withRuntimeScope,
   withDomHost,
