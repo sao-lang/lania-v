@@ -9,6 +9,7 @@ export default defineConfig({
     jsxImportSource: '@lania-v/runtime',
   },
   resolve: {
+    dedupe: ['axios'],
     alias: [
       {
         find: '@lania-v/runtime/jsx-dev-runtime',
@@ -39,5 +40,9 @@ export default defineConfig({
   server: {
     port: 4175,
     host: '127.0.0.1',
+  },
+  optimizeDeps: {
+    // lania-tools 以链接方式接入（dist 为预构建 ESM），显式预打包避免二次转换。
+    include: ['@lania-tools/tools/axios-wrapper', 'axios'],
   },
 });

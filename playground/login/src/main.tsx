@@ -1,5 +1,6 @@
 import { createRoot, registerRuntimeDebugHooks } from '@lania-v/runtime';
 import LoginPage from './LoginPage.lania.tsx';
+import ProfilePage from './views/ProfilePage.lania.tsx';
 import { loginStyles } from './login-styles';
 
 if (import.meta.env.DEV) {
@@ -98,6 +99,8 @@ if (import.meta.env.DEV) {
 
 // 样式挂在组件构造器上，由 ReactiveElement 注入到组件自己的 shadow root。
 LoginPage.styles = loginStyles;
+// ProfilePage 渲染在 LoginPage 的 shadow root 内，需要同一套作用域样式。
+(ProfilePage as typeof LoginPage).styles = loginStyles;
 
 const OBSERVE_OPTIONS: MutationObserverInit = {
   childList: true,

@@ -9,9 +9,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@lania-tools/tools": "^1.0.3",
     "@lania-v/compiler-tsx": "0.0.0",
     "@lania-v/runtime": "0.0.0",
-    "@lania-v/vite-plugin": "0.0.0"
+    "@lania-v/vite-plugin": "0.0.0",
+    "axios": "^1.7.3"
   },
   "files": [
     "src",
