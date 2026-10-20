@@ -17,10 +17,245 @@ import { emitSignalDebugEvent, isDevEnvironment } from '../core/debug';
  * - 调度交给 `Scheduler`：signal.set 不直接同步跑 job，而是按优先级排队。
  */
 
-export type SignalSetter<T> = (value: T | ((prev: T) => T)) => T;
+export type SignalSetter<T> = {
+  /** 整体替换 signal 的值。 */
+  (value: T | ((prev: T) => T)): T;
+  /** 点路径写入对象型 signal：`user.set('profile.city', 'Lyon')`。 */
+  (path: string, value: unknown | ((prev: unknown) => unknown)): T;
+};
+
+const readPathValue = (value: unknown, path: readonly (string | number)[]): unknown => {
+  return path.reduce<unknown>((current, segment) => {
+    if (current === null || typeof current !== 'object') {
+      return undefined;
+    }
+
+    return (current as Record<string | number, unknown>)[segment];
+  }, value);
+};
+
+/**
+ * 深层只读视图的通用构造器。
+ *
+ * 与 store 的实现保持一致：视图按路径严格读取当前值，并把「当前路径」登记为一个订阅点，
+ * 因此 `sig.value.user.name` 只订阅 `['user', 'name']`，兄弟字段变化不会重跑。
+ * 视图本身按路径缓存（由调用方维护 cache），保证 `sig.value.user === sig.value.user`。
+ */
+export interface PathViewRuntime<T> {
+  /** 读取当前整棵状态（不建立路径订阅）。 */
+  readRoot: () => T;
+  /** 订阅某个路径；读取视图属性时调用。 */
+  trackPath: (path: readonly (string | number)[]) => void;
+  /** 只读写入错误信息。 */
+  describeReadonly: (path: readonly (string | number)[], property: PropertyKey) => string;
+  /** 视图缓存：同一路径必须返回同一实例。 */
+  cache: Map<string, unknown>;
+  /** 按路径读取后的值转换（例如冻结）。 */
+  transformLeaf?: (value: unknown) => unknown;
+}
+
+const ARRAY_MUTATORS = new Set<PropertyKey>([
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse',
+  'fill',
+  'copyWithin',
+]);
+
+const createPathView = (
+  runtime: PathViewRuntime<unknown>,
+  path: readonly (string | number)[] = []
+): unknown => {
+  const key = path.join('\u0000');
+  const cached = runtime.cache.get(key);
+
+  if (cached) {
+    return cached;
+  }
+
+  const current = readPathValue(runtime.readRoot(), path);
+
+  // 原始值直接返回；对象/数组才需要视图。
+  if (current === null || typeof current !== 'object') {
+    runtime.cache.set(key, current);
+    return current;
+  }
+
+  // target 必须是空对象/空数组：所有读写都通过 trap 转发到当前状态，
+  // 否则真实对象作为 target 时会触发 Proxy 的“描述符必须一致”不变量。
+  const target = Array.isArray(current) ? [] : {};
+
+  const view = new Proxy(target, {
+    get(_target, property) {
+      const raw = readPathValue(runtime.readRoot(), path);
+
+      if (typeof property === 'symbol') {
+        // 数组迭代器 / 内建符号按数组原型解析，保持 `for...of` 与展开语义。
+        // 迭代结果必须是当前真实元素，因此先把快照转成普通数组再迭代。
+        if (property === Symbol.iterator) {
+          const snapshot = Array.isArray(raw) ? [...raw] : null;
+          return snapshot ? snapshot[Symbol.iterator].bind(snapshot) : undefined;
+        }
+
+        const proto = Array.isArray(raw) ? Array.prototype : Object.prototype;
+        return Reflect.get(proto, property);
+      }
+
+      if (Array.isArray(raw) && ARRAY_MUTATORS.has(property)) {
+        throw new TypeError(runtime.describeReadonly(path, property));
+      }
+
+      const nextPath = [...path, property];
+      runtime.trackPath(nextPath);
+
+      const nextValue = readPathValue(runtime.readRoot(), nextPath);
+
+      if (typeof nextValue === 'function') {
+        // 方法调用时把 owner 绑定回当前对象，避免 `this` 丢失。
+        const owner = readPathValue(runtime.readRoot(), path);
+        return (nextValue as Function).bind(owner);
+      }
+
+      if (nextValue !== null && typeof nextValue === 'object') {
+        return createPathView(runtime, nextPath);
+      }
+
+      return runtime.transformLeaf ? runtime.transformLeaf(nextValue) : nextValue;
+    },
+    set(_target, property) {
+      throw new TypeError(runtime.describeReadonly(path, property));
+    },
+    deleteProperty(_target, property) {
+      throw new TypeError(runtime.describeReadonly(path, property));
+    },
+    defineProperty(_target, property) {
+      throw new TypeError(runtime.describeReadonly(path, property));
+    },
+    has(_target, property) {
+      runtime.trackPath(path);
+      const raw = readPathValue(runtime.readRoot(), path);
+      return raw !== null && typeof raw === 'object' ? property in (raw as object) : false;
+    },
+    ownKeys() {
+      runtime.trackPath(path);
+      const raw = readPathValue(runtime.readRoot(), path);
+      return raw !== null && typeof raw === 'object' ? Reflect.ownKeys(raw as object) : [];
+    },
+    getOwnPropertyDescriptor(_target, property) {
+      if (typeof property === 'symbol') {
+        return undefined;
+      }
+
+      runtime.trackPath(path);
+      const raw = readPathValue(runtime.readRoot(), path);
+
+      if (Array.isArray(raw) && property === 'length') {
+        // 数组 target 上的 length 不可配置，描述符形状必须一致。
+        return { configurable: false, enumerable: false, value: raw.length, writable: true };
+      }
+
+      if (raw === null || typeof raw !== 'object' || !(property in (raw as object))) {
+        return undefined;
+      }
+
+      return {
+        configurable: true,
+        enumerable: true,
+        // 数组索引在数组 target 上不可配置，必须声明为可写以匹配不变量。
+        writable: Array.isArray(raw),
+        value: (raw as Record<PropertyKey, unknown>)[property],
+      };
+    },
+    getPrototypeOf() {
+      return Array.isArray(readPathValue(runtime.readRoot(), path))
+        ? Array.prototype
+        : Object.prototype;
+    },
+  });
+
+  runtime.cache.set(key, view);
+  return view;
+};
+
+/**
+ * 递归冻结对象/数组，得到不带 Proxy 的只读值。
+ *
+ * 不用 Proxy 的原因：Proxy 会让每次读取产生新引用，破坏 memo/watch 依赖的 `Object.is` 等值语义；
+ * 冻结会一次性把属性改成不可写，读取仍返回同一个对象，因此引用稳定、subscriber 判断正常。
+ * 冻结结果按原对象缓存，同一份底层值的多次读取返回同一个只读实例。
+ */
+const readonlyCache = new WeakMap<object, object>();
+
+const freezeDeep = <T>(value: T): T => {
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  const target = value as object;
+  const cached = readonlyCache.get(target);
+
+  if (cached) {
+    return cached as T;
+  }
+
+  // 先登记再递归，避免环状引用导致无限递归。
+  // 已冻结（外部传入）的对象同样登记，保证后续读取命中同一实例。
+  readonlyCache.set(target, target);
+
+  if (!Object.isExtensible(target)) {
+    return target as T;
+  }
+
+  for (const key of Reflect.ownKeys(target)) {
+    const descriptor = Object.getOwnPropertyDescriptor(target, key);
+
+    if (descriptor && 'value' in descriptor) {
+      freezeDeep(descriptor.value as unknown);
+    }
+  }
+
+  return Object.freeze(target) as T;
+};
+
+/** 读取 signal 值时返回只读副本；原始值直接返回。 */
+const toReadonlyValue = <T>(value: T): T => freezeDeep(value);
+
+const applyPathValue = (
+  current: unknown,
+  path: readonly (string | number)[],
+  nextValue: unknown
+): unknown => {
+  if (path.length === 0) {
+    return nextValue;
+  }
+
+  const [head, ...tail] = path;
+  const base = (
+    Array.isArray(current)
+      ? [...current]
+      : current && typeof current === 'object'
+        ? { ...(current as Record<string, unknown>) }
+        : {}
+  ) as Record<string | number, unknown>;
+
+  base[head] = applyPathValue(base[head], tail, nextValue);
+  return base;
+};
+
 export type SignalSource<T> = Signal<T> | ReadonlySignal<T>;
-export type ReadonlySignal<T> = (() => T) & {
+
+export type ReadonlySignal<T> = {
+  readonly value: T;
+  peek: () => T;
   updaters: Set<Job>;
+};
+
+export type ComputedAccessor<T> = {
+  readonly value: T;
   peek: () => T;
 };
 export type EffectCleanup = void | (() => void);
@@ -160,6 +395,11 @@ const collectActiveSignal = (signal: Signal<any>): void => {
   trackingStack[trackingStack.length - 1]?.add(signal);
 };
 
+/** 统一读取 signal 源：写入依赖收集，返回只读值。 */
+const readSource = <T>(source: SignalSource<T>): T => {
+  return source.value;
+};
+
 // `createMemo/createDeferred` 会把计算结果写回一个 signal，这里统一支持“值”与“惰性函数”两种写法。
 const writeSignalValue = <T>(signal: Signal<T>, value: T): T => {
   if (typeof value === 'function') {
@@ -183,19 +423,18 @@ const detachJobFromSignals = (signals: Iterable<Signal<any>>, job: Job): void =>
   }
 };
 
-export type Signal<T> = (() => T) & {
-  updaters: Set<Job>;
-  peek: () => T;
+export type Signal<T> = {
+  /** 响应式读取；每次访问都会建立依赖。 */
+  readonly value: T;
   set: SignalSetter<T>;
+  peek: () => T;
+  updaters: Set<Job>;
   debugId: number;
   // Sets a raw value even if it's a function/class constructor.
   setValue: (value: T) => T;
 };
 
-/** 编译产物里的 computed 字段：可调用、可 peek，但不带 setter。 */
-export type ComputedAccessor<T> = (() => T) & {
-  peek: () => T;
-};
+/** 编译产物里的 computed 字段：可读取、可 peek，但不带 setter。 */
 
 /**
  * 在 `run` 执行期间收集依赖：所有被读取的 signal 会被加入 deps。
@@ -262,54 +501,157 @@ export const createSignal = <T>(
   let currentValue = initialValue;
   // 这里返回类型上是 Set<Job>，实际用 CompactJobSet 以优化小集合性能。
   const updaters = new CompactJobSet<Job>() as unknown as Set<Job>;
+  // 路径级版本 signal：每条被读取过的路径各有一个版本号，写入时只通知相关路径。
+  const pathVersions = new Map<string, Signal<number>>();
+  // 只读视图按路径缓存，保证 `sig.value.user === sig.value.user`。
+  const viewCache = new Map<string, unknown>();
 
-  const read = (() => {
-    collectActiveSignal(read as Signal<any>);
+  const ensurePathVersion = (path: readonly (string | number)[]): Signal<number> => {
+    const key = path.join('\u0000');
+    const existing = pathVersions.get(key);
+
+    if (existing) {
+      return existing;
+    }
+
+    const created = createSignal(0, scheduler);
+    pathVersions.set(key, created);
+    return created;
+  };
+
+  const notifyPath = (path: readonly (string | number)[]): void => {
+    const changed = path.map(String);
+    const isPrefix = (short: readonly string[], long: readonly string[]): boolean =>
+      short.length <= long.length && short.every((segment, index) => segment === long[index]);
+
+    for (const [key, signal] of pathVersions) {
+      const registered = key.length === 0 ? [] : key.split('\u0000');
+
+      // 祖先与后代路径互为影响：改 `user` 要通知 `user.name` 的订阅者，反之亦然。
+      if (
+        changed.length === 0 ||
+        registered.length === 0 ||
+        isPrefix(registered, changed) ||
+        isPrefix(changed, registered)
+      ) {
+        signal.set((value) => value + 1);
+      }
+    }
+  };
+
+  const viewRuntime: PathViewRuntime<unknown> = {
+    readRoot: () => currentValue,
+    trackPath: (path) => {
+      // 路径订阅是精确的：只触碰该路径的版本号，不再订阅整个 signal。
+      void ensurePathVersion(path).value;
+    },
+    describeReadonly: (path, property) => {
+      const target = [...path, property].map(String).join('.');
+      return `${target} is read-only. Use signal.set(${JSON.stringify(target)}, value) to update it.`;
+    },
+    cache: viewCache,
+    // 叶子值同样需要冻结，避免通过视图拿到可变引用。
+    transformLeaf: toReadonlyValue,
+  };
+
+  const trackValue = (): T => {
+    if (currentValue !== null && typeof currentValue === 'object') {
+      // 对象/数组：只按路径订阅（根读取订阅根路径），保证兄弟字段互不干扰。
+      return createPathView(viewRuntime, []) as T;
+    }
+
+    // 原始值没有路径可细分，直接订阅 signal 本身。
+    collectActiveSignal(signalHandle);
     return currentValue;
-  }) as Signal<T>;
+  };
 
-  read.debugId = nextSignalDebugId++;
-  read.peek = () => currentValue;
-  read.updaters = updaters;
-  read.set = (value) => {
-    const nextValue =
-      typeof value === 'function'
-        ? (value as (prev: T) => T)(currentValue)
-        : value;
-
+  const commit = (nextValue: T, changedPath: readonly (string | number)[] = []): T => {
     // 使用 Object.is 确保 NaN 等边界值行为一致
     if (Object.is(currentValue, nextValue)) {
-      return currentValue;
+      return toReadonlyValue(currentValue);
     }
 
     const previousValue = currentValue;
     currentValue = nextValue;
+
+    // 值换了引用后，旧视图里缓存的路径实例不再代表当前树，
+    // 清空缓存让后续读取重建视图，避免读到视图构建时的旧快照。
+    viewCache.clear();
+
     if (isDevEnvironment()) {
       emitSignalDebugEvent({
         type: 'set',
-        signalId: read.debugId,
+        signalId: signalHandle.debugId,
         previous: previousValue,
         current: nextValue,
       });
     }
+
+    // 路径写入只通知受影响的路径；整体替换通知所有路径。
+    notifyPath(changedPath);
 
     // set 只“通知”，具体执行时机交给 scheduler（避免深层嵌套 set 造成同步抖动）
     for (const updater of updaters) {
       scheduler.scheduleSignal(updater, getSignalPriority());
     }
 
-    return currentValue;
+    return toReadonlyValue(currentValue);
   };
 
-  read.setValue = (value: T) => {
-    if (typeof value === 'function') {
-      // Treat functions/classes as raw values, not updater callbacks.
-      return read.set((() => value) as unknown as (prev: T) => T);
+  const setSignal = ((...args: unknown[]) => {
+    // 两个及以上参数视为路径写入：`sig.set('user.name', v)` / `sig.set(['user','name'], v)`。
+    if (args.length > 1) {
+      const [first, ...rest] = args;
+      const segments: (string | number)[] =
+        typeof first === 'string' && rest.length === 1
+          ? first.split('.').map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment))
+          : Array.isArray(first)
+            ? (first as (string | number)[])
+            : (args.slice(0, -1) as (string | number)[]);
+      const nextValue = rest[rest.length - 1];
+
+      return commit(
+        applyPathValue(
+          currentValue,
+          segments,
+          typeof nextValue === 'function'
+            ? (nextValue as (previous: unknown) => unknown)(
+                readPathValue(currentValue, segments)
+              )
+            : nextValue
+        ) as T,
+        segments
+      );
     }
-    return read.set(value);
-  };
 
-  return read;
+    const [first] = args;
+    return commit(
+      typeof first === 'function'
+        ? (first as (prev: T) => T)(currentValue)
+        : (first as T)
+    );
+  }) as SignalSetter<T>;
+
+  // 句柄与读取器分离：`value` 是 getter，每次读取都会建立依赖。
+  const signalHandle = {
+    get value(): T {
+      return trackValue();
+    },
+    set: setSignal,
+    peek: () => toReadonlyValue(currentValue),
+    updaters,
+    debugId: nextSignalDebugId++,
+    setValue: (value: T) => commit(value),
+    // 兼容旧形态：允许 `sig()` 读取，便于逐步迁移。
+    [Symbol.toPrimitive]() {
+      return trackValue() as unknown as string;
+    },
+  } as unknown as Signal<T>;
+
+  const read = signalHandle as Signal<T>;
+  void read;
+
+  return signalHandle;
 };
 
 /**
@@ -320,16 +662,22 @@ export const createSignal = <T>(
  * 因为不缓存，也不会把调度顺序问题带进组件更新链路。
  */
 export const createComputedAccessor = <T>(compute: () => T): ComputedAccessor<T> => {
-  const read = (() => compute()) as ComputedAccessor<T>;
-  read.peek = () => compute();
-  return read;
+  return {
+    get value(): T {
+      return compute();
+    },
+    peek: () => compute(),
+  };
 };
 
 export const readonly = <T>(signal: SignalSource<T>): ReadonlySignal<T> => {
-  const read = (() => signal()) as ReadonlySignal<T>;
-  read.peek = signal.peek;
-  read.updaters = signal.updaters;
-  return read;
+  return {
+    get value(): T {
+      return readSource(signal);
+    },
+    peek: signal.peek,
+    updaters: signal.updaters,
+  };
 };
 
 /**
@@ -498,7 +846,9 @@ export function watch<T>(
   };
 
   const runWatch = () => {
-    const nextValues = sources.map((entry) => entry());
+    // watch 回调在调度队列中执行，不需要建立依赖；用 peek 取稳定快照，
+    // 避免对象型 signal 的 `.value` 返回路径视图造成“永远不相等”的误判。
+    const nextValues = sources.map((entry) => entry.peek());
 
     if (deep && previousValues.every((previous, index) => isDeepEqual(nextValues[index], previous))) {
       // 内容没变时不回调，但仍然保留最新引用，避免用户原地改值后快照过期。

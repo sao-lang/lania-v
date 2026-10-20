@@ -72,20 +72,20 @@ export default defineComponent(function Demo() {
 
   return (
     <section>
-      <button onClick={() => items.set([...items(), { id: 'd' + String(items().length), label: 'X' }])}>append</button>
-      <button onClick={() => items.set(items().slice(1))}>remove</button>
-      <button onClick={() => items.set([...items()].reverse())}>reverse</button>
+      <button onClick={() => items.set([...items.value, { id: 'd' + String(items.value.length), label: 'X' }])}>append</button>
+      <button onClick={() => items.set(items.value.slice(1))}>remove</button>
+      <button onClick={() => items.set([...items.value].reverse())}>reverse</button>
       <TransitionGroup
-        keys={items().map((item) => item.id)}
+        keys={items.value.map((item) => item.id)}
         onEnter={(_el: Element, ctx: { key: PropertyKey; phase: string }) => push('enter:' + String(ctx.key))}
         onLeave={(_el: Element, ctx: { key: PropertyKey; phase: string }) => push('leave:' + String(ctx.key))}
         onMove={(_el: Element, ctx: { key: PropertyKey; phase: string; index: number }) => push('move:' + String(ctx.key) + ':' + String(ctx.index))}
       >
-        <Each items={items()} key={keyOf}>
+        <Each items={items.value} key={keyOf}>
           {(item: Item): any => <div data-key={item.id}>{item.label}</div>}
         </Each>
       </TransitionGroup>
-      <output>{log().join(',')}</output>
+      <output>{log.value.join(',')}</output>
     </section>
   );
 });

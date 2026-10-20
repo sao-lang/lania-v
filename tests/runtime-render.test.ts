@@ -55,10 +55,10 @@ const GeneratedRenderElement = (() => {
       this.trackSignal(this.count);
       this.registerUpdater(() => {
         this.writeCalls += 1;
-        this.countSlot.write(this.count());
+        this.countSlot.write(this.count.value);
       });
       this.writeCalls += 1;
-      this.countSlot.write(this.count());
+      this.countSlot.write(this.count.value);
     }
   }
 

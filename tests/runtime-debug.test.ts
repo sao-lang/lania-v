@@ -74,7 +74,7 @@ describe('runtime debug hooks', () => {
 
     const signal = createSignal('secret-value');
     const slot = new TextSlot(document.createTextNode(''), 4);
-    const updater = new SimpleUpdater(() => signal(), slot);
+    const updater = new SimpleUpdater(() => signal.value, slot);
     updater.deps.add(signal);
     updater.attach();
     signal.set('changed-secret');

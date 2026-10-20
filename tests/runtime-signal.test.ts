@@ -30,7 +30,7 @@ describe('createSignal', () => {
     const signal = createSignal(0, scheduler);
     const values: number[] = [];
     const job = () => {
-      values.push(signal());
+      values.push(signal.value);
     };
 
     signal.updaters.add(job);
@@ -46,7 +46,7 @@ describe('createSignal', () => {
     const values: number[] = [];
 
     signal.updaters.add(() => {
-      values.push(signal());
+      values.push(signal.value);
     });
 
     batch(() => {
@@ -85,18 +85,18 @@ describe('createSignal', () => {
 });
 
 describe('createComputedAccessor', () => {
-  it('recomputes on every read and exposes the same call style as a signal', () => {
+  it('recomputes on every read and exposes the same .value shape as a signal', () => {
     const count = createSignal(1);
-    const doubled = createComputedAccessor(() => count() * 2);
+    const doubled = createComputedAccessor(() => count.value * 2);
 
-    expect(typeof doubled).toBe('function');
-    expect(doubled()).toBe(2);
+    expect(typeof doubled.value).toBe('number');
+    expect(doubled.value).toBe(2);
     expect(doubled.peek()).toBe(2);
 
     count.set(3);
 
     // 编译产物依赖静态注入的订阅，句柄本身不缓存，因此读到的永远是最新值。
-    expect(doubled()).toBe(6);
+    expect(doubled.value).toBe(6);
     expect(doubled.peek()).toBe(6);
   });
 });

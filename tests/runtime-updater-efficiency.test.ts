@@ -27,7 +27,7 @@ describe('updater scheduling efficiency', () => {
     const updater = new SimpleUpdater(
       () => {
         computes += 1;
-        return value();
+        return value.value;
       },
       slot,
       'normal',
@@ -88,7 +88,7 @@ describe('updater scheduling efficiency', () => {
         const updater = new SimpleUpdater(
           () => {
             this.computes += 1;
-            return this.value();
+            return this.value.value;
           },
           slot,
           'normal',

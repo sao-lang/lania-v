@@ -60,7 +60,7 @@ export default defineComponent(function Demo() {
   const visible = createSignal(true);
   return (
     <Transition name="fade" onEnter={() => undefined}>
-      <section>{String(visible())}</section>
+      <section>{String(visible.value)}</section>
     </Transition>
   );
 });
@@ -82,17 +82,17 @@ export default defineComponent(function Demo() {
 
   return (
     <section>
-      <button onClick={() => visible.set(!visible())}>toggle</button>
+      <button onClick={() => visible.set(!visible.value)}>toggle</button>
       <Transition
         transitionKey="visibility"
         onEnter={(_el: Element, ctx: { phase: string }) => push('enter:' + ctx.phase)}
         onLeave={(_el: Element, ctx: { phase: string }) => push('leave:' + ctx.phase)}
       >
-        <When when={visible()}>
+        <When when={visible.value}>
           <div>content</div>
         </When>
       </Transition>
-      <output>{log().join(',')}</output>
+      <output>{log.value.join(',')}</output>
     </section>
   );
 });
@@ -126,9 +126,9 @@ export default defineComponent(function LeaveCleanupDemo() {
   const visible = createSignal(true);
   return (
     <section>
-      <button onClick={() => visible.set(!visible())}>toggle</button>
+      <button onClick={() => visible.set(!visible.value)}>toggle</button>
       <Transition transitionKey="cleanup">
-        <When when={visible()}>
+        <When when={visible.value}>
           <div>content</div>
         </When>
       </Transition>

@@ -211,29 +211,30 @@ const createBindingTransformer = (
         }
 
         if (bindings.computedNames.has(node.expression.text)) {
-          // computed 在实例模型里是 memo 字段，读取与 signal 一样保留调用括号。
-          return ts.factory.updateCallExpression(
-            node,
+          // computed 在实例模型里是 memo 字段，读取统一走 `.value`。
+          return ts.factory.createPropertyAccessExpression(
             ts.factory.createPropertyAccessExpression(
               ts.factory.createThis(),
               node.expression.text
             ),
-            node.typeArguments,
-            node.arguments
+            'value'
           );
         }
 
         if (bindings.signalNames.has(node.expression.text)) {
-          // signal 读取仍保留“调用取值”约定，只是宿主从局部变量换成实例字段。
-          return ts.factory.updateCallExpression(
-            node,
+          // signal 读取统一走 `.value`，与 store 的属性读取形态保持一致。
+          // 带参数的调用（`sig(...)`）视为「读取后再调用」，同样先取 `.value`。
+          const readValue = ts.factory.createPropertyAccessExpression(
             ts.factory.createPropertyAccessExpression(
               ts.factory.createThis(),
               node.expression.text
             ),
-            node.typeArguments,
-            node.arguments
+            'value'
           );
+
+          return node.arguments.length === 0
+            ? readValue
+            : ts.factory.createCallExpression(readValue, node.typeArguments, node.arguments);
         }
       }
 

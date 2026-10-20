@@ -125,7 +125,7 @@ describe('runtime directives', () => {
     input.value = ' 42 ';
     handler({ target: input } as Event);
 
-    expect(signal()).toBe(42);
+    expect(signal.value).toBe(42);
   });
 
   it('supports empty, boolean and debounce model modifiers', () => {
@@ -136,18 +136,18 @@ describe('runtime directives', () => {
       const input = document.createElement('input');
       input.value = '   ';
       emptyHandler({ target: input } as Event);
-      expect(emptyTarget()).toBe('   ');
+      expect(emptyTarget.value).toBe('   ');
 
       const trimmed = createSignal<string | undefined>('seed');
       createModelEventHandler(trimmed, ['trim', 'empty'])({ target: input } as Event);
-      expect(trimmed()).toBeUndefined();
+      expect(trimmed.value).toBeUndefined();
 
       const checkboxState = createSignal<boolean | string>('');
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = true;
       createModelEventHandler(checkboxState, ['boolean'], 'checked')({ target: checkbox } as Event);
-      expect(checkboxState()).toBe(true);
+      expect(checkboxState.value).toBe(true);
 
       const debounced = createSignal('');
       const debouncedHandler = createModelEventHandler(debounced, ['debounce'], 'value', {
@@ -158,9 +158,9 @@ describe('runtime directives', () => {
       input.value = 'second';
       debouncedHandler({ target: input } as Event);
 
-      expect(debounced()).toBe('');
+      expect(debounced.value).toBe('');
       vi.advanceTimersByTime(30);
-      expect(debounced()).toBe('second');
+      expect(debounced.value).toBe('second');
     } finally {
       vi.useRealTimers();
     }
@@ -178,9 +178,9 @@ describe('runtime directives', () => {
       input.dispatchEvent(new Event('input'));
 
       vi.advanceTimersByTime(119);
-      expect(target()).toBe('');
+      expect(target.value).toBe('');
       vi.advanceTimersByTime(1);
-      expect(target()).toBe('typed');
+      expect(target.value).toBe('typed');
       slot.destroy();
     } finally {
       vi.useRealTimers();

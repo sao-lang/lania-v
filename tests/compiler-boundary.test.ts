@@ -204,7 +204,7 @@ export default Card;
 import { createSignal, defineComponent, useFormValidity } from '@lania-v/runtime';
 export default defineComponent(function Field() {
   const valid = createSignal(false);
-  useFormValidity(() => valid() ? true : { valid: false, message: 'required' });
+  useFormValidity(() => valid.value ? true : { valid: false, message: 'required' });
   return <input />;
 });
 `);
@@ -223,7 +223,7 @@ export default defineComponent(function Field() {
 import { defineComponent, createSignal } from '@lania-v/runtime';
 export default defineComponent(function Report(props: { title: string }) {
   const count = createSignal(0);
-  return <section>{props.title}{count()}</section>;
+  return <section>{props.title}{count.value}</section>;
 });
 `,
       { plugins: [reportPlugin] }

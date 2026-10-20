@@ -665,7 +665,8 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     for (const key of Object.keys(this)) {
       const value = (this as unknown as Record<string, unknown>)[key];
       if (
-        typeof value === 'function' &&
+        value != null &&
+        typeof value === 'object' &&
         typeof (value as { set?: unknown }).set === 'function' &&
         (() => {
           const updaters = (value as { updaters?: unknown }).updaters as

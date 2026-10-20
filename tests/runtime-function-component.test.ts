@@ -782,7 +782,7 @@ describe('function component runtime helpers', () => {
 
     const value = withContextHost(consumer, () => useContext(themeContext));
 
-    expect(value()).toBe('dark');
+    expect(value.value).toBe('dark');
   });
 
   it('renders and unmounts content through createRoot', () => {
@@ -3400,7 +3400,7 @@ describe('function reactive apis', () => {
     const count = createSignal(1);
     const publicCount = readonly(count);
 
-    expect(publicCount()).toBe(1);
+    expect(publicCount.value).toBe(1);
     expect('set' in publicCount).toBe(false);
   });
 
@@ -3409,8 +3409,8 @@ describe('function reactive apis', () => {
     const tracked = trackSignals(() => {
       expect(isTracking()).toBe(true);
       return {
-        tracked: count(),
-        untracked: untrack(() => count()),
+        tracked: count.value,
+        untracked: untrack(() => count.value),
       };
     });
 
@@ -3424,14 +3424,14 @@ describe('function reactive apis', () => {
 
   it('recomputes createMemo values when dependencies change', async () => {
     const count = createSignal(1);
-    const doubled = createMemo(() => count() * 2);
+    const doubled = createMemo(() => count.value * 2);
 
-    expect(doubled()).toBe(2);
+    expect(doubled.value).toBe(2);
 
     count.set(4);
     await flushMicrotasks();
 
-    expect(doubled()).toBe(8);
+    expect(doubled.value).toBe(8);
   });
 
   it('runs createEffect immediately and after dependency updates with cleanup', async () => {
@@ -3439,7 +3439,7 @@ describe('function reactive apis', () => {
     const events: string[] = [];
 
     createEffect(() => {
-      events.push(`run:${count()}`);
+      events.push(`run:${count.value}`);
       return () => {
         events.push(`cleanup:${count.peek()}`);
       };
@@ -3478,10 +3478,10 @@ describe('function reactive apis', () => {
 
     count.set(5);
     await flushMicrotasks(3);
-    expect(deferred()).toBe(1);
+    expect(deferred.value).toBe(1);
 
     await wait(20);
-    expect(deferred()).toBe(5);
+    expect(deferred.value).toBe(5);
   });
 
   it('updates nested store paths immutably through createStore', async () => {
@@ -3600,29 +3600,172 @@ describe('function reactive apis', () => {
     const id = createSignal(1);
     const requests: number[] = [];
     const [user, resource] = createResource(id, async () => {
-      const currentId = id();
+      const currentId = id.value;
       requests.push(currentId);
       await wait(5);
       return `user-${currentId}`;
     });
 
-    expect(resource.loading()).toBe(true);
+    expect(resource.loading.value).toBe(true);
     await wait(10);
     await flushMicrotasks(3);
 
-    expect(user()).toBe('user-1');
-    expect(resource.loading()).toBe(false);
-    expect(resource.error()).toBeUndefined();
+    expect(user.value).toBe('user-1');
+    expect(resource.loading.value).toBe(false);
+    expect(resource.error.value).toBeUndefined();
 
     id.set(2);
     await wait(10);
     await flushMicrotasks(3);
 
-    expect(user()).toBe('user-2');
+    expect(user.value).toBe('user-2');
     expect(requests).toEqual([1, 2]);
 
     await resource.refetch();
     await flushMicrotasks(3);
     expect(requests).toEqual([1, 2, 2]);
+  });
+});
+
+  it('rejects direct property assignment on stores', () => {
+    const store = createStore({ user: { name: 'Ada' }, list: [1] });
+
+    // 写入只允许 set()：任何属性赋值都必须在运行时直接报错，而不是静默失效。
+    expect(() => {
+      (store as { user: { name: string } }).user = { name: 'Grace' };
+    }).toThrowError(/read-only/);
+    expect(() => {
+      (store.user as { name: string }).name = 'Grace';
+    }).toThrowError(/store\.set\("user\.name"/);
+    expect(() => {
+      (store as Record<string, unknown>).extra = 1;
+    }).toThrowError(/read-only/);
+    expect(() => {
+      delete (store.user as { name?: string }).name;
+    }).toThrowError(/read-only/);
+
+    expect(store.user.name).toBe('Ada');
+    expect(store.peek()).toEqual({ user: { name: 'Ada' }, list: [1] });
+  });
+
+  it('keeps deep reactivity on nested paths without a Proxy wrapper', async () => {
+    const store = createStore({ user: { profile: { city: 'Paris' } } });
+    const cities: string[] = [];
+
+    createEffect(() => {
+      cities.push(store.user.profile.city);
+    });
+
+    store.set('user.profile.city', 'Lyon');
+    await flushMicrotasks(3);
+
+    expect(cities).toEqual(['Paris', 'Lyon']);
+    // 视图按路径缓存，同一路径始终拿到同一对象。
+    expect(store.user).toBe(store.user);
+  });
+
+  it('replaces the whole state when store.set receives an object', async () => {
+    const store = createStore({ count: 0, page: 1, label: 'ready' });
+
+    // 对象参数是整体替换，未给出的字段会被丢弃；局部更新用路径写法。
+    store.set({ page: 2 });
+
+    expect(store.peek()).toEqual({ page: 2 });
+
+    store.set('count', 1);
+    expect(store.peek()).toEqual({ page: 2, count: 1 });
+  });
+
+  it('supports nested path writes with dot and array paths', async () => {
+    const store = createStore({ user: { profile: { city: 'Paris' } }, list: [1, 2] });
+    const cities: string[] = [];
+
+    createEffect(() => {
+      cities.push(store.user.profile.city);
+    });
+
+    store.set('user.profile.city', 'Lyon');
+    await flushMicrotasks(3);
+    expect(store.user.profile.city).toBe('Lyon');
+
+    store.set(['user', 'profile', 'city'], 'Nice');
+    await flushMicrotasks(3);
+    expect(store.user.profile.city).toBe('Nice');
+    expect(cities).toEqual(['Paris', 'Lyon', 'Nice']);
+
+    // 数组下标同样可写。
+    store.set('list.0', 99);
+    expect(store.list[0]).toBe(99);
+  });
+
+describe('store state api', () => {
+  it('exposes get / has / keys / entries snapshots', () => {
+    const store = createStore({ user: { name: 'Ada' }, list: [1] });
+
+    expect(store.get('user.name')).toBe('Ada');
+    expect(store.get(['user', 'name'])).toBe('Ada');
+    expect(store.has('user.name')).toBe(true);
+    expect(store.has('user.missing')).toBe(false);
+    expect(store.keys()).toEqual(['user', 'list']);
+    expect(store.entries()).toEqual([['user', { name: 'Ada' }], ['list', [1]]]);
+  });
+
+  it('supports update / delete / patch / reset', async () => {
+    const store = createStore({ user: { name: 'Ada', age: 20 }, extra: 1 });
+    const names: string[] = [];
+
+    createEffect(() => {
+      names.push(store.user.name);
+    });
+
+    store.update('user.age', (age) => Number(age) + 1);
+    await flushMicrotasks(3);
+    expect(store.user.age).toBe(21);
+
+    store.patch({ extra: 2 });
+    expect(store.extra).toBe(2);
+    // patch 只覆盖给出的字段，user 保持不变。
+    expect(store.user.name).toBe('Ada');
+
+    store.delete('user.age');
+    expect('age' in store.user).toBe(false);
+
+    store.reset();
+    expect(store.peek()).toEqual({ user: { name: 'Ada', age: 20 }, extra: 1 });
+    expect(names).toEqual(['Ada']);
+  });
+
+  it('notifies subscribers for whole state and single paths', async () => {
+    const store = createStore({ user: { name: 'Ada' }, count: 0 });
+    const all: number[] = [];
+    const perPath: unknown[] = [];
+
+    const stopAll = store.subscribe((current) => all.push(current.count));
+    const stopPath = store.subscribe('user.name', (next) => perPath.push(next));
+
+    store.set('user.name', 'Grace');
+    await flushMicrotasks(3);
+    store.set('count', 1);
+    await flushMicrotasks(3);
+
+    expect(perPath).toEqual(['Grace']);
+    expect(all).toEqual([1]);
+
+    stopAll();
+    stopPath();
+    store.set('count', 2);
+    await flushMicrotasks(3);
+    expect(all).toEqual([1]);
+  });
+
+  it('derives read-only memos from store paths', async () => {
+    const store = createStore({ user: { name: 'Ada' } });
+    const label = store.derive(() => store.user.name.toUpperCase());
+
+    expect(label.value).toBe('ADA');
+
+    store.set('user.name', 'Grace');
+    await flushMicrotasks(3);
+    expect(label.value).toBe('GRACE');
   });
 });

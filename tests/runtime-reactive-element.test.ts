@@ -43,10 +43,10 @@ class CounterElement extends ReactiveElement {
     this.trackSignal(this.count);
     this.trackSignal(this.active);
     this.registerUpdater(() => {
-      this.textSlot.write(this.count());
-      this.attrSlot.write(this.count());
-      this.styleSlot.write(this.count() * 10);
-      this.classSlot.write(this.active());
+      this.textSlot.write(this.count.value);
+      this.attrSlot.write(this.count.value);
+      this.styleSlot.write(this.count.value * 10);
+      this.classSlot.write(this.active.value);
     });
 
     container.appendChild(text);

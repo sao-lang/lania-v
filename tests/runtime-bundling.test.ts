@@ -124,7 +124,7 @@ describe('runtime bundling', () => {
   it('tree-shakes unrelated runtime modules when only createSignal is imported', async () => {
     const entryImport = toAbsoluteImportPath(path.join(workspaceRoot, 'packages/runtime/src/index.ts'));
     const bundle = await buildBundle(
-      `import { createSignal } from ${JSON.stringify(entryImport)};\nconst count = createSignal(0);\ncount.set(1);\nexport default count();\n`
+      `import { createSignal } from ${JSON.stringify(entryImport)};\nconst count = createSignal(0);\ncount.set(1);\nexport default count.value;\n`
     );
 
     expect(bundle).toContain('createSignal');

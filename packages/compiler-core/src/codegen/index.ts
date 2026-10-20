@@ -280,7 +280,7 @@ const createPropFields = (
     declarations.push(
       // prop 在运行时用 signal 包一层，便于与普通 state 共享依赖跟踪逻辑。
       `get ${prop.name}(): unknown {`,
-      indent(`return this.${backingField}();`),
+      indent(`return this.${backingField}.value;`),
       `}`,
       `set ${prop.name}(value: unknown) {`,
       indent(

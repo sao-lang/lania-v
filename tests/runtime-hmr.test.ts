@@ -64,8 +64,8 @@ const ${name} = defineComponent(function ${name}(props: { title: string }) {
   const count = createSignal(0);
   return (
     <div>
-      <button onClick={() => count.set(count() + 1)}>inc</button>
-      <output>{count()}</output>
+      <button onClick={() => count.set(count.value + 1)}>inc</button>
+      <output>{count.value}</output>
       <span class="label">${label}</span>
     </div>
   );
@@ -81,9 +81,9 @@ const ${name} = defineComponent(function ${name}(props: { title: string }) {
   const note = createSignal('fresh');
   return (
     <div>
-      <button onClick={() => count.set(count() + 1)}>inc</button>
-      <output>{count()}</output>
-      <span class="note">{note()}</span>
+      <button onClick={() => count.set(count.value + 1)}>inc</button>
+      <output>{count.value}</output>
+      <span class="note">{note.value}</span>
     </div>
   );
 });
@@ -96,8 +96,8 @@ const ${name} = defineComponent(function ${name}(props: { title: string }) {
   const count = createSignal(0);
   return (
     <div>
-      <button onClick={() => count.set(count() + 1)}>inc</button>
-      <output>{count()}</output>
+      <button onClick={() => count.set(count.value + 1)}>inc</button>
+      <output>{count.value}</output>
     </div>
   );
 });

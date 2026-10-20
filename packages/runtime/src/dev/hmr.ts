@@ -15,7 +15,9 @@ import type {
   RenderMode,
 } from '../component/host/reactive-element';
 
-type SignalLike = (() => unknown) & {
+type SignalLike = {
+  value?: unknown;
+  peek?: () => unknown;
   set?: unknown;
   setValue?: (value: unknown) => void;
 };
@@ -85,8 +87,12 @@ export const uninstallComponentHmr = (): void => {
 };
 
 const isSignalLike = (value: unknown): value is SignalLike => {
+  // signal 句柄现在是对象形态（`.value` + `.set`），不再是可调用函数。
   return (
-    typeof value === 'function' && typeof (value as SignalLike).set === 'function'
+    value !== null &&
+    typeof value === 'object' &&
+    typeof (value as SignalLike).set === 'function' &&
+    typeof (value as SignalLike).peek === 'function'
   );
 };
 
@@ -109,7 +115,7 @@ export const captureComponentState = (
     const value = (element as unknown as Record<string, unknown>)[key];
 
     if (isSignalLike(value)) {
-      state[key] = value();
+      state[key] = value.peek?.();
       continue;
     }
 

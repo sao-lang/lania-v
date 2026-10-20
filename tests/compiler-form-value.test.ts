@@ -12,13 +12,13 @@ import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
 
 export default defineComponent(function FormField() {
   const value = createSignal('seed');
-  useFormValue(() => value());
-  return <input value={value()} />;
+  useFormValue(() => value.value);
+  return <input value={value.value} />;
 });
 `);
 
     expect(moduleCode).toContain('static formAssociated = true;');
-    expect(moduleCode).toContain('this._setFormValue(this.value());');
+    expect(moduleCode).toContain('this._setFormValue(this.value.value);');
     // 复用 effect 通道：依赖必须挂到负责写表单值的 updater 上。
     expect(moduleCode).toMatch(/const runEffect___formValue = new EffectUpdater/);
     expect(moduleCode).toContain('runEffect___formValue.deps.add(this.value);');
@@ -31,8 +31,8 @@ import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
 
 export default defineComponent(function FormField() {
   const value = createSignal('seed');
-  useFormValue(() => value());
-  return <p>{value()}</p>;
+  useFormValue(() => value.value);
+  return <p>{value.value}</p>;
 });
 `);
 
@@ -46,13 +46,13 @@ import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
 
 export default defineComponent(function FormField() {
   const value = createSignal(1);
-  const formValue = useFormValue(() => value());
-  return <p>{value()}{formValue === undefined ? '' : ''}</p>;
+  const formValue = useFormValue(() => value.value);
+  return <p>{value.value}{formValue === undefined ? '' : ''}</p>;
 });
 `);
 
     expect(moduleCode).toContain('static formAssociated = true;');
-    expect(moduleCode).toContain('this._setFormValue(this.value());');
+    expect(moduleCode).toContain('this._setFormValue(this.value.value);');
   });
 
   it('skips form association when useFormValue is absent', () => {
@@ -61,7 +61,7 @@ import { createSignal, defineComponent } from '@lania-v/runtime';
 
 export default defineComponent(function PlainField() {
   const value = createSignal('seed');
-  return <p>{value()}</p>;
+  return <p>{value.value}</p>;
 });
 `);
 
@@ -76,8 +76,8 @@ import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
 
 export default defineComponent(function FormField() {
   const value = createSignal('seed');
-  useFormValue(() => { const next = value(); return next; });
-  return <p>{value()}</p>;
+  useFormValue(() => { const next = value.value; return next; });
+  return <p>{value.value}</p>;
 });
 `)
     ).toThrowError(/useFormValue/);

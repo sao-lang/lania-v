@@ -89,7 +89,7 @@ import { createSignal } from '@lania-v/runtime/reactivity';
 
 function PluginHost() {
   const count = createSignal(1);
-  return <section>{helper}{count()}</section>;
+  return <section>{helper}{count.value}</section>;
 }
 `.trim();
 

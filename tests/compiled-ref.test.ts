@@ -70,7 +70,7 @@ export default defineComponent(function ElementRef() {
       <input ref={inputRef} value="seed" />
       <button onClick={() => status.set(inputRef ? inputRef.value : 'missing')}>read</button>
       <button onClick={() => { if (inputRef) { inputRef.value = 'updated'; } }}>write</button>
-      <output>{status()}</output>
+      <output>{status.value}</output>
     </section>
   );
 });
@@ -103,7 +103,7 @@ export default defineComponent(function LegacyRef() {
     <section>
       <input ref={inputRef} value="legacy" />
       <button onClick={() => status.set(inputRef.current?.value ?? 'missing')}>read</button>
-      <output>{status()}</output>
+      <output>{status.value}</output>
     </section>
   );
 });
@@ -134,7 +134,7 @@ export default defineComponent(function Parent() {
     <section>
       <Child ref={childRef} />
       <button onClick={() => status.set(childRef ? childRef.focus() : 'missing')}>read</button>
-      <output>{status()}</output>
+      <output>{status.value}</output>
     </section>
   );
 });

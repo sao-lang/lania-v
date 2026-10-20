@@ -63,8 +63,8 @@ export default defineComponent(function DestructuredSetup() {
     <section>
       <button onClick={() => count.set((v) => v + 1)}>go</button>
       <p>{label}:{nested.count}:{String(rest.extra)}</p>
-      <p>{pending() ? 'pending' : 'idle'}</p>
-      <p>{count()}</p>
+      <p>{pending.value ? 'pending' : 'idle'}</p>
+      <p>{count.value}</p>
     </section>
   );
 });
@@ -134,8 +134,8 @@ export default defineComponent(function CardComposable() {
   const count = useCounter();
   return (
     <div>
-      <button onClick={() => count.set(count() + 1)}>inc</button>
-      <output>{count()}</output>
+      <button onClick={() => count.set(count.value + 1)}>inc</button>
+      <output>{count.value}</output>
     </div>
   );
 });

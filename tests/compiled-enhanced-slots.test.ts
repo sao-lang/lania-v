@@ -87,9 +87,9 @@ export default defineComponent(function KeepAliveParent() {
   const key = createSignal('a');
   return (
     <section>
-      <button onClick={() => key.set(key() === 'a' ? 'b' : 'a')}>switch</button>
-      <KeepAlive cacheKey={key()}>
-        <p>{key()}</p>
+      <button onClick={() => key.set(key.value === 'a' ? 'b' : 'a')}>switch</button>
+      <KeepAlive cacheKey={key.value}>
+        <p>{key.value}</p>
       </KeepAlive>
     </section>
   );

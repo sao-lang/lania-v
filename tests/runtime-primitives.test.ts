@@ -45,7 +45,7 @@ describe('runtime primitives', () => {
         this.renderRoot.appendChild(node);
         const slot = this.registerSlot(new TextSlot(node, 0));
         const updater = new SimpleUpdater(
-          () => String(this.count()),
+          () => String(this.count.value),
           slot,
           'normal',
           this._scheduler,
@@ -88,27 +88,46 @@ describe('runtime primitives', () => {
 
   it('startTransition exposes pending until the low-priority update flushes', async () => {
     const { pending } = useTransition();
-    expect(pending()).toBe(false);
+    expect(pending.value).toBe(false);
     const value = createSignal(0);
 
     startTransition(() => value.set(1));
-    expect(pending()).toBe(true);
+    expect(pending.value).toBe(true);
 
     await tick();
     await flush();
 
-    expect(value()).toBe(1);
-    expect(pending()).toBe(false);
+    expect(value.value).toBe(1);
+    expect(pending.value).toBe(false);
   });
 
-  it('produce applies mutable updates to a store', () => {
+  it('produce applies pure updates to a store', () => {
     const state = createStore({ list: [1, 2] });
 
-    produce(state, (draft) => {
-      draft.list.push(3);
-    });
+    // 回调必须是纯函数：返回下一个状态，draft 只读。
+    produce(state, (draft) => ({ ...draft, list: [...draft.list, 3] }));
 
     expect(state.list).toEqual([1, 2, 3]);
+  });
+
+  it('produce rejects drafts that mutate state directly', () => {
+    const state = createStore({ list: [1, 2] });
+
+    expect(() =>
+      produce(state, (draft) => {
+        (draft.list as number[]).push(3);
+        return draft;
+      })
+    ).toThrowError(/read-only/);
+    expect(state.list).toEqual([1, 2]);
+  });
+
+  it('produce requires a returned state object', () => {
+    const state = createStore({ list: [1, 2] });
+
+    expect(() =>
+      produce(state, () => undefined as unknown as { list: number[] })
+    ).toThrowError(/return the next state/);
   });
 
   it('passes scoped slot args through Slot', () => {
@@ -135,10 +154,10 @@ describe('runtime primitives', () => {
     let effectRuns = 0;
     const scope = createScope(() => {
       createEffect(() => {
-        value();
+        value.value;
         effectRuns += 1;
       });
-      createMemo(() => value() * 2);
+      createMemo(() => value.value * 2);
       return value;
     });
 
@@ -195,5 +214,60 @@ describe('runtime primitives', () => {
     }
 
     expect(chunks.join('')).toBe('<h1>hello</h1>');
+  });
+});
+
+describe('unified state writes', () => {
+  it('subscribes object signals per path instead of per signal', async () => {
+    const user = createSignal({ name: 'Ada', profile: { city: 'Paris' } });
+    const names: string[] = [];
+    const cities: string[] = [];
+
+    createEffect(() => {
+      names.push(user.value.name);
+    });
+    createEffect(() => {
+      cities.push(user.value.profile.city);
+    });
+
+    await Promise.resolve();
+    user.set('profile.city', 'Lyon');
+    await Promise.resolve();
+
+    // 改 city 不应连带触发只读 name 的 effect。
+    expect(names).toEqual(['Ada']);
+    expect(cities).toEqual(['Paris', 'Lyon']);
+    // 视图按路径缓存，同一路径恒等。
+    expect(user.value.profile).toBe(user.value.profile);
+    // 深处写入仍然是只读的。
+    expect(() => {
+      (user.value.profile as { city: string }).city = 'X';
+    }).toThrowError(/read-only/);
+  });
+
+  it('supports nested path writes on object signals', async () => {
+    const user = createSignal({ profile: { city: 'Paris', zip: '75001' } });
+    const cities: string[] = [];
+
+    createEffect(() => {
+      cities.push(user.value.profile.city);
+    });
+
+    user.set('profile.city', 'Lyon');
+    await Promise.resolve();
+
+    expect(user.value.profile.city).toBe('Lyon');
+    // 只改 city 时兄弟字段保持不变。
+    expect(user.value.profile.zip).toBe('75001');
+    expect(cities).toEqual(['Paris', 'Lyon']);
+  });
+
+  it('still replaces the whole value when a signal is set with an object', () => {
+    const user = createSignal({ name: 'Ada', age: 20 });
+
+    user.set({ name: 'Grace' });
+
+    // createSignal 的 set 是整体替换，不做合并。
+    expect(user.value).toEqual({ name: 'Grace' });
   });
 });

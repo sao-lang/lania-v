@@ -19,7 +19,7 @@ import { isAssignmentOperatorToken } from './utils';
  * 这里的实现偏“语义保守”：
  * 只在能够较可靠区分读取与写入时才记录依赖，避免把无关节点误归入响应式依赖图。
  */
-export const getDependencyAccessPath = (expression: ts.CallExpression): string[] => {
+export const getDependencyAccessPath = (expression: ts.Node): string[] => {
   const accessPath: string[] = [];
   let current: ts.Node = expression;
 
@@ -215,6 +215,24 @@ const collectDependencyCalls = (
           accessPath,
         });
       }
+    }
+
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      node.name.text === 'value' &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.expression.kind === ts.SyntaxKind.ThisKeyword &&
+      isPropertyRead(node)
+    ) {
+      // `this.count.value` 是新的 signal / computed 读取形态，等价于旧的 `this.count()`。
+      const name = node.expression.name.text;
+      const accessPath = getDependencyAccessPath(node.expression);
+      dependencies.set(`this:${name}:${accessPath.join('.')}`, {
+        kind: 'this-signal-call',
+        name,
+        text: node.getText(),
+        accessPath,
+      });
     }
 
     if (

@@ -30,7 +30,7 @@ export const createSelector = <T, K = T>(
 ): Selector<T, K> => {
   const signals = new Map<K, Signal<boolean>>();
   const stop = createEffect(() => {
-    const current = source();
+    const current = source.value;
 
     for (const [key, signal] of signals) {
       signal.set(equals(key, current));
@@ -45,7 +45,7 @@ export const createSelector = <T, K = T>(
       signals.set(key, signal);
     }
 
-    return signal();
+    return signal.value;
   }) as Selector<T, K>;
 
   selector.dispose = () => {

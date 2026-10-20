@@ -217,7 +217,7 @@ export const provideStyleVariables = (
 export const consumeStyleVariables = (
   host: { dispatchEvent(event: Event): boolean }
 ): CSSVariables => {
-  return consumeContext(host, StyleVariablesContext)();
+  return consumeContext(host, StyleVariablesContext).value;
 };
 
 export const toStyleArray = (styles: StaticStyles | undefined): StyleValue[] => {

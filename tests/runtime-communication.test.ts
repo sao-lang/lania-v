@@ -74,8 +74,8 @@ const CommunicationChildElement = (() => {
 
     notify(): void {
       this.emit('toggle', {
-        label: this.label(),
-        count: this.count(),
+        label: this.label.value,
+        count: this.count.value,
       });
     }
   }
@@ -110,15 +110,15 @@ describe('communication runtime', () => {
     });
     await flushMicrotasks();
 
-    expect(slot.instance?.label()).toBe('static-label');
-    expect(slot.instance?.count()).toBe(1);
+    expect(slot.instance?.label.value).toBe('static-label');
+    expect(slot.instance?.count.value).toBe(1);
 
     const labelSignal = createSignal('dynamic-a');
     const countSignal = createSignal(2);
     const updater = new SimpleUpdater(
       () => ({
-        label: labelSignal(),
-        count: countSignal(),
+        label: labelSignal.value,
+        count: countSignal.value,
       }),
       slot
     );
@@ -128,15 +128,15 @@ describe('communication runtime', () => {
     updater.attach();
     updater.run();
 
-    expect(slot.instance?.label()).toBe('dynamic-a');
-    expect(slot.instance?.count()).toBe(2);
+    expect(slot.instance?.label.value).toBe('dynamic-a');
+    expect(slot.instance?.count.value).toBe(2);
 
     labelSignal.set('dynamic-b');
     countSignal.set(3);
     await flushMicrotasks();
 
-    expect(slot.instance?.label()).toBe('dynamic-b');
-    expect(slot.instance?.count()).toBe(3);
+    expect(slot.instance?.label.value).toBe('dynamic-b');
+    expect(slot.instance?.count.value).toBe(3);
   });
 
   it('maps attributes to child properties and signalized props', async () => {
@@ -149,11 +149,11 @@ describe('communication runtime', () => {
 
     const propSlot = new PropSlot(child, 'label', 0);
     propSlot.write('from-prop-slot');
-    expect(child.label()).toBe('from-prop-slot');
+    expect(child.label.value).toBe('from-prop-slot');
 
     const attrSlot = new AttrSlot(child, 'count', 1);
     attrSlot.write(9);
-    expect(child.count()).toBe(9);
+    expect(child.count.value).toBe(9);
   });
 
   it('supports custom event emit and parent listeners', async () => {
@@ -201,9 +201,9 @@ describe('communication runtime', () => {
     document.body.appendChild(provider);
 
     const cleanup = provideContext(provider, themeContext, 'dark');
-    expect(useContext(themeContext, child)()).toBe('dark');
+    expect(useContext(themeContext, child).value).toBe('dark');
     cleanup();
-    expect(useContext(themeContext, child)()).toBe('light');
+    expect(useContext(themeContext, child).value).toBe('light');
 
     const domRefSlot = new RefSlot<HTMLDivElement>(child, 0);
     domRefSlot.write(domRef);
