@@ -170,13 +170,13 @@ export interface EventNode {
 export interface DirectiveNode {
   type: 'DirectiveNode';
   kind:
-    | 'if'
     | 'bind'
     | 'model'
     | 'html'
-    | 'class'
     | 'style'
     | 'use'
+    | 'attr'
+    | 'on'
     | 'ref'
     | 'unknown';
   name: string;

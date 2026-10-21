@@ -1,4 +1,9 @@
-import type { AttributeNode, ElementNode, ExpressionNode, TemplateChildNode } from '../../../ast';
+import type {
+  AttributeNode,
+  ElementNode,
+  ExpressionNode,
+  TemplateChildNode,
+} from '../../../ast';
 import { compileKeyedEachItemTemplate } from '../helpers/keyed-each';
 import type { IfIR, ListIR, TemplateLowerer } from '../types';
 import {
@@ -40,16 +45,22 @@ const templateNamePrefix = (
   path: number[],
   slotIndex: number,
   templateHash: string
-): string => `__when_slot_${slotIndex}_${path.join('_') || 'root'}_${templateHash}`;
+): string =>
+  `__when_slot_${slotIndex}_${path.join('_') || 'root'}_${templateHash}`;
 
-const normalizeStaticMode = (expression: string | null): 'retain' | 'remount' | undefined => {
+const normalizeStaticMode = (
+  expression: string | null
+): 'retain' | 'remount' | undefined => {
   // 只接受编译期就能确定的字面量模式，其他表达式一律回退为未指定。
   return expression === '"retain"' || expression === '"remount"'
     ? (expression.slice(1, -1) as 'retain' | 'remount')
     : undefined;
 };
 
-const createExpressionAttribute = (name: string, expression: string): AttributeNode => {
+const createExpressionAttribute = (
+  name: string,
+  expression: string
+): AttributeNode => {
   // `Switch` 转 `When` 时需要动态构造属性节点，因此这里提供一个小型 AST 工厂。
   const value: ExpressionNode = {
     type: 'ExpressionNode',
@@ -94,7 +105,7 @@ export const lowerWhenElement = (
   slotIndex: number,
   lowerTemplateChildren: TemplateLowerer
 ): IfIR | null => {
-  const whenExpression = getAttributeExpression(child, 'when');
+  const whenExpression = getAttributeExpression(child, 'value');
 
   if (!whenExpression) {
     return null;
@@ -130,7 +141,9 @@ export const lowerWhenElement = (
   // fallback 既可能来自显式 `<Else>` 子树，也可能来自 `fallback={...}` 表达式属性。
   const fallbackTemplateHtml =
     fallbackTemplate?.staticHtml ||
-    (fallbackExpression ? renderStaticTemplateFromExpression(fallbackExpression) ?? undefined : undefined);
+    (fallbackExpression
+      ? (renderStaticTemplateFromExpression(fallbackExpression) ?? undefined)
+      : undefined);
   const mode = normalizeStaticMode(modeExpression);
   // hoist 名称带上 path + slot + html hash，尽量保持稳定且可避免冲突。
   //
@@ -138,7 +151,9 @@ export const lowerWhenElement = (
   // 不同分支可能出现相同的 `path + slotIndex`。这里额外并入 HTML hash，
   // 并在 hash 冲突时再退让到父路径，保证同一模块内不会出现重复声明。
   const templateHash = hashTemplateHtml(truthyTemplate.staticHtml);
-  const fallbackHash = fallbackTemplateHtml ? hashTemplateHtml(fallbackTemplateHtml) : null;
+  const fallbackHash = fallbackTemplateHtml
+    ? hashTemplateHtml(fallbackTemplateHtml)
+    : null;
   const namePrefix = templateNamePrefix(path, slotIndex, templateHash);
 
   return {
@@ -165,49 +180,73 @@ export const lowerSwitchElement = (
   lowerTemplateChildren: TemplateLowerer
 ): IfIR | null => {
   const mode = normalizeStaticMode(getAttributeExpression(child, 'mode'));
+  // `Switch` 有两种形态：带 `value` 时 `<Case when>` 表示取值匹配；
+  // 不带 `value` 时 `<Case when>` / `<Match value>` 表示布尔分支。
+  const switchValueExpression = getAttributeExpression(child, 'value');
 
-  // `Switch` 只消费直接子级里的 `Case` / `Default`，其他节点在这里被忽略。
+  // `Switch` 只消费直接子级里的 `Case` / `Match` / `Default`，其他节点在这里被忽略。
   const elementChildren = child.children.filter(
     (candidate): candidate is ElementNode =>
       candidate.type === 'ElementNode' &&
-      (candidate.tagName === 'Case' || candidate.tagName === 'Default')
+      (candidate.tagName === 'Case' ||
+        candidate.tagName === 'Match' ||
+        candidate.tagName === 'Default')
   );
 
-  const cases = elementChildren.filter((entry) => entry.tagName === 'Case');
+  const branches = elementChildren.filter(
+    (entry) => entry.tagName === 'Case' || entry.tagName === 'Match'
+  );
   const defaultBranch = elementChildren
     .filter((entry) => entry.tagName === 'Default')
     .at(-1);
 
-  if (cases.length === 0) {
+  if (branches.length === 0) {
     return null;
   }
 
   const fallbackChildren: TemplateChildNode[] = defaultBranch?.children ?? [];
 
-  const buildNestedWhen = (index: number): ElementNode | null => {
-    if (index >= cases.length) {
+  // 取值匹配模式下，`<Case when>` 的表达式会被改写为与 `Switch value` 的严格相等比较。
+  const resolveBranchCondition = (branch: ElementNode): string | null => {
+    if (branch.tagName === 'Match') {
+      return getAttributeExpression(branch, 'value');
+    }
+
+    const expectedExpression = getAttributeExpression(branch, 'when');
+
+    if (!expectedExpression) {
       return null;
     }
 
-    const caseNode = cases[index];
-    const whenExpression = getAttributeExpression(caseNode, 'when');
+    return switchValueExpression
+      ? `(${switchValueExpression} === (${expectedExpression}))`
+      : expectedExpression;
+  };
+
+  const buildNestedWhen = (index: number): ElementNode | null => {
+    if (index >= branches.length) {
+      return null;
+    }
+
+    const branchNode = branches[index];
+    const whenExpression = resolveBranchCondition(branchNode);
 
     if (!whenExpression) {
-      // 没有条件的 Case 无法参与判断，直接跳过继续看下一个分支。
+      // 没有条件的分支无法参与判断，直接跳过继续看下一个分支。
       return buildNestedWhen(index + 1);
     }
 
     const next = buildNestedWhen(index + 1);
     const whenAttributes: AttributeNode[] = [
-      createExpressionAttribute('when', whenExpression),
+      createExpressionAttribute('value', whenExpression),
     ];
     if (mode) {
       whenAttributes.push(createStaticAttribute('mode', mode));
     }
 
-    // 把当前 case 包成 `When -> Then / Else` 结构，递归拼成链式条件树。
+    // 把当前分支包成 `When -> Then / Else` 结构，递归拼成链式条件树。
     // 这里选择先重写 AST，再复用既有 `When` lowering，避免出现两套 IfIR 语义分叉。
-    const thenNode = createElementNode('Then', caseNode.children);
+    const thenNode = createElementNode('Then', branchNode.children);
     const elseChildren = next ? [next] : fallbackChildren;
     const elseNode =
       elseChildren.length > 0 ? createElementNode('Else', elseChildren) : null;
@@ -225,7 +264,12 @@ export const lowerSwitchElement = (
   }
 
   // 统一复用 `When` lowering，避免 `Switch` 维护另一套 IfIR 构建逻辑。
-  return lowerWhenElement(syntheticRoot, path, slotIndex, lowerTemplateChildren);
+  return lowerWhenElement(
+    syntheticRoot,
+    path,
+    slotIndex,
+    lowerTemplateChildren
+  );
 };
 
 export const lowerEachElement = (
@@ -233,13 +277,15 @@ export const lowerEachElement = (
   path: number[],
   slotIndex: number
 ): ListIR | null => {
-  const itemsExpression = getAttributeExpression(child, 'items');
+  const itemsExpression = getAttributeExpression(child, 'value');
 
   if (!itemsExpression) {
     return null;
   }
 
-  const renderChild = child.children.find((candidate) => candidate.type === 'ExpressionNode');
+  const renderChild = child.children.find(
+    (candidate) => candidate.type === 'ExpressionNode'
+  );
   const renderExpression =
     renderChild && renderChild.type === 'ExpressionNode'
       ? renderChild.expression
@@ -247,7 +293,7 @@ export const lowerEachElement = (
   const keyExpression = getAttributeExpression(child, 'key');
   const fallbackExpression = getAttributeExpression(child, 'fallback');
   const fallbackTemplateHtml = fallbackExpression
-    ? renderStaticTemplateFromExpression(fallbackExpression) ?? undefined
+    ? (renderStaticTemplateFromExpression(fallbackExpression) ?? undefined)
     : undefined;
 
   if (keyExpression) {

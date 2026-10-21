@@ -2369,7 +2369,7 @@ describe('TextSlot', () => {
               path: [0],
               evaluate: () => () =>
                 When({
-                  when: currentPage === 'page-a',
+                  value: currentPage === 'page-a',
                   fallback: (() => {
                     const pageB = document.createElement('div');
                     pageB.dataset.page = 'page-b';

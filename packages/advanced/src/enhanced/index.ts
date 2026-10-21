@@ -18,6 +18,8 @@ export {
   type FragmentProps,
   type KeepAliveProps,
   type LazyLoadProps,
+  type MatchProps,
+  type ReachProps,
   type SlotProps,
   type SuspenseProps,
   type SwitchProps,
@@ -31,6 +33,10 @@ export {
   type TransitionLifecycleHooks,
   type TransitionProps,
   type VirtualProps,
+  type VirtualScrollState,
+  type VirtualSize,
+  type VirtualHost,
+  type VirtualSizeInput,
   type WhenMode,
   type WhenProps,
 } from './types';
@@ -42,6 +48,7 @@ export {
   Each,
   Else,
   Fragment,
+  Match,
   Slot,
   Switch,
   Teleport,
@@ -49,7 +56,9 @@ export {
   When,
 } from './basic';
 export { ErrorBoundary, LazyLoad, Suspense } from './async';
-export { Await, Virtual } from './await-virtual';
+export { Await } from './await-virtual';
+export { Reach } from './reach';
+export { Virtual } from './virtual';
 export { Transition, TransitionGroup } from './transition';
 export { isEnhancedDef } from './utils/predicates';
 
@@ -65,6 +74,7 @@ declare global {
       Else: import('./types').ElseProps;
       Switch: import('./types').SwitchProps;
       Case: import('./types').CaseProps;
+      Match: import('./types').MatchProps;
       Default: import('./types').DefaultProps;
       Each: import('./types').EachProps<any>;
       Teleport: import('./types').TeleportProps;
@@ -79,6 +89,7 @@ declare global {
       Suspense: import('./types').SuspenseProps;
       Await: import('./types').AwaitProps<any>;
       Virtual: import('./types').VirtualProps<any>;
+      Reach: import('./types').ReachProps;
     }
   }
 }

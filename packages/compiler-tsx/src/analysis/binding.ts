@@ -4,7 +4,7 @@
  * 这个文件负责把 JSX/TSX 属性名归一化为编译器内部可消费的统一语义：
  * 1. 普通 prop，例如 `title`、`value`；
  * 2. DOM 事件与组件事件，例如 `onClick`、`onSubmit`、`on:close`；
- * 3. 扩展指令，例如 `model:value.trim`、`style:width.px`、`use:tooltip`。
+ * 3. 指令，例如 `model`、`style`、`use`、`attr`、`on`。
  *
  * 上层模板解析器不会直接和原始属性名耦合，而是先调用这里完成分类，
  * 再决定应该写入 `attributes`、`events` 还是 `directives`。
@@ -33,14 +33,13 @@ export type TsxBindingKind =
   | 'dom-event'
   | 'component-event'
   | 'ref'
-  | 'if-directive'
   | 'bind-directive'
   | 'model-directive'
   | 'html-directive'
-  | 'class-directive'
   | 'style-object'
-  | 'style-directive'
-  | 'use-directive';
+  | 'use-directive'
+  | 'attr-directive'
+  | 'on-directive';
 
 // 归一化结果会被模板解析器直接消费，因此这里的字段尽量贴近“可编译语义”而非 AST 细节。
 export interface TsxBindingAnalysis {
@@ -52,7 +51,6 @@ export interface TsxBindingAnalysis {
 }
 
 export interface AnalyzeTsxBindingOptions {
-  mode?: 'jsx-standard' | 'directive-extended';
   intrinsicElement?: boolean;
 }
 
@@ -88,7 +86,6 @@ export const analyzeTsxBindingName = (
   name: string | ts.JsxAttributeName,
   options: AnalyzeTsxBindingOptions = {}
 ): TsxBindingAnalysis => {
-  const mode = options.mode ?? 'jsx-standard';
   const intrinsicElement = options.intrinsicElement ?? false;
   const sourceName = unescapeBindingNameFromTsxParser(
     typeof name === 'string' ? name : getJsxAttributeNameText(name)
@@ -113,37 +110,6 @@ export const analyzeTsxBindingName = (
     };
   }
 
-  // 扩展指令语法优先于普通 prop 处理，避免 `model:*`、`style:*` 等名字退化成字符串属性。
-  if (mode === 'directive-extended' && sourceName === 'if') {
-    return {
-      kind: 'if-directive',
-      sourceName,
-      bindingName: 'if',
-      modifiers: [],
-    };
-  }
-
-  if (mode === 'directive-extended' && sourceName.startsWith('bind:')) {
-    return {
-      kind: 'bind-directive',
-      sourceName,
-      bindingName: sourceName.slice(5),
-      modifiers: [],
-    };
-  }
-
-  if (mode === 'directive-extended' && sourceName.startsWith('model:')) {
-    const descriptor = sourceName.slice(6);
-    const [bindingName, ...modifiers] = descriptor.split('.');
-
-    return {
-      kind: 'model-directive',
-      sourceName,
-      bindingName,
-      modifiers: modifiers as EventModifier[],
-    };
-  }
-
   if (sourceName === 'model') {
     return {
       kind: 'model-directive',
@@ -162,38 +128,26 @@ export const analyzeTsxBindingName = (
     };
   }
 
-  if (mode === 'directive-extended' && sourceName.startsWith('class:')) {
+  // `attr` / `on` 是批量绑定入口：一次绑定多个属性或多个事件。
+  if (sourceName === 'attr') {
     return {
-      kind: 'class-directive',
+      kind: 'attr-directive',
       sourceName,
-      bindingName: sourceName.slice(6),
+      bindingName: 'attr',
       modifiers: [],
     };
   }
 
-  if (mode === 'directive-extended' && sourceName.startsWith('style:')) {
-    const descriptor = sourceName.slice(6);
-    const [bindingName, unit] = descriptor.split('.');
-
+  if (sourceName === 'on') {
     return {
-      kind: 'style-directive',
+      kind: 'on-directive',
       sourceName,
-      bindingName,
-      modifiers: [],
-      unit: unit || undefined,
-    };
-  }
-
-  if (mode === 'directive-extended' && sourceName.startsWith('use:')) {
-    return {
-      kind: 'use-directive',
-      sourceName,
-      bindingName: sourceName.slice(4),
+      bindingName: 'on',
       modifiers: [],
     };
   }
 
-  // 事件语法分成三层：显式 `on:*`、React 风格 `onXxx`、以及扩展模式下的小写事件名。
+  // 事件语法分成三层：显式 `on:*`、React 风格 `onXxx`、以及小写事件名。
   if (sourceName.startsWith('on:')) {
     return {
       kind: 'component-event',
@@ -247,17 +201,7 @@ export const analyzeTsxBindingName = (
   // DOM 事件支持 `click.stop.prevent` 这类修饰符后缀。
   const [eventCandidate, ...eventModifiers] = sourceName.split('.');
 
-  if (mode === 'directive-extended' && DOM_EVENT_NAMES.has(sourceName)) {
-    return {
-      kind: 'dom-event',
-      sourceName,
-      bindingName: sourceName,
-      modifiers: [],
-    };
-  }
-
   if (
-    mode === 'directive-extended' &&
     eventModifiers.length > 0 &&
     isPotentialDomEventName(eventCandidate)
   ) {

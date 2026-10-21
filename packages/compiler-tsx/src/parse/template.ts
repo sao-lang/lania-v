@@ -25,11 +25,9 @@ import {
 } from '@lania-v/shared';
 import {
   analyzeTsxBindingName,
-  DOM_EVENT_NAMES,
   type TsxBindingAnalysis,
   getJsxAttributeNameText,
 } from '../analysis/binding';
-import type { TsxTemplateSyntaxMode } from './template-mode';
 import type {
   AttributeNode,
   DirectiveNode,
@@ -141,105 +139,26 @@ const getJsxExpressionNode = (
 };
 
 interface NormalizedJsxAttribute {
-  // 这里的名字已经过扩展语法拼接恢复，可直接送入绑定名分析器。
   nameText: string;
   initializer: ts.JsxAttribute['initializer'];
 }
 
-// 这组辅助函数负责把 TSX 词法层面被拆开的扩展 attribute 名重新拼回编译器语义。
-// 这几类绑定允许在 TSX 预处理后以多段 attribute 的形式重新拼回完整名字。
-const shouldAttemptBindingMerge = (nameText: string): boolean => {
-  return (
-    nameText.startsWith('model:') ||
-    nameText.startsWith('style:') ||
-    DOM_EVENT_NAMES.has(nameText) ||
-    looksLikeDirectiveExtendedEventToken(nameText)
-  );
-};
-
-const canAppendBindingSegment = (nameText: string): boolean => {
-  // 被拆出来的后续片段只能是“纯后缀 token”，避免把新的独立绑定错误拼接进去。
-  return !nameText.includes(':') && !nameText.includes('.');
-};
-
-// 把 TSX 解析器看到的属性序列恢复成“编译器真正想分析的绑定名 + initializer”。
+// 标准 TSX 下属性名不会被拆段，直接按原样取出即可。
 const normalizeJsxAttributeProperties = (
-  attributes: ts.JsxAttributes,
-  mode: TsxTemplateSyntaxMode
+  attributes: ts.JsxAttributes
 ): NormalizedJsxAttribute[] => {
-  if (mode !== 'directive-extended') {
-    return attributes.properties.flatMap((property) => {
-      if (!ts.isJsxAttribute(property)) {
-        return [];
-      }
+  return attributes.properties.flatMap((property) => {
+    if (!ts.isJsxAttribute(property)) {
+      return [];
+    }
 
-      return [{
+    return [
+      {
         nameText: getJsxAttributeNameText(property.name),
         initializer: property.initializer,
-      }];
-    });
-  }
-
-  const normalized: NormalizedJsxAttribute[] = [];
-
-  // `directive-extended` 模式下，某些扩展属性名会在预处理阶段被拆段，这里顺序还原。
-  for (let index = 0; index < attributes.properties.length; index += 1) {
-    const property = attributes.properties[index];
-
-    if (!ts.isJsxAttribute(property)) {
-      continue;
-    }
-
-    const nameText = getJsxAttributeNameText(property.name);
-
-    if (!shouldAttemptBindingMerge(nameText) || property.initializer) {
-      normalized.push({
-        nameText,
-        initializer: property.initializer,
-      });
-      continue;
-    }
-
-    // 例如 `model:value.trim={x}` 可能在预处理后拆成多段，这里顺序合并回来。
-    let mergedName = nameText;
-    let initializer: ts.JsxAttribute['initializer'] = property.initializer;
-    let cursor = index;
-
-    while (cursor + 1 < attributes.properties.length) {
-      const nextProperty = attributes.properties[cursor + 1];
-
-      if (!ts.isJsxAttribute(nextProperty)) {
-        break;
-      }
-
-      const nextNameText = getJsxAttributeNameText(nextProperty.name);
-
-      if (!canAppendBindingSegment(nextNameText)) {
-        break;
-      }
-
-      mergedName += `.${nextNameText}`;
-      initializer = nextProperty.initializer;
-      cursor += 1;
-
-      if (nextProperty.initializer) {
-        break;
-      }
-    }
-
-    normalized.push({
-      nameText: mergedName,
-      initializer,
-    });
-    index = cursor;
-  }
-
-  return normalized;
-};
-
-const looksLikeDirectiveExtendedEventToken = (nameText: string): boolean => {
-  // 扩展事件名的后续 token 允许 `:`，例如自定义事件或具名阶段；这里只做宽松词法过滤。
-  return /^[a-z][a-z0-9:-]*$/.test(nameText);
+      },
+    ];
+  });
 };
 
 const classifyDirectiveKind = (
@@ -247,18 +166,12 @@ const classifyDirectiveKind = (
 ): DirectiveNode['kind'] => {
   // 绑定名分析阶段会产出更细的种类，这里再映射成模板 IR 约定的指令 kind。
   switch (analysis.kind) {
-    case 'if-directive':
-      return 'if';
     case 'bind-directive':
       return 'bind';
     case 'model-directive':
       return 'model';
     case 'html-directive':
       return 'html';
-    case 'class-directive':
-      return 'class';
-    case 'style-directive':
-      return 'style';
     case 'use-directive':
       return 'use';
     case 'ref':
@@ -442,6 +355,97 @@ const EVENT_RESERVED_MODIFIERS = new Set([
   'middle',
   'right',
 ]);
+
+// `attr={{ alt: x, 'data-id': id }}` 展开成多个属性绑定，合并成一个 slot 承载。
+const collectAttrObjectDirectives = (
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  tagName: string
+): DirectiveNode[] | null => {
+  if (!ts.isObjectLiteralExpression(expression)) {
+    return null;
+  }
+
+  assertStaticObjectLiteralShape(expression, tagName, 'attr');
+
+  const directives: DirectiveNode[] = [];
+
+  for (const property of expression.properties) {
+    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+      return null;
+    }
+
+    // `attr` 的属性名是运行时属性名，允许字符串字面量以支持 `data-*` / `aria-*`。
+    const keyName = ts.isShorthandPropertyAssignment(property)
+      ? property.name.text
+      : ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+        ? property.name.text
+        : null;
+
+    if (!keyName) {
+      return null;
+    }
+
+    const exprText = ts.isShorthandPropertyAssignment(property)
+      ? property.name.text
+      : property.initializer.getText(sourceFile);
+
+    directives.push({
+      type: 'DirectiveNode',
+      kind: 'attr',
+      name: keyName,
+      expression: exprText,
+      modifiers: [],
+    });
+  }
+
+  return directives;
+};
+
+// `on={{ click: fn, keydown: onEsc }}` 展开成多个事件监听。
+const collectOnObjectDirectives = (
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  tagName: string
+): DirectiveNode[] | null => {
+  if (!ts.isObjectLiteralExpression(expression)) {
+    return null;
+  }
+
+  assertStaticObjectLiteralShape(expression, tagName, 'on');
+
+  const directives: DirectiveNode[] = [];
+
+  for (const property of expression.properties) {
+    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+      return null;
+    }
+
+    const keyName = ts.isShorthandPropertyAssignment(property)
+      ? property.name.text
+      : ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+        ? property.name.text
+        : null;
+
+    if (!keyName) {
+      return null;
+    }
+
+    const exprText = ts.isShorthandPropertyAssignment(property)
+      ? property.name.text
+      : property.initializer.getText(sourceFile);
+
+    directives.push({
+      type: 'DirectiveNode',
+      kind: 'on',
+      name: keyName,
+      expression: exprText,
+      modifiers: [],
+    });
+  }
+
+  return directives;
+};
 
 // `style` / `use` / `model` 三类对象糖衣都在模板解析阶段展开，避免把语法分歧传到下游 IR。
 // `style={{ width: size, height.px: n }}` 会在这里拆成多个 style 指令，便于后续统一序列化。
@@ -948,7 +952,6 @@ const normalizeEventBindingMetadata = (
 const parseJsxAttributes = (
   attributes: ts.JsxAttributes,
   sourceFile: ts.SourceFile,
-  mode: TsxTemplateSyntaxMode,
   tagName: string
 ): Pick<
   ElementNode,
@@ -969,7 +972,7 @@ const parseJsxAttributes = (
     }
   });
 
-  normalizeJsxAttributeProperties(attributes, mode).forEach((property) => {
+  normalizeJsxAttributeProperties(attributes).forEach((property) => {
     // `client:<priority>` 是 island 声明，不参与 props，也不允许用在原生标签上。
     if (property.nameText.startsWith('client:')) {
       if (intrinsicTag) {
@@ -997,7 +1000,6 @@ const parseJsxAttributes = (
     }
     // 先把绑定名分析成统一语义，再决定它应落到属性、事件还是指令数组。
     const analysis = analyzeTsxBindingName(property.nameText, {
-      mode,
       intrinsicElement: intrinsicTag,
     });
     const expressionText = getJsxExpressionText(property.initializer, sourceFile);
@@ -1011,7 +1013,7 @@ const parseJsxAttributes = (
           return;
         }
 
-        if (mode === 'jsx-standard' && expressionNode && ts.isObjectLiteralExpression(expressionNode)) {
+        if (expressionNode && ts.isObjectLiteralExpression(expressionNode)) {
           // 标准 TSX 额外支持对象事件语法，用来把模板级修饰符能力折叠回 JSX 表达式。
           const normalizedEvent = collectEventObjectBinding(
             analysis.bindingName,
@@ -1054,12 +1056,9 @@ const parseJsxAttributes = (
           component: analysis.kind === 'component-event',
         });
         return;
-      case 'if-directive':
       case 'bind-directive':
       case 'model-directive':
       case 'html-directive':
-      case 'class-directive':
-      case 'style-directive':
       case 'use-directive':
       case 'ref':
         if (!expressionText) {
@@ -1067,13 +1066,12 @@ const parseJsxAttributes = (
           return;
         }
 
-        // 标准 TSX 下 `model` 保留对象语法入口；扩展语法则仍走绑定名分析后的通用分支。
-        if (mode === 'jsx-standard' && intrinsicTag && analysis.kind === 'model-directive') {
+        // `model` 在标准 TSX 中只有对象入口，避免与普通属性赋值语义混淆。
+        if (intrinsicTag && analysis.kind === 'model-directive') {
           if (!expressionNode || !ts.isObjectLiteralExpression(expressionNode)) {
             throw createTemplateParseError(tagName, 'model', 'TSX `model` must use an object literal.');
           }
 
-          // `model` 在标准 TSX 中只有对象入口，避免与普通属性赋值语义混淆。
           directiveNodes.push(collectModelObjectDirective(expressionNode, sourceFile, tagName));
           return;
         }
@@ -1104,8 +1102,8 @@ const parseJsxAttributes = (
         break;
     }
 
-    if (mode === 'jsx-standard' && intrinsicTag) {
-      // `use` / `html` / prop-like bind 都是标准 TSX 模式下对原生标签补出来的模板糖衣。
+    if (intrinsicTag) {
+      // `use` / `attr` / `on` / `html` 都是标准 TSX 下对原生标签补出来的模板糖衣。
       // 它们只对原生标签生效，组件标签仍优先按 props / component event 语义处理。
       if (analysis.bindingName === 'use' && expressionNode) {
         if (!ts.isObjectLiteralExpression(expressionNode)) {
@@ -1115,6 +1113,40 @@ const parseJsxAttributes = (
         const useDirectives = collectUseObjectDirectives(expressionNode, sourceFile, tagName);
         if (useDirectives) {
           directiveNodes.push(...useDirectives);
+          return;
+        }
+      }
+
+      // `attr` 批量属性绑定：一次声明多个属性，避免逐个属性各占一个 slot。
+      if (analysis.kind === 'attr-directive' && expressionNode) {
+        const attrDirectives = collectAttrObjectDirectives(
+          expressionNode,
+          sourceFile,
+          tagName
+        );
+        if (attrDirectives) {
+          directiveNodes.push(...attrDirectives);
+          return;
+        }
+      }
+
+      // `on` 批量事件绑定：一次声明多个事件监听。
+      if (analysis.kind === 'on-directive' && expressionNode) {
+        const onDirectives = collectOnObjectDirectives(
+          expressionNode,
+          sourceFile,
+          tagName
+        );
+        if (onDirectives) {
+          for (const directive of onDirectives) {
+            eventNodes.push({
+              type: 'EventNode',
+              name: directive.name,
+              expression: directive.expression,
+              modifiers: [],
+              component: false,
+            });
+          }
           return;
         }
       }
@@ -1160,7 +1192,7 @@ const parseJsxAttributes = (
       attributeNodes.push({
         type: 'AttributeNode',
         name:
-          mode === 'jsx-standard' && intrinsicTag && analysis.bindingName === 'className'
+          intrinsicTag && analysis.bindingName === 'className'
             ? 'class'
             : analysis.bindingName,
         value: null,
@@ -1173,7 +1205,7 @@ const parseJsxAttributes = (
       attributeNodes.push({
         type: 'AttributeNode',
         name:
-          mode === 'jsx-standard' && intrinsicTag && analysis.bindingName === 'className'
+          intrinsicTag && analysis.bindingName === 'className'
             ? 'class'
             : analysis.bindingName,
         value: property.initializer.text,
@@ -1216,7 +1248,6 @@ const parseJsxAttributes = (
 const parseJsxChild = (
   node: ts.Node,
   sourceFile: ts.SourceFile,
-  mode: TsxTemplateSyntaxMode
 ): TemplateChildNode[] => {
   if (ts.isJsxText(node)) {
     // JSX 文本节点需要先按模板语义压缩空白，再决定是否保留。
@@ -1237,12 +1268,12 @@ const parseJsxChild = (
 
   if (ts.isJsxFragment(node)) {
     // Fragment 自身不落节点，只展开其子节点。
-    return node.children.flatMap((child) => parseJsxChild(child, sourceFile, mode));
+    return node.children.flatMap((child) => parseJsxChild(child, sourceFile));
   }
 
   if (ts.isJsxSelfClosingElement(node)) {
     const tagName = node.tagName.getText(sourceFile);
-    const parsedAttributes = parseJsxAttributes(node.attributes, sourceFile, mode, tagName);
+    const parsedAttributes = parseJsxAttributes(node.attributes, sourceFile, tagName);
 
     // 自闭合节点没有 children，但属性、事件、指令仍要完整解析后再落入模板树。
     return [
@@ -1267,11 +1298,10 @@ const parseJsxChild = (
   const parsedAttributes = parseJsxAttributes(
     node.openingElement.attributes,
     sourceFile,
-    mode,
     node.openingElement.tagName.getText(sourceFile)
   );
   // 这里先得到完整 children，再把“属性侧信息”和“子树侧信息”做交叉约束检查。
-  const children = node.children.flatMap((child) => parseJsxChild(child, sourceFile, mode));
+  const children = node.children.flatMap((child) => parseJsxChild(child, sourceFile));
   // 非自闭合元素只有在子节点递归完成后，才能判断 `html` 指令是否与 children 冲突。
   assertHtmlDirectiveChildExclusion(
     node.openingElement.tagName.getText(sourceFile),
@@ -1320,7 +1350,6 @@ export const unwrapJsxExpression = (
 export const parseReturnedJsxTemplate = (
   sourceFile: ts.SourceFile,
   expression: ts.Expression,
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
 ): TemplateNode => {
   const jsxRoot = unwrapJsxExpression(expression);
 
@@ -1335,6 +1364,6 @@ export const parseReturnedJsxTemplate = (
   // 根节点统一包成 TemplateNode，便于后续编译阶段只处理一种入口形态。
   return {
     type: 'TemplateNode',
-    children: parseJsxChild(jsxRoot, sourceFile, mode),
+    children: parseJsxChild(jsxRoot, sourceFile),
   };
 };

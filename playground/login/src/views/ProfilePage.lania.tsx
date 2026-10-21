@@ -187,7 +187,7 @@ export default function ProfilePage(props: ProfilePageProps) {
         </button>
       </header>
 
-      <When when={pwdOpen.value}>
+      <When value={pwdOpen.value}>
         <div className="pwd-panel" data-debug="change-password">
           <label className="field">
             <span className="field-label">原密码</span>
@@ -248,7 +248,7 @@ export default function ProfilePage(props: ProfilePageProps) {
               />
             </span>
             <When
-              when={
+              value={
                 pwdNew.value.length > 0 &&
                 pwdNew.value.length < PASSWORD_MIN_LENGTH
               }
@@ -281,7 +281,7 @@ export default function ProfilePage(props: ProfilePageProps) {
                 }}
               />
             </span>
-            <When when={pwdMismatch()}>
+            <When value={pwdMismatch()}>
               <p className="hint">两次输入的密码不一致。</p>
             </When>
           </label>
@@ -292,19 +292,19 @@ export default function ProfilePage(props: ProfilePageProps) {
             disabled={!pwdReady() || pwdBusy.value}
             onClick={() => void submitPasswordChange()}
           >
-            <When when={pwdBusy.value}>
+            <When value={pwdBusy.value}>
               <span className="spinner"></span>
             </When>
             <span>{pwdBusy.value ? '正在更新…' : '更新密码'}</span>
           </button>
 
-          <When when={pwdMessage.value.length > 0}>
+          <When value={pwdMessage.value.length > 0}>
             <div className="banner" role="status">
               <span className="banner-check">✓</span>
               <span>{pwdMessage.value}</span>
             </div>
           </When>
-          <When when={pwdError.value.length > 0}>
+          <When value={pwdError.value.length > 0}>
             <div className="banner banner-error" role="alert">
               <span className="banner-check">!</span>
               <span>{pwdError.value}</span>
@@ -313,10 +313,10 @@ export default function ProfilePage(props: ProfilePageProps) {
         </div>
       </When>
 
-      <When when={accountLoading.value}>
+      <When value={accountLoading.value}>
         <p className="hint">正在获取用户信息…</p>
       </When>
-      <When when={accountError.value.length > 0}>
+      <When value={accountError.value.length > 0}>
         <div className="banner banner-error" role="alert">
           <span className="banner-check">!</span>
           <span>{accountError.value}</span>
@@ -345,21 +345,21 @@ export default function ProfilePage(props: ProfilePageProps) {
         />
       </span>
 
-      <When when={state.value === 'loading'}>
+      <When value={state.value === 'loading'}>
         <p className="hint">正在加载用户列表…</p>
       </When>
 
-      <When when={state.value === 'error'}>
+      <When value={state.value === 'error'}>
         <div className="banner banner-error" role="alert">
           <span className="banner-check">!</span>
           <span>{errorText.value}</span>
         </div>
       </When>
 
-      <When when={state.value === 'ready'}>
+      <When value={state.value === 'ready'}>
         <ul className="user-list">
           <Each
-            items={users.value.items}
+            value={users.value.items}
             fallback={<li class="empty">没有匹配的用户</li>}
           >
             {(item: UserView): any => (

@@ -18,6 +18,7 @@ export const ENHANCED_COMPONENT_NAMES = [
   'Switch',
   'Case',
   'Default',
+  'Match',
   'Each',
   'Teleport',
   'Fragment',
@@ -31,11 +32,12 @@ export const ENHANCED_COMPONENT_NAMES = [
   'Suspense',
   'Await',
   'Virtual',
+  'Reach',
 ] as const;
 
 export type EnhancedComponentName = (typeof ENHANCED_COMPONENT_NAMES)[number];
 export type EnhancedWhenBranchComponentName = 'Then' | 'Else';
-export type EnhancedSwitchBranchComponentName = 'Case' | 'Default';
+export type EnhancedSwitchBranchComponentName = 'Case' | 'Match' | 'Default';
 export type EnhancedBranchComponentName =
   | EnhancedWhenBranchComponentName
   | EnhancedSwitchBranchComponentName;
@@ -95,10 +97,10 @@ const registryEntries = [
     supportsSsr: true,
     supportsHydration: true,
     staticRenderMode: 'preserve',
-    metadataPropNames: ['when', 'fallback', 'mode'],
+    metadataPropNames: ['value', 'fallback', 'mode'],
     notes: 'Lower to IfIR and keep branch semantics in compiler IR.',
   },
-  // `Then` / `Else` / `Case` / `Default` 只作为父级 lowering 的语法提示。
+  // `Then` / `Else` / `Case` / `Match` / `Default` 只作为父级 lowering 的语法提示。
   {
     name: 'Then',
     category: 'syntax',
@@ -121,7 +123,7 @@ const registryEntries = [
     metadataPropNames: [],
     notes: 'Branch marker consumed by <When> lowering.',
   },
-  // 生命周期/边界类组件虽然仍是结构节点，但运行时语义更特殊。
+  // `Switch` 有两种形态：`<Case when={值}>` 做取值匹配，`<Match value={条件}>` 做布尔分支。
   {
     name: 'Switch',
     category: 'structure',
@@ -130,8 +132,8 @@ const registryEntries = [
     supportsSsr: true,
     supportsHydration: true,
     staticRenderMode: 'preserve',
-    metadataPropNames: ['mode'],
-    notes: 'Lower to nested IfIR chain based on <Case> / <Default> children.',
+    metadataPropNames: ['value', 'mode'],
+    notes: 'Value switch: either value lookup via <Case when> / <Default>, or boolean branches via <Match>.',
   },
   {
     name: 'Case',
@@ -142,7 +144,7 @@ const registryEntries = [
     supportsHydration: false,
     staticRenderMode: 'flatten',
     metadataPropNames: [],
-    notes: 'Branch marker consumed by <Switch> lowering.',
+    notes: 'Branch marker consumed by <Switch> lowering; `when` is the expected value.',
   },
   {
     name: 'Default',
@@ -156,6 +158,17 @@ const registryEntries = [
     notes: 'Branch marker consumed by <Switch> lowering.',
   },
   {
+    name: 'Match',
+    category: 'syntax',
+    irKind: 'passthrough',
+    runtimeHostKind: 'none',
+    supportsSsr: false,
+    supportsHydration: false,
+    staticRenderMode: 'flatten',
+    metadataPropNames: [],
+    notes: 'Boolean branch marker consumed by <Switch> lowering.',
+  },
+  {
     name: 'Each',
     category: 'structure',
     irKind: 'ListIR',
@@ -163,7 +176,7 @@ const registryEntries = [
     supportsSsr: true,
     supportsHydration: true,
     staticRenderMode: 'preserve',
-    metadataPropNames: ['items', 'key', 'fallback'],
+    metadataPropNames: ['value', 'key', 'fallback'],
     notes: 'Lower to ListIR and structural slot payloads.',
   },
   {
@@ -305,8 +318,36 @@ const registryEntries = [
     supportsSsr: true,
     supportsHydration: true,
     staticRenderMode: 'preserve',
-    metadataPropNames: ['items', 'itemHeight', 'height', 'overscan', 'key'],
-    notes: 'Windowed dynamic block that renders only the visible item range.',
+    metadataPropNames: [
+      'value',
+      'itemHeight',
+      'height',
+      'width',
+      'itemWidth',
+      'overscan',
+      'key',
+      'fallback',
+      'groupBy',
+      'header',
+      'headerHeight',
+      'endReachedThreshold',
+      'hasMore',
+      'scrollTo',
+    ],
+    notes:
+      'Windowed list: fixed, per-item or estimated row sizes, scroll anchoring, sticky group headers and bidirectional virtualization.',
+  },
+  {
+    name: 'Reach',
+    category: 'structure-lifecycle',
+    irKind: 'DynamicIR',
+    runtimeHostKind: 'structural',
+    supportsSsr: false,
+    supportsHydration: false,
+    staticRenderMode: 'preserve',
+    metadataPropNames: ['mode', 'root', 'rootMargin', 'threshold', 'once'],
+    notes:
+      'IntersectionObserver sentinel for bottom-of-scroll loading, lazy reveal and impressions.',
   },
 ] as const satisfies readonly EnhancedComponentRegistryEntry[];
 
@@ -361,6 +402,7 @@ const ENHANCED_COMPONENT_PARENT_REQUIREMENTS = Object.freeze({
   Then: 'When',
   Else: 'When',
   Case: 'Switch',
+  Match: 'Switch',
   Default: 'Switch',
 } satisfies Record<EnhancedBranchComponentName, EnhancedComponentName>);
 

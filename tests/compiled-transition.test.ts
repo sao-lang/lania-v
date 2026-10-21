@@ -88,7 +88,7 @@ export default defineComponent(function Demo() {
         onEnter={(_el: Element, ctx: { phase: string }) => push('enter:' + ctx.phase)}
         onLeave={(_el: Element, ctx: { phase: string }) => push('leave:' + ctx.phase)}
       >
-        <When when={visible.value}>
+        <When value={visible.value}>
           <div>content</div>
         </When>
       </Transition>
@@ -128,7 +128,7 @@ export default defineComponent(function LeaveCleanupDemo() {
     <section>
       <button onClick={() => visible.set(!visible.value)}>toggle</button>
       <Transition transitionKey="cleanup">
-        <When when={visible.value}>
+        <When value={visible.value}>
           <div>content</div>
         </When>
       </Transition>

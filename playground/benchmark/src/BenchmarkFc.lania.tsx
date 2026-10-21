@@ -16,7 +16,9 @@ export default defineComponent(function BenchmarkFc() {
   const patchVersion = createSignal(0);
   const toggleVisible = createSignal(true);
   const draft = createSignal('seed');
-  const middleSnapshot = createSignal(describeBenchItem(items()[BENCH_MIDDLE_ROW_INDEX]));
+  const middleSnapshot = createSignal(
+    describeBenchItem(items()[BENCH_MIDDLE_ROW_INDEX])
+  );
 
   const increment = () => {
     count.set((value) => value + 1);
@@ -37,7 +39,11 @@ export default defineComponent(function BenchmarkFc() {
   };
 
   return (
-    <section className="bench-root" data-bench-root="ready" data-bench-ready="true">
+    <section
+      className="bench-root"
+      data-bench-root="ready"
+      data-bench-ready="true"
+    >
       <header className="bench-header">
         <h2>lania-v FC benchmark</h2>
         <p className="bench-meta">list size: 1000 | middle row: 501</p>
@@ -46,7 +52,11 @@ export default defineComponent(function BenchmarkFc() {
       <div className="bench-grid">
         <div className="bench-card">
           <div className="bench-toolbar">
-            <button className="bench-btn" data-bench-action="increment" onClick={increment}>
+            <button
+              className="bench-btn"
+              data-bench-action="increment"
+              onClick={increment}
+            >
               increment
             </button>
             <output className="bench-output" data-bench-output="count">
@@ -58,18 +68,25 @@ export default defineComponent(function BenchmarkFc() {
 
         <div className="bench-card">
           <div className="bench-toolbar">
-            <button className="bench-btn" data-bench-action="patch" onClick={patchMiddle}>
+            <button
+              className="bench-btn"
+              data-bench-action="patch"
+              onClick={patchMiddle}
+            >
               patch middle
             </button>
             <output className="bench-output" data-bench-output="patch-version">
               {String(patchVersion())}
             </output>
-            <output className="bench-output bench-output-wide" data-bench-output="middle-row">
+            <output
+              className="bench-output bench-output-wide"
+              data-bench-output="middle-row"
+            >
               {middleSnapshot()}
             </output>
           </div>
           <ul className="bench-list" data-bench-list="patch">
-            <Each items={items()} key={eachItemKey}>
+            <Each value={items()} key={eachItemKey}>
               {(item): any => (
                 <li
                   className="bench-list-row"
@@ -81,19 +98,25 @@ export default defineComponent(function BenchmarkFc() {
               )}
             </Each>
           </ul>
-          <p className="bench-note">1000-item keyed list patch + middle row verification</p>
+          <p className="bench-note">
+            1000-item keyed list patch + middle row verification
+          </p>
         </div>
 
         <div className="bench-card">
           <div className="bench-toolbar">
-            <button className="bench-btn" data-bench-action="toggle" onClick={toggle}>
+            <button
+              className="bench-btn"
+              data-bench-action="toggle"
+              onClick={toggle}
+            >
               toggle panel
             </button>
             <output className="bench-output" data-bench-output="toggle-state">
               {toggleVisible() ? 'visible' : 'hidden'}
             </output>
           </div>
-          <When when={toggleVisible()}>
+          <When value={toggleVisible()}>
             <section className="bench-panel" data-bench-output="toggle-panel">
               <p className="bench-note">mounted conditional subtree</p>
               <p className="bench-meta">panel body: visible</p>
@@ -109,11 +132,16 @@ export default defineComponent(function BenchmarkFc() {
               model={{ target: draft }}
               placeholder="type benchmark payload"
             />
-            <output className="bench-output bench-output-wide" data-bench-output="draft">
+            <output
+              className="bench-output bench-output-wide"
+              data-bench-output="draft"
+            >
               {draft()}
             </output>
           </div>
-          <p className="bench-note">input event to model binding to text slot</p>
+          <p className="bench-note">
+            input event to model binding to text slot
+          </p>
         </div>
       </div>
     </section>

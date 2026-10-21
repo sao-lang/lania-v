@@ -359,14 +359,12 @@ export const isListExpression = (expression: string): boolean => {
   }
 };
 
-// 生成 `IfIR` 静态骨架时，只保留不会影响结构判断的静态属性，去掉事件和 `if` 本身。
+// 生成 `IfIR` 静态骨架时，只保留不会影响结构判断的静态属性，去掉事件等行为语义。
 export const toStaticElementNode = (node: ElementNode): ElementNode => {
   return {
     ...node,
-    // `if` 指令和事件都属于结构/行为语义，不应污染“静态骨架”的判定结果。
     attributes: node.attributes.filter((attribute) => attribute.static),
     events: [],
-    directives: node.directives.filter((directive) => directive.kind !== 'if'),
     children: node.children,
   };
 };

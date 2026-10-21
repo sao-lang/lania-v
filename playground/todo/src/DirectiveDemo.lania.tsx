@@ -91,7 +91,7 @@ export default defineComponent(function DirectiveDemo() {
         </div>
 
         <When
-          when={directiveVisible()}
+          value={directiveVisible()}
           fallback={renderEmpty('target removed, directive unmounted')}
         >
           <div
@@ -127,7 +127,7 @@ export default defineComponent(function DirectiveDemo() {
         </When>
 
         <Each
-          items={directiveLog()}
+          value={directiveLog()}
           fallback={renderEmpty('no directive logs')}
         >
           {(line: string): any => <p className="empty">{line}</p>}

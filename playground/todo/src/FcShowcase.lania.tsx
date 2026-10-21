@@ -236,7 +236,7 @@ function TransitionDemoSection() {
             pushLog(`leave:${ctx.phase}`);
           }}
         >
-          <When when={visible()}>
+          <When value={visible()}>
             <div
               data-demo="transition-block"
               style={{
@@ -299,7 +299,7 @@ function TransitionDemoSection() {
           }}
         >
           <Each
-            items={items()}
+            value={items()}
             key={itemKey}
             fallback={<p className="empty">empty</p>}
           >
@@ -330,7 +330,7 @@ function TransitionDemoSection() {
 
       <div className="item">
         <p className="summary">transition logs</p>
-        <Each items={logs()} fallback={<p className="empty">no logs</p>}>
+        <Each value={logs()} fallback={<p className="empty">no logs</p>}>
           {(line: string): any => <p className="empty">{line}</p>}
         </Each>
       </div>
@@ -780,7 +780,7 @@ function FcShowcase() {
       </div>
 
       <div className="list">
-        <When when={tab() === 'reactivity'} mode="remount">
+        <When value={tab() === 'reactivity'} mode="remount">
           <div>
             <div className="item">
               <p className="summary">
@@ -842,13 +842,13 @@ function FcShowcase() {
                 </button>
               </div>
               <Each
-                items={lifecycleLog()}
+                value={lifecycleLog()}
                 fallback={renderEmpty('no lifecycle logs yet')}
               >
                 {(line): any => <p className="empty">{line}</p>}
               </Each>
               <Each
-                items={lifecycleHookLog()}
+                value={lifecycleHookLog()}
                 fallback={renderEmpty('no hook logs yet')}
               >
                 {(line: string): any => <p className="empty">{line}</p>}
@@ -900,7 +900,7 @@ function FcShowcase() {
 
             <div className="item">
               <p className="summary">watch</p>
-              <Each items={watchLog()} fallback={renderEmpty('no watch logs')}>
+              <Each value={watchLog()} fallback={renderEmpty('no watch logs')}>
                 {(line: string): any => <p className="empty">{line}</p>}
               </Each>
             </div>
@@ -923,7 +923,7 @@ function FcShowcase() {
                 </button>
               </div>
               <Each
-                items={watchMultiLog()}
+                value={watchMultiLog()}
                 fallback={renderEmpty('no watch logs')}
               >
                 {(line: string): any => <p className="empty">{line}</p>}
@@ -976,7 +976,7 @@ function FcShowcase() {
                 </button>
               </div>
               <Each
-                items={transitionStateLog()}
+                value={transitionStateLog()}
                 fallback={renderEmpty('no transition logs')}
               >
                 {(line: string): any => <p className="empty">{line}</p>}
@@ -985,7 +985,7 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When when={tab() === 'store'}>
+        <When value={tab() === 'store'}>
           <div className="item">
             <p className="summary">@lania/store 原子读写链路</p>
             <p>store.value.user.name: {storeUserName()}</p>
@@ -1031,7 +1031,7 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When when={tab() === 'resource'}>
+        <When value={tab() === 'resource'}>
           <div className="item">
             <p className="summary">createResource（依赖追踪 + 异步刷新）</p>
             <p>query: {query()}</p>
@@ -1084,13 +1084,13 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When when={tab() === 'enhanced'}>
+        <When value={tab() === 'enhanced'}>
           <div className="item">
             <p className="summary">&lt;When fallback /&gt;</p>
             <button className="btn" onClick={() => whenFlag.set((v) => !v)}>
               toggle: {String(whenFlag())}
             </button>
-            <When when={whenFlag()} fallback={renderEmpty('fallback branch')}>
+            <When value={whenFlag()} fallback={renderEmpty('fallback branch')}>
               <p className="summary">truthy branch</p>
             </When>
           </div>
@@ -1108,7 +1108,7 @@ function FcShowcase() {
             >
               toggle branch: {String(whenBranchFlag())}
             </button>
-            <When when={whenBranchFlag()}>
+            <When value={whenBranchFlag()}>
               <Then>
                 <p className="summary">Then branch: visible = true</p>
               </Then>
@@ -1138,7 +1138,7 @@ function FcShowcase() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               }}
             >
-              <When when={whenModeDemoVisible()}>
+              <When value={whenModeDemoVisible()}>
                 <div
                   className="surface-light"
                   style={{
@@ -1153,7 +1153,7 @@ function FcShowcase() {
                   <input className="input" placeholder="type in retain block" />
                 </div>
               </When>
-              <When when={whenModeDemoVisible()} mode="remount">
+              <When value={whenModeDemoVisible()} mode="remount">
                 <div
                   className="surface-light"
                   style={{
@@ -1217,10 +1217,10 @@ function FcShowcase() {
               tips: 在 A/B/Default 里输入内容，来回切分支再回来；retain
               会保留输入值，remount 会清空。
             </p>
-            <When when={switchMode() === 'retain'}>
+            <When value={switchMode() === 'retain'}>
               <Then>
                 <Switch mode="retain">
-                  <Case when={switchCase() === 1}>
+                  <Case value={switchCase() === 1}>
                     <div
                       className="surface-light"
                       style={{
@@ -1234,7 +1234,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 1" />
                     </div>
                   </Case>
-                  <Case when={switchCase() === 2}>
+                  <Case value={switchCase() === 2}>
                     <div
                       className="surface-light"
                       style={{
@@ -1248,7 +1248,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 2" />
                     </div>
                   </Case>
-                  <Case when={switchCase() === 3}>
+                  <Case value={switchCase() === 3}>
                     <div
                       className="surface-light"
                       style={{
@@ -1280,7 +1280,7 @@ function FcShowcase() {
               </Then>
               <Else>
                 <Switch mode="remount">
-                  <Case when={switchCase() === 1}>
+                  <Case value={switchCase() === 1}>
                     <div
                       className="surface-light"
                       style={{
@@ -1294,7 +1294,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 1" />
                     </div>
                   </Case>
-                  <Case when={switchCase() === 2}>
+                  <Case value={switchCase() === 2}>
                     <div
                       className="surface-light"
                       style={{
@@ -1308,7 +1308,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 2" />
                     </div>
                   </Case>
-                  <Case when={switchCase() === 3}>
+                  <Case value={switchCase() === 3}>
                     <div
                       className="surface-light"
                       style={{
@@ -1365,7 +1365,7 @@ function FcShowcase() {
               </button>
             </div>
             <Each
-              items={eachItems()}
+              value={eachItems()}
               key={eachItemKey}
               fallback={renderEmpty('empty')}
             >
@@ -1476,7 +1476,7 @@ function FcShowcase() {
                 : keepAliveViews().pageB}
             </KeepAlive>
             <Each
-              items={keepAliveLog()}
+              value={keepAliveLog()}
               fallback={renderEmpty('no keep-alive logs')}
             >
               {(line: string): any => <p className="empty">{line}</p>}
@@ -1496,7 +1496,7 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When when={tab() === 'suspense'} mode="remount">
+        <When value={tab() === 'suspense'} mode="remount">
           <div className="item">
             <p className="summary">
               &lt;Suspense /&gt; + lazy() + &lt;LazyLoad /&gt;
@@ -1518,7 +1518,7 @@ function FcShowcase() {
               )}
             >
               <Suspense fallback={<p className="empty">loading...</p>}>
-                <When when={!throwError()}>
+                <When value={!throwError()}>
                   <Then>
                     <LazyHello name={lazyName()} key={suspenseTabSession()} />
                   </Then>
@@ -1545,10 +1545,10 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When when={tab() === 'transition'} mode="remount">
+        <When value={tab() === 'transition'} mode="remount">
           <TransitionDemoSection />
         </When>
-        <When when={tab() === 'local'} mode="remount">
+        <When value={tab() === 'local'} mode="remount">
           <Dynamic component="x-local-state-counter-card" />
         </When>
       </div>

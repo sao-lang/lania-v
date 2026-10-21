@@ -10,6 +10,7 @@ import {
   renderCompatDynamic,
   renderCompatEach,
   renderCompatSlot,
+  renderCompatSwitch,
   renderCompatWhen,
 } from './utils/compat';
 import type {
@@ -19,6 +20,7 @@ import type {
   EnhancedRenderable,
   ElseProps,
   FragmentProps,
+  MatchProps,
   SlotProps,
   DefaultProps,
   SwitchProps,
@@ -53,13 +55,20 @@ export const Else = defineEnhancedComponent(
 export const Switch = defineEnhancedComponent(
   'Switch',
   (props: SwitchProps): EnhancedRenderable => {
-    return renderCompatChildren(props.children);
+    return renderCompatSwitch(props);
   }
 );
 
 export const Case = defineEnhancedComponent(
   'Case',
   (props: CaseProps): EnhancedRenderable => {
+    return renderCompatChildren(props.children);
+  }
+);
+
+export const Match = defineEnhancedComponent(
+  'Match',
+  (props: MatchProps): EnhancedRenderable => {
     return renderCompatChildren(props.children);
   }
 );

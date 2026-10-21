@@ -38,6 +38,7 @@ describe('enhanced registry and contract drafts', () => {
       'Switch',
       'Case',
       'Default',
+      'Match',
       'Each',
       'Teleport',
       'Fragment',
@@ -51,6 +52,7 @@ describe('enhanced registry and contract drafts', () => {
       'Suspense',
       'Await',
       'Virtual',
+      'Reach',
     ]);
 
     expect(getEnhancedComponentRegistryEntry('Await')).toMatchObject({
@@ -72,7 +74,9 @@ describe('enhanced registry and contract drafts', () => {
       irKind: 'BoundaryIR',
       staticRenderMode: 'children-only',
     });
-    expect(getEnhancedComponentMetadataPropNames('KeepAlive')).toContain('cacheKey');
+    expect(getEnhancedComponentMetadataPropNames('KeepAlive')).toContain(
+      'cacheKey'
+    );
     expect(isEnhancedComponentName('TransitionGroup')).toBe(true);
     expect(isEnhancedComponentName('section')).toBe(false);
     expect(isFlattenedEnhancedComponentName('Fragment')).toBe(true);
@@ -80,6 +84,11 @@ describe('enhanced registry and contract drafts', () => {
     expect(getEnhancedWhenBranchKind('Else')).toBe('fallback');
     expect(getRequiredEnhancedParentComponentName('Then')).toBe('When');
     expect(getRequiredEnhancedParentComponentName('Case')).toBe('Switch');
+    expect(getRequiredEnhancedParentComponentName('Match')).toBe('Switch');
+    expect(getRequiredEnhancedParentComponentName('Default')).toBe('Switch');
+    expect(getEnhancedComponentMetadataPropNames('When')).toContain('value');
+    expect(getEnhancedComponentMetadataPropNames('Switch')).toContain('value');
+    expect(getEnhancedComponentMetadataPropNames('Each')).toContain('value');
     expect(createEnhancedParentRequirementErrorMessage('Then')).toBe(
       '<Then> can only be used as a direct child of <When>.'
     );
@@ -97,13 +106,23 @@ describe('enhanced registry and contract drafts', () => {
       'onCache',
       'onEvict',
     ]);
-    expect(isStructuralChildrenOnlyEnhancedComponentName('Transition')).toBe(true);
-    expect(isStructuralChildrenOnlyEnhancedComponentName('Suspense')).toBe(false);
+    expect(isStructuralChildrenOnlyEnhancedComponentName('Transition')).toBe(
+      true
+    );
+    expect(isStructuralChildrenOnlyEnhancedComponentName('Suspense')).toBe(
+      false
+    );
     expect(isTransitionPayloadComponentName('TransitionGroup')).toBe(true);
     expect(isSuspenseBoundaryComponentName('Suspense')).toBe(true);
-    expect(doesTransitionPayloadComponentUseSsrWrapperTag('Transition')).toBe(false);
-    expect(doesTransitionPayloadComponentUseSsrWrapperTag('TransitionGroup')).toBe(true);
-    expect(getTransitionPayloadComponentConfig('TransitionGroup')).toMatchObject({
+    expect(doesTransitionPayloadComponentUseSsrWrapperTag('Transition')).toBe(
+      false
+    );
+    expect(
+      doesTransitionPayloadComponentUseSsrWrapperTag('TransitionGroup')
+    ).toBe(true);
+    expect(
+      getTransitionPayloadComponentConfig('TransitionGroup')
+    ).toMatchObject({
       keyPropName: 'groupKey',
       tagPropName: 'tag',
       phases: ['appear', 'enter', 'move', 'leave'],
@@ -119,8 +138,12 @@ describe('enhanced registry and contract drafts', () => {
       const entry = getEnhancedComponentRegistryEntry(name);
       expect(entry).not.toBeNull();
       expect(entry!.name).toBe(name);
-      expect(getEnhancedComponentMetadataPropNames(name)).toEqual(entry!.metadataPropNames);
-      expect(isFlattenedEnhancedComponentName(name)).toBe(entry!.staticRenderMode === 'flatten');
+      expect(getEnhancedComponentMetadataPropNames(name)).toEqual(
+        entry!.metadataPropNames
+      );
+      expect(isFlattenedEnhancedComponentName(name)).toBe(
+        entry!.staticRenderMode === 'flatten'
+      );
       expect(shouldRenderEnhancedComponentChildrenOnly(name)).toBe(
         entry!.staticRenderMode === 'children-only'
       );

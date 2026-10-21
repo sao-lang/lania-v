@@ -44,7 +44,7 @@ export interface EnhancedComponentProps {
 export type WhenMode = 'retain' | 'remount';
 
 export interface WhenProps extends EnhancedComponentProps {
-  when: boolean;
+  value: boolean;
   fallback?: EnhancedRenderable;
   mode?: WhenMode;
 }
@@ -54,17 +54,25 @@ export interface ThenProps extends EnhancedComponentProps {}
 export interface ElseProps extends EnhancedComponentProps {}
 
 export interface SwitchProps extends EnhancedComponentProps {
+  /** 提供时进入取值匹配模式，`<Case when>` 与它做严格相等比较。 */
+  value?: unknown;
   mode?: WhenMode;
 }
 
 export interface CaseProps extends EnhancedComponentProps {
-  when: boolean;
+  /** 取值匹配模式下的期望值；没有 `Switch value` 时按布尔条件处理。 */
+  when?: unknown;
+}
+
+export interface MatchProps extends EnhancedComponentProps {
+  /** 布尔分支条件。 */
+  value: unknown;
 }
 
 export interface DefaultProps extends EnhancedComponentProps {}
 
 export interface EachProps<T> extends EnhancedComponentProps {
-  items: readonly T[] | null | undefined;
+  value: readonly T[] | null | undefined;
   key?: (item: T, index: number) => PropertyKey;
   fallback?: EnhancedRenderable;
   children:
@@ -81,7 +89,7 @@ export interface SlotProps extends EnhancedComponentProps {
   name?: string;
   fallback?: EnhancedRenderable;
   /** 传给函数型 slot 的参数；数组会按位置展开。 */
-  args?: unknown;
+  props?: unknown;
 }
 
 export interface DynamicProps extends EnhancedComponentProps {
@@ -209,13 +217,87 @@ export interface AwaitProps<T = unknown> extends EnhancedComponentProps {
 }
 
 export interface VirtualProps<T = unknown> extends EnhancedComponentProps {
-  items: readonly T[];
-  itemHeight: number;
+  value: readonly T[];
+  /**
+   * 行高来源，支持三态：
+   * - `number`：固定行高，零测量成本，最快；
+   * - `number[]`：逐项预知高度，避免首帧测量抖动；
+   * - `(index) => number`：估算器，未测量行用估算值占位，渲染后以实测值覆盖。
+   */
+  itemHeight: number | readonly number[] | ((index: number) => number);
+  /** 纵向可视区高度。 */
   height: number;
+  /** 横向可视区宽度；必须同时提供 `itemWidth` 才会启用横向虚拟滚动。 */
+  width?: number;
+  /** 横向每项宽度，语义同 `itemHeight`。 */
+  itemWidth?: number | readonly number[] | ((index: number) => number);
   overscan?: number;
   tag?: string;
   key?: (item: T, index: number) => PropertyKey;
-  onScroll?: (scrollTop: number) => void;
+  /** 列表为空时渲染；也接受 `() => renderable`。 */
+  fallback?: EnhancedRenderable | (() => EnhancedRenderable);
+  /** 返回分组名时该位置插入 sticky 分组头；返回空值表示不分组。 */
+  groupBy?: (item: T, index: number) => string | null | undefined;
+  /** 分组头渲染函数。 */
+  header?: (group: string, index: number) => EnhancedRenderable;
+  /** 分组头的行高，默认沿用 `itemHeight`。 */
+  headerHeight?: number | readonly number[] | ((index: number) => number);
+  /** 距底部小于该值时触发 `onEndReached`，默认 160。 */
+  endReachedThreshold?: number;
+  /** 是否还会追加数据；为 `true` 时允许反复触发 `onEndReached`。 */
+  hasMore?: boolean;
+  /** 行尺寸实测后回调，便于外部做布局联动。 */
+  onResize?: (rowIndex: number, size: VirtualSize) => void;
+  onEndReached?: () => void;
+  /** 受控滚动位置：偏移数字或 `#index`。 */
+  scrollTo?: number | `#${number}` | null;
+  onScroll?: (state: VirtualScrollState) => void;
   /** children 必须是 `(item, index) => renderable`。 */
   children?: unknown;
+}
+
+export interface VirtualSize {
+  height: number;
+  width: number;
+}
+
+export interface VirtualScrollState {
+  scrollTop: number;
+  scrollLeft: number;
+  /** 当前渲染窗口（含 overscan）的闭开区间。 */
+  startIndex: number;
+  endIndex: number;
+  /** 滚动方向，便于做增量加载或埋点。 */
+  direction: 'forward' | 'backward';
+}
+
+/** `Virtual` 渲染出的宿主节点额外暴露的命令式能力。 */
+export interface VirtualHost extends HTMLElement {
+  scrollToIndex(
+    index: number,
+    options?: { align?: 'start' | 'center' | 'end' }
+  ): void;
+  scrollToOffset(offset: number): void;
+  /** 强制重测当前窗口内的行。 */
+  measure(): void;
+}
+
+export type VirtualSizeInput =
+  | number
+  | readonly number[]
+  | ((index: number) => number);
+
+export interface ReachProps extends EnhancedComponentProps {
+  /** 触发回调。 */
+  onReach?: () => void;
+  /** `root`：盯滚动容器底部；`viewport`：盯哨兵自身进入视口。默认 `root`。 */
+  mode?: 'root' | 'viewport';
+  /** 滚动容器：CSS 选择器、元素，或 `null` 表示浏览器视口。省略时自动向上查找。 */
+  root?: string | Element | null;
+  /** 提前量，例如 `'240px'` 表示距底部 240px 就触发。仅 `root` 模式有效。 */
+  rootMargin?: string;
+  /** 交叉比例阈值，0~1。 */
+  threshold?: number;
+  /** 只触发一次。 */
+  once?: boolean;
 }

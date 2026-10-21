@@ -35,6 +35,7 @@ import type {
   FragmentProps,
   KeepAliveProps,
   LazyLoadProps,
+  MatchProps,
   SuspenseProps,
   SwitchProps,
   TeleportProps,
@@ -425,6 +426,7 @@ type EnhancedIntrinsicElements = {
   Else: ElseProps;
   Switch: SwitchProps;
   Case: CaseProps;
+  Match: MatchProps;
   Default: DefaultProps;
   Each: EachProps<any>;
   Teleport: TeleportProps;

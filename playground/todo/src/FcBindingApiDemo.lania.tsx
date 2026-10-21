@@ -311,7 +311,7 @@ export default defineComponent(function FcBindingApiDemo() {
         <div className="item">
           <p className="summary">submit logs</p>
           <Each
-            items={submitLog()}
+            value={submitLog()}
             fallback={<p className="empty">no logs yet</p>}
           >
             {(line: string): any => <p className="empty">{line}</p>}

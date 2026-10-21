@@ -13,6 +13,7 @@ import {
   LazyLoad as LazyLoadComponent,
   Slot,
   Suspense as SuspenseComponent,
+  Switch,
   Transition as TransitionComponent,
   TransitionGroup as TransitionGroupComponent,
   When,
@@ -958,15 +959,15 @@ describe('function component runtime helpers', () => {
   });
 
   it('evaluates enhanced component helpers with their first-pass runtime semantics', () => {
-    expect(When({ when: true, children: 'ready', fallback: 'empty' })).toBe(
+    expect(When({ value: true, children: 'ready', fallback: 'empty' })).toBe(
       'ready'
     );
-    expect(When({ when: false, children: 'ready', fallback: 'empty' })).toBe(
+    expect(When({ value: false, children: 'ready', fallback: 'empty' })).toBe(
       'empty'
     );
     expect(
       When({
-        when: true,
+        value: true,
         mode: 'remount',
         children: 'ready',
         fallback: 'empty',
@@ -974,19 +975,52 @@ describe('function component runtime helpers', () => {
     ).toBe('ready');
     expect(
       Each({
-        items: ['A', 'B'],
+        value: ['A', 'B'],
         children: (item) => item.toLowerCase(),
       })
     ).toEqual(['a', 'b']);
     expect(
       Each({
-        items: [],
+        value: [],
         fallback: 'none',
         children: (item: string) => item,
       })
     ).toBe('none');
     expect(Fragment({ children: ['a', 'b'] })).toEqual(['a', 'b']);
     expect(Slot({ children: 'fallback' })).toBe('fallback');
+  });
+
+  it('matches Switch branches by value or by boolean condition', () => {
+    const branch = (type: string, props: Record<string, unknown>) => ({
+      type,
+      props,
+    });
+
+    // 取值匹配：`Case when` 与 `Switch value` 做严格相等比较。
+    const lookupBranches = [
+      branch('Case', { when: 'register', children: 'register-hint' }),
+      branch('Case', { when: 'forgot', children: 'forgot-hint' }),
+      branch('Default', { children: 'login-hint' }),
+    ];
+
+    expect(Switch({ value: 'forgot', children: lookupBranches })).toBe(
+      'forgot-hint'
+    );
+    expect(Switch({ value: 'login', children: lookupBranches })).toBe(
+      'login-hint'
+    );
+
+    // 布尔模式：没有 `Switch value` 时退化为链式条件，`Match value` 直接求值。
+    const booleanBranches = [
+      branch('Case', { when: false, children: 'hidden' }),
+      branch('Match', { value: true, children: 'visible' }),
+      branch('Default', { children: 'fallback' }),
+    ];
+
+    expect(Switch({ children: booleanBranches })).toBe('visible');
+    expect(
+      Switch({ children: [branch('Case', { when: false, children: 'no' })] })
+    ).toBe(undefined);
   });
 
   it('renders Slot helpers against caller children in function-component scope', () => {
@@ -2568,7 +2602,7 @@ describe('function component runtime helpers', () => {
         cacheKey,
         children: [
           When({
-            when: currentPage === 'page-a',
+            value: currentPage === 'page-a',
             children: () => {
               const input = document.createElement('input');
               input.dataset.page = 'page-a';
@@ -2576,7 +2610,7 @@ describe('function component runtime helpers', () => {
             },
           }),
           When({
-            when: currentPage === 'page-b',
+            value: currentPage === 'page-b',
             children: () => {
               const section = document.createElement('section');
               section.dataset.page = 'page-b';

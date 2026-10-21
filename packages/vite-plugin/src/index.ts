@@ -14,7 +14,6 @@ import type { CompilerPlugin } from '@lania-v/compiler-core';
 import {
   compileFunctionComponentTsxModule,
   LaniaTsxCompileError,
-  type TsxTemplateSyntaxMode,
 } from '@lania-v/compiler-tsx';
 import { createFilter } from '@rollup/pluginutils';
 import type { SourceMapInput } from 'rollup';
@@ -30,7 +29,6 @@ export interface LaniaFcVitePluginOptions {
   compilerPlugins?: CompilerPlugin[];
   tsxInclude?: RegExp;
   tsxExclude?: RegExp;
-  tsxTemplateSyntaxMode?: TsxTemplateSyntaxMode;
   /** Emit serializable compiler-stage snapshots into transformed modules during `vite dev`. */
   debug?: boolean;
   /**
@@ -88,12 +86,10 @@ const compileFcModule = (
   includeDebugTrace: boolean,
   hotReload: boolean
 ) => {
-  const compiled = compileFunctionComponentTsxModule(
-    fileName,
-    code,
-    { plugins: options.compilerPlugins, hotReload },
-    options.tsxTemplateSyntaxMode
-  );
+  const compiled = compileFunctionComponentTsxModule(fileName, code, {
+    plugins: options.compilerPlugins,
+    hotReload,
+  });
   let moduleCode = compiled.compiled.moduleCode;
 
   if (includeDebugTrace) {

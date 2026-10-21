@@ -10,6 +10,7 @@ import type {
   EachProps,
   EnhancedRenderable,
   SlotProps,
+  SwitchProps,
   WhenProps,
 } from '../types';
 import { appendRenderable, asRenderable, invokeRenderable } from './renderable';
@@ -20,15 +21,71 @@ export const renderCompatChildren = (children: unknown): EnhancedRenderable => {
 };
 
 export const renderCompatWhen = (props: WhenProps): EnhancedRenderable => {
-  return props.when
+  return props.value
     ? renderCompatChildren(props.children)
     : (invokeRenderable(props.fallback) as EnhancedRenderable);
+};
+
+// 手写/运行时 `Switch` 需要自己挑分支：取值匹配走 `<Case when>`，布尔分支走 `<Match value>`。
+// 编译路径会把这些分支折叠成 nested `When`，无需经过这里。
+// 分支节点在编译产物里以 `{ type: 'Case' | 'Match' | 'Default', props }` 的普通对象形式出现。
+const resolveSwitchBranch = (
+  branch: unknown
+): { type: string; props: Record<string, unknown> } | null => {
+  if (typeof branch !== 'object' || branch === null) {
+    return null;
+  }
+
+  const { type, props } = branch as { type?: unknown; props?: unknown };
+
+  if (typeof type !== 'string') {
+    return null;
+  }
+
+  return {
+    type,
+    props:
+      typeof props === 'object' && props !== null
+        ? (props as Record<string, unknown>)
+        : {},
+  };
+};
+
+export const renderCompatSwitch = (props: SwitchProps): EnhancedRenderable => {
+  const branches = (
+    Array.isArray(props.children) ? props.children : [props.children]
+  ).map(resolveSwitchBranch);
+  let fallback: EnhancedRenderable = undefined;
+
+  for (const branch of branches) {
+    if (!branch) {
+      continue;
+    }
+
+    if (branch.type === 'Default') {
+      fallback = renderCompatChildren(branch.props.children);
+      continue;
+    }
+
+    const condition =
+      branch.type === 'Match'
+        ? branch.props.value
+        : props.value === undefined
+          ? branch.props.when
+          : props.value === branch.props.when;
+
+    if (condition) {
+      return renderCompatChildren(branch.props.children);
+    }
+  }
+
+  return fallback;
 };
 
 export const renderCompatEach = (
   props: EachProps<unknown>
 ): EnhancedRenderable => {
-  const items = props.items ?? [];
+  const items = props.value ?? [];
 
   if (items.length === 0) {
     return invokeRenderable(props.fallback) as EnhancedRenderable;
@@ -128,9 +185,11 @@ const resolveScopedSlotContent = (content: unknown, name?: string): unknown => {
 
 const invokeScopedSlot = (
   slot: (...values: unknown[]) => unknown,
-  args: unknown
+  slotProps: unknown
 ): EnhancedRenderable => {
-  const result = Array.isArray(args) ? slot(...args) : slot(args);
+  const result = Array.isArray(slotProps)
+    ? slot(...slotProps)
+    : slot(slotProps);
   return renderCompatChildren(result);
 };
 
@@ -144,11 +203,11 @@ export const renderCompatSlot = (props: SlotProps): EnhancedRenderable => {
     props.name
   );
 
-  // 函数型 slot 需要把 args 传回父组件，无法走原生 <slot> 投影。
+  // 函数型 slot 需要把 props 传回父组件，无法走原生 <slot> 投影。
   if (typeof slottedContent === 'function') {
     return invokeScopedSlot(
       slottedContent as (...values: unknown[]) => unknown,
-      props.args
+      props.props
     );
   }
 

@@ -50,7 +50,7 @@ export interface EnhancedComponentProps {
 export type WhenMode = 'retain' | 'remount';
 
 export interface WhenProps extends EnhancedComponentProps {
-  when: boolean;
+  value: boolean;
   fallback?: EnhancedRenderable;
   mode?: WhenMode;
 }
@@ -60,17 +60,25 @@ export interface ThenProps extends EnhancedComponentProps {}
 export interface ElseProps extends EnhancedComponentProps {}
 
 export interface SwitchProps extends EnhancedComponentProps {
+  /** 提供时进入取值匹配模式，`<Case when>` 与它做严格相等比较。 */
+  value?: unknown;
   mode?: WhenMode;
 }
 
 export interface CaseProps extends EnhancedComponentProps {
-  when: boolean;
+  /** 取值匹配模式下的期望值；没有 `Switch value` 时按布尔条件处理。 */
+  when?: unknown;
+}
+
+export interface MatchProps extends EnhancedComponentProps {
+  /** 布尔分支条件。 */
+  value: unknown;
 }
 
 export interface DefaultProps extends EnhancedComponentProps {}
 
 export interface EachProps<T> extends EnhancedComponentProps {
-  items: readonly T[] | null | undefined;
+  value: readonly T[] | null | undefined;
   key?: (item: T, index: number) => PropertyKey;
   fallback?: EnhancedRenderable;
   children:
@@ -87,7 +95,7 @@ export interface SlotProps extends EnhancedComponentProps {
   name?: string;
   fallback?: EnhancedRenderable;
   /** 传给函数型 slot 的参数；数组会按位置展开。 */
-  args?: unknown;
+  props?: unknown;
 }
 
 export interface DynamicProps extends EnhancedComponentProps {
@@ -215,7 +223,7 @@ export interface AwaitProps<T = unknown> extends EnhancedComponentProps {
 }
 
 export interface VirtualProps<T = unknown> extends EnhancedComponentProps {
-  items: readonly T[];
+  value: readonly T[];
   itemHeight: number;
   height: number;
   overscan?: number;

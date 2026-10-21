@@ -103,7 +103,7 @@ describe('runtime primitives', () => {
   });
 
   it('passes scoped slot args through Slot', () => {
-    const Child = defineComponent(() => Slot({ args: 'row-1' }));
+    const Child = defineComponent(() => Slot({ props: 'row-1' }));
 
     expect(jsx(Child, { children: (value: string) => `render:${value}` })).toBe(
       'render:row-1'

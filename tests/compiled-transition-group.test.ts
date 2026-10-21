@@ -81,7 +81,7 @@ export default defineComponent(function Demo() {
         onLeave={(_el: Element, ctx: { key: PropertyKey; phase: string }) => push('leave:' + String(ctx.key))}
         onMove={(_el: Element, ctx: { key: PropertyKey; phase: string; index: number }) => push('move:' + String(ctx.key) + ':' + String(ctx.index))}
       >
-        <Each items={items.value} key={keyOf}>
+        <Each value={items.value} key={keyOf}>
           {(item: Item): any => <div data-key={item.id}>{item.label}</div>}
         </Each>
       </TransitionGroup>

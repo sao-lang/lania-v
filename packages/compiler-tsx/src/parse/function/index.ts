@@ -18,7 +18,6 @@ import {
   assertNoLegacyTsxDirectiveSyntax,
   preprocessTsxBindingSyntax,
 } from '../../syntax/tsx-binding';
-import type { TsxTemplateSyntaxMode } from '../template-mode';
 
 import { rewriteBlockWithBindings, rewriteExpressionWithBindings, rewriteFunctionTemplateNode } from './bindings';
 import {
@@ -54,7 +53,6 @@ import type { ParsedTsxFunctionComponent, FunctionBindingContext } from './types
 const createComponentDeclaration = (
   sourceFile: ts.SourceFile,
   functionComponent: ResolvedFunctionComponent,
-  mode: TsxTemplateSyntaxMode
 ): ComponentDeclaration => {
   const functionDeclaration = functionComponent.declaration;
 
@@ -270,7 +268,7 @@ const createComponentDeclaration = (
     optionsSource: componentOptions.source ?? undefined,
     template: rewriteFunctionTemplateNode(
       // 模板内表达式必须使用与 setup/effect 相同的访问模型，否则后续 IR 会前后不一致。
-      parseFunctionReturnTemplate(sourceFile, functionDeclaration, mode),
+      parseFunctionReturnTemplate(sourceFile, functionDeclaration),
       bindings
     ),
   };
@@ -287,14 +285,10 @@ const createComponentDeclaration = (
 export const parseFunctionComponentTsx = (
   fileName: string,
   source: string,
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
 ): ParsedTsxFunctionComponent => {
-  if (mode === 'jsx-standard') {
-    assertNoLegacyTsxDirectiveSyntax(fileName, source);
-  }
+  // 旧式扩展指令写法已不再支持，这里给出明确的迁移提示而不是静默失效。
+  assertNoLegacyTsxDirectiveSyntax(fileName, source);
 
-  // 先预处理扩展绑定语法，再交给 TypeScript 构建 AST。
-  // 标准 TSX 模式下 `onClick.once` 这类写法同样需要转义点号，只是过滤器在解析后再做语法校验。
   const sourceFile = parseTypeScriptSource(
     fileName,
     preprocessTsxBindingSyntax(fileName, source)
@@ -311,7 +305,7 @@ export const parseFunctionComponentTsx = (
   }
 
   const declarations = functionComponents.map((component) =>
-    createComponentDeclaration(sourceFile, component, mode)
+    createComponentDeclaration(sourceFile, component)
   );
 
   return {

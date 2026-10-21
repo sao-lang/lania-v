@@ -366,12 +366,6 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
           `const slot${slot.slotIndex} = this.registerSlot(new StyleSlot(slot${slot.slotIndex}Node, ${JSON.stringify(slot.name ?? '')}, ${slot.slotIndex}, ${JSON.stringify(slot.unit ?? '')}));`,
           `this._slots[${slot.slotIndex}] = slot${slot.slotIndex}.node;`,
         ].join('\n');
-      case 'class':
-        return [
-          `const slot${slot.slotIndex}Node = resolveMountedTemplateNode(mounted, ${pathExpression}) as HTMLElement;`,
-          `const slot${slot.slotIndex} = this.registerSlot(new ClassSlot(slot${slot.slotIndex}Node, ${JSON.stringify(slot.name ?? '')}, ${slot.slotIndex}));`,
-          `this._slots[${slot.slotIndex}] = slot${slot.slotIndex}.node;`,
-        ].join('\n');
       case 'event':
         return [
           `const slot${slot.slotIndex}Node = resolveMountedTemplateNode(mounted, ${pathExpression}) as HTMLElement;`,

@@ -274,7 +274,7 @@ return <div>{slots.renderDefault('empty', item)}</div>;
 <Child>{(item: string) => <span>{item}</span>}</Child>
 ```
 
-当 slot 内容是函数时，额外参数会按位置透传；`<Slot args={item} />` 使用同一套语义。
+当 slot 内容是函数时，额外参数会按位置透传；`<Slot props={item} />` 使用同一套语义。
 
 ### `createResource()` / `createStore()`
 
@@ -412,8 +412,8 @@ DOM 事件和组件事件统一使用 `onXxx`：
 - 组件标签上的 `onXxx` 会被当作组件事件；需要父传回调时请用 `props={{ ... }}` 或非 `on` 前缀的字段名。
 - `once` / `capture` / `passive` 属于 `listener` 选项，不属于 `modifiers`。
 - `enter`、`key:*`、`system:*` 只能用于键盘事件（`keydown` / `keyup` / `keypress`）。
-- `click={...}`、`click.stop={...}`、`on:*` 不属于 `FC` 标准 TSX 主路径，
-  仅在 `directive-extended` 模式下兼容。
+- `click={...}`、`click.stop={...}` 不属于 `FC` 标准 TSX 主路径；旧式
+  `directive-extended` 语法已移除，请改用 `onClick` 或 `on={{ click: fn }}`。
 
 修饰符执行顺序：`key:*` / `system:*` 过滤 → `stop` / `prevent` / `self` / `enter` → 用户 handler，
 任一过滤失败即短路。
@@ -506,7 +506,40 @@ const { title, count } = props;
 
 - 正式主路径是 `use={{ name: value }}`。
 - 已注册指令是主路径，inline directive definition 仅保留兼容。
-- `use` / `model` / 对象型事件绑定当前只支持对象字面量、静态 key、无 spread、无计算属性名。
+- `use` / `model` / `attr` / `on` / 对象型事件绑定当前只支持对象字面量、静态 key、无 spread、无计算属性名。
+
+### 5.3.1 `attr` 批量属性
+
+一次声明多个属性，每个 key 展开成独立的属性绑定槽位。
+
+```tsx
+<img attr={{ alt: alt(), 'data-state': state(), loading: 'lazy' }} />
+
+<div attr={{ 'data-index': index, 'aria-label': label() }} />
+```
+
+规则：
+
+- key 支持标识符与字符串字面量，因此 `data-*` / `aria-*` 可直接书写。
+- 每个 key 独立成为一个 slot，按属性精确更新，不会整体重写。
+- 依赖只追踪各属性表达式实际读取的 signal。
+- 不支持 spread（`...rest`）与计算属性名。
+
+### 5.3.2 `on` 批量事件
+
+一次声明多个事件监听。
+
+```tsx
+<button on={{ click: onClick, keydown: onEnterKey }}>提交</button>
+
+<div on={{ 'my:event': onCustom }} />
+```
+
+规则：
+
+- 等价于逐个书写 `onClick` / `onKeydown`，编译后各自成为独立事件槽位。
+- key 支持自定义事件名（含 `:`）。
+- 不支持 spread 与计算属性名。
 
 ### 5.4 类名与样式
 
@@ -523,7 +556,7 @@ const { title, count } = props;
 - `className={...}` 支持字符串、对象、数组，并会和静态 `class` 合并。
 - `style={...}` 支持字符串、对象、数组，并会和静态 `style` 合并。
 - `class` 仍可作为兼容属性使用，但 `FC` 主路径推荐 `className`。
-- `class:*` / `style:*` 不再属于 `FC` 标准 TSX 主路径。
+- `class:*` / `style:*` 不再属于 `FC` 标准 TSX 主路径（旧式 `directive-extended` 语法已移除）。
 
 ### 5.5 原始 HTML
 
@@ -542,11 +575,11 @@ const { title, count } = props;
 当前推荐直接使用增强组件表达结构语义：
 
 ```tsx
-<When when={visible()} fallback={<p>Hidden</p>}>
+<When value={visible()} fallback={<p>Hidden</p>}>
   <p>Visible</p>
 </When>
 
-<Each items={items()} fallback={<p>Empty</p>}>
+<Each value={items()} fallback={<p>Empty</p>}>
   {(item) => <li>{item}</li>}
 </Each>
 ```
@@ -554,6 +587,7 @@ const { title, count } = props;
 常见增强组件包括：
 
 - `When`
+- `Switch` / `Case` / `Match` / `Default`
 - `Each`
 - `Dynamic`
 - `Teleport`

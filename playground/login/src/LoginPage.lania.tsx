@@ -6,7 +6,7 @@ import {
   useFormValue,
   watch,
 } from '@lania-v/runtime';
-import { When } from '@lania-v/advanced';
+import { Case, Default, Switch, When } from '@lania-v/advanced';
 import { createAtom } from '@lania/store';
 import {
   ApiError,
@@ -244,7 +244,7 @@ export default defineComponent(function LoginPage() {
   return (
     <section className="card" data-debug="login-page">
       <div className="brand">
-        <span className="brand-mark">L</span>
+        <span className="brand-mark"></span>
         <span className="brand-text">
           <span className="brand-name">lania-v</span>
           <span className="brand-tag">
@@ -253,11 +253,11 @@ export default defineComponent(function LoginPage() {
         </span>
       </div>
 
-      <When when={session.value.current !== null}>
+      <When value={session.value.current !== null}>
         <ProfilePage signedOut={() => signOut()} />
       </When>
 
-      <When when={session.value.current === null}>
+      <When value={session.value.current === null}>
         <div className="headline">
           <h1>{headline.value}</h1>
           <p>{summary.value}</p>
@@ -308,12 +308,12 @@ export default defineComponent(function LoginPage() {
               onKeyDown={{ handler: onSubmit, modifiers: { enter: true } }}
             />
           </span>
-          <When when={accountInvalid.value}>
+          <When value={accountInvalid.value}>
             <p className="hint">账号至少需要 {ACCOUNT_MIN_LENGTH} 个字符。</p>
           </When>
         </label>
 
-        <When when={needsPassword.value}>
+        <When value={needsPassword.value}>
           <label className="field">
             <span className="field-label">密码</span>
             <span class={['control', { 'is-invalid': passwordInvalid.value }]}>
@@ -348,13 +348,13 @@ export default defineComponent(function LoginPage() {
                 {form.value.passwordVisible ? '隐藏' : '显示'}
               </button>
             </span>
-            <When when={passwordInvalid.value}>
+            <When value={passwordInvalid.value}>
               <p className="hint">密码至少需要 {PASSWORD_MIN_LENGTH} 位。</p>
             </When>
           </label>
         </When>
 
-        <When when={isForgot.value}>
+        <When value={isForgot.value}>
           <label className="field">
             <span className="field-label">新密码</span>
             <span class="control">
@@ -387,7 +387,7 @@ export default defineComponent(function LoginPage() {
               </button>
             </span>
             <When
-              when={
+              value={
                 form.value.newPassword.length > 0 && newPasswordMissing.value
               }
             >
@@ -416,13 +416,13 @@ export default defineComponent(function LoginPage() {
                 onKeyDown={{ handler: onSubmit, modifiers: { enter: true } }}
               />
             </span>
-            <When when={confirmMismatch.value}>
+            <When value={confirmMismatch.value}>
               <p className="hint">两次输入的密码不一致。</p>
             </When>
           </label>
         </When>
 
-        <When when={isRegister.value}>
+        <When value={isRegister.value}>
           <label className="field">
             <span className="field-label">角色</span>
             <span className="control">
@@ -460,7 +460,7 @@ export default defineComponent(function LoginPage() {
             />
             <span>记住账号</span>
           </label>
-          <When when={!isForgot.value}>
+          <When value={!isForgot.value}>
             <button
               className="link"
               type="button"
@@ -477,49 +477,55 @@ export default defineComponent(function LoginPage() {
           disabled={!canSubmit.value}
           onClick={() => void onSubmit()}
         >
-          <When when={submitting.value}>
+          <When value={submitting.value}>
             <span className="spinner"></span>
           </When>
           <span>{submitLabel.value}</span>
         </button>
 
         <p className="switch-line">
-          <span>
-            {isForgot.value
-              ? '想起密码了？'
-              : isRegister.value
-                ? '已有账号？'
-                : '还没有账号？'}
-          </span>
-          <button
-            className="link"
-            type="button"
-            onClick={() =>
-              setMode(
-                isForgot.value
-                  ? 'login'
-                  : isRegister.value
-                    ? 'login'
-                    : 'register'
-              )
-            }
-          >
-            {isForgot.value
-              ? '返回登录'
-              : isRegister.value
-                ? '直接登录'
-                : '立即注册'}
-          </button>
+          <Switch value={form.value.mode}>
+            <Case when="register">
+              <span>已有账号？</span>
+              <button
+                className="link"
+                type="button"
+                onClick={() => setMode('login')}
+              >
+                直接登录
+              </button>
+            </Case>
+            <Case when="forgot">
+              <span>想起密码了？</span>
+              <button
+                className="link"
+                type="button"
+                onClick={() => setMode('login')}
+              >
+                返回登录
+              </button>
+            </Case>
+            <Default>
+              <span>还没有账号？</span>
+              <button
+                className="link"
+                type="button"
+                onClick={() => setMode('register')}
+              >
+                立即注册
+              </button>
+            </Default>
+          </Switch>
         </p>
 
-        <When when={form.value.status === 'success'}>
+        <When value={form.value.status === 'success'}>
           <div className="banner" role="status">
             <span className="banner-check">✓</span>
             <span>{form.value.message}</span>
           </div>
         </When>
 
-        <When when={form.value.status === 'error'}>
+        <When value={form.value.status === 'error'}>
           <div className="banner banner-error" role="alert">
             <span className="banner-check">!</span>
             <span>{form.value.message}</span>

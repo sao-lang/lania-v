@@ -19,7 +19,6 @@ import {
   type SignalDeclaration,
 } from '@lania-v/compiler-core';
 import { parseReturnedJsxTemplate } from '../template';
-import type { TsxTemplateSyntaxMode } from '../template-mode';
 import { resolveImportedTypeDeclaration } from './imported-types';
 
 export type FunctionComponentLike =
@@ -598,7 +597,6 @@ export const collectContextEmitAliases = (
 export const parseFunctionReturnTemplate = (
   sourceFile: ts.SourceFile,
   functionDeclaration: FunctionComponentLike,
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
 ) => {
   if (!functionDeclaration.body) {
     throw new Error('Function component body was not found.');
@@ -606,7 +604,7 @@ export const parseFunctionReturnTemplate = (
 
   if (!ts.isBlock(functionDeclaration.body)) {
     // 表达式体箭头函数可直接视为“隐式 return JSX”。
-    return parseReturnedJsxTemplate(sourceFile, functionDeclaration.body, mode);
+    return parseReturnedJsxTemplate(sourceFile, functionDeclaration.body);
   }
 
   const returnStatement = functionDeclaration.body.statements.find(
@@ -619,5 +617,5 @@ export const parseFunctionReturnTemplate = (
   }
 
   // 块体函数只消费首个带表达式的 return；更复杂控制流留给后续能力再扩展。
-  return parseReturnedJsxTemplate(sourceFile, returnStatement.expression, mode);
+  return parseReturnedJsxTemplate(sourceFile, returnStatement.expression);
 };

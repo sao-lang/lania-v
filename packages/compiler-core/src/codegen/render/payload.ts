@@ -225,12 +225,6 @@ export const renderChildPayloadBindings = (nodes: readonly TemplateIRNode[]): st
               ];
             }
 
-            if (directive.kind === 'class') {
-              return [
-                `{ kind: "class", slotIndex: -1, path: [${directive.path.join(', ')}], name: ${JSON.stringify(directive.name)}, evaluate: () => (${directive.expression}) }`,
-              ];
-            }
-
             if (directive.kind === 'style') {
               return [
                 `{ kind: "style", slotIndex: -1, path: [${directive.path.join(', ')}], name: ${JSON.stringify(directive.name)}, unit: ${directive.unit ? JSON.stringify(directive.unit) : 'undefined'}, evaluate: () => (${directive.expression}) }`,

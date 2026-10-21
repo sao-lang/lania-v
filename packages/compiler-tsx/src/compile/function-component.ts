@@ -27,7 +27,6 @@ import {
 } from './module-output';
 import { LaniaTsxCompileError, wrapLaniaTsxCompileError } from './errors';
 import { parseFunctionComponentTsx } from '../parse/function';
-import type { TsxTemplateSyntaxMode } from '../parse/template-mode';
 
 export interface TsxFunctionTextBindingPlan extends RenderTextBindingPlan {}
 
@@ -57,11 +56,10 @@ export const compileFunctionComponentTsx = (
   fileName: string,
   source: string,
   options: CompilerPluginOptions = {},
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
 ): CompiledTsxFunctionComponent => {
   try {
     // 先把 TSX 源码压成统一 Program，再交给 compiler-core 继续做 lowering/codegen。
-    const parsed = parseFunctionComponentTsx(fileName, source, mode);
+    const parsed = parseFunctionComponentTsx(fileName, source);
     const pipeline = runComponentCompilerPipeline(parsed.program, options);
 
     if (pipeline.components.length === 0) {
@@ -109,10 +107,9 @@ export const compileFunctionComponentTsx = (
 export const compileFunctionComponentTsxToModule = (
   fileName: string,
   source: string,
-  options: CompilerPluginOptions = {},
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
+  options: CompilerPluginOptions = {}
 ): string => {
-  const compiled = compileFunctionComponentTsx(fileName, source, options, mode);
+  const compiled = compileFunctionComponentTsx(fileName, source, options);
   return emitFunctionComponentTsxModule(fileName, source, compiled).moduleCode;
 };
 
@@ -120,13 +117,12 @@ export const compileFunctionComponentTsxToModule = (
 export const compileFunctionComponentTsxModule = (
   fileName: string,
   source: string,
-  options: CompilerPluginOptions = {},
-  mode: TsxTemplateSyntaxMode = 'jsx-standard'
+  options: CompilerPluginOptions = {}
 ): CompiledTsxModule => {
   const compiled = emitFunctionComponentTsxModule(
     fileName,
     source,
-    compileFunctionComponentTsx(fileName, source, options, mode)
+    compileFunctionComponentTsx(fileName, source, options)
   );
 
   return {

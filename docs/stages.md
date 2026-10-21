@@ -50,6 +50,8 @@ TSX
 | --- | --- | --- | --- | --- | --- |
 | `When` | Yes | Compat layer | Yes | Yes | 结构分支语义由编译器 lowering |
 | `Then` / `Else` | Yes | Compat layer | N/A | N/A | 仅作为 `When` 的编译期标记 |
+| `Switch` / `Case` / `Default` | Yes | Compat layer | Yes | Yes | `Switch value` 做取值匹配 |
+| `Match` | Yes | Compat layer | Yes | Yes | 布尔分支，等同 `Case when` |
 | `Each` | Yes | Compat layer | Yes | Yes | lower 到列表/slot IR |
 | `Fragment` | Yes | Compat layer | Yes | Yes | 语法糖，最终被 flatten |
 | `Dynamic` | Yes | Compat layer | Yes | Yes | 动态组件解析进入 IR |
@@ -59,11 +61,13 @@ TSX
 | `LazyLoad` | Yes | Compat layer | Yes | Yes | 走统一 boundary payload |
 | `ErrorBoundary` | Yes | Compat layer | Yes | Yes | 主路径已经共享 boundary host |
 | `Suspense` | Yes | Compat layer | Yes | Yes | 支持 fallback、流式 chunk 与恢复 |
+| `Await` / `Virtual` | Yes | Compat layer | Yes | Yes | `Virtual` 支持可变行高与双向滚动 |
+| `Reach` | Yes | Compat layer | N/A | N/A | 触底/进入视口哨兵 |
 
 ### 当前可信结论
 
 - `KeepAlive`、`ErrorBoundary`、`TransitionGroup` 已有较强的自动化证据
-- `Teleport`、`When`、`Each`、`Dynamic` 已处于可用主路径
+- `Teleport`、`When`、`Switch`、`Each`、`Dynamic` 已处于可用主路径
 - `Suspense` 已具备 fallback、异步 chunk 回填与恢复链路
 - SSR / Hydration 已经进入协议化验证阶段，而不是只停留在 demo 可用
 

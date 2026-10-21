@@ -51,7 +51,6 @@ export default defineConfig({
 type LaniaFcVitePluginOptions = {
   tsxInclude?: RegExp;
   tsxExclude?: RegExp;
-  tsxTemplateSyntaxMode?: TsxTemplateSyntaxMode;
   compilerPlugins?: CompilerPlugin[];
 };
 ```

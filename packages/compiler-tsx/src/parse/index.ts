@@ -11,4 +11,3 @@
 // 编译入口只需依赖 parse 门面，不需要感知内部实现文件。
 export * from './function';
 export * from './template';
-export * from './template-mode';

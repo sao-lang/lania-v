@@ -11,13 +11,11 @@ import {
   lowerDirective,
   lowerEvent,
   renderStaticAttributes,
-  toStaticElementNode,
 } from '../helpers/template-helpers';
 import type {
   DynamicAttributeIR,
   ElementIR,
   ExpressionIR,
-  IfIR,
   ListIR,
   LowerTemplateOptions,
   LowerTemplateResult,
@@ -146,29 +144,6 @@ export const lowerTemplateChildren = (
         domIndex += 1;
         return;
       }
-    }
-
-    const ifDirective = child.directives.find((directive) => directive.kind === 'if');
-
-    if (ifDirective) {
-      // 普通元素上的 `if` 指令会被提升成 `IfIR` block，而不再保留为普通 directive。
-      const conditionTemplate = lowerTemplateChildren([toStaticElementNode(child)], [], 0, 0);
-      const ifNode: IfIR = {
-        type: 'IfIR',
-        path,
-        slotIndex,
-        expression: ifDirective.expression,
-        templateHtml: conditionTemplate.staticHtml,
-        hoistName: `__if_slot_${path.join('_') || 'root'}_${slotIndex}`,
-        children: conditionTemplate.nodes,
-      };
-
-      nodes.push(ifNode);
-      // 条件块在静态 HTML 骨架里只占一个注释锚点，具体内容交给运行时决定。
-      htmlParts.push(`<!--__LANIA_SLOT_${slotIndex}__-->`);
-      slotIndex += 1;
-      domIndex += 1;
-      return;
     }
 
     const staticComponentNode = lowerStaticComponentElement(child, path, slotIndex);

@@ -13,15 +13,42 @@
 ### `When`
 
 ```tsx
-<When when={this.visible} fallback={<p>Hidden</p>}>
+<When value={this.visible} fallback={<p>Hidden</p>}>
   <p>Visible</p>
 </When>
+```
+
+`value` 为真时渲染 `children`，否则渲染 `fallback`（也可以写成 `<Else>` 子节点）。
+
+### `Switch` / `Case` / `Match` / `Default`
+
+`Switch` 有两种模式，用来替代嵌套三元表达式。
+
+**取值匹配**：给 `Switch` 传 `value`，`<Case when>` 写期望值，命中条件是严格相等。
+
+```tsx
+<Switch value={this.mode}>
+  <Case when="register">已有账号？</Case>
+  <Case when="forgot">想起密码了？</Case>
+  <Default>还没有账号？</Default>
+</Switch>
+```
+
+**布尔分支**：不传 `Switch value` 时，每个分支独立判断条件。`<Case when>` 与
+`<Match value>` 语义等价，`<Match>` 只是让"这是一条布尔条件"更直白。
+
+```tsx
+<Switch>
+  <Match value={this.loading}>加载中…</Match>
+  <Match value={this.error}>加载失败</Match>
+  <Default>列表内容</Default>
+</Switch>
 ```
 
 ### `Each`
 
 ```tsx
-<Each items={this.items} fallback={<p>Empty</p>}>
+<Each value={this.items} fallback={<p>Empty</p>}>
   {(item, index) => <li data-index={index}>{item}</li>}
 </Each>
 ```
@@ -173,28 +200,111 @@
 
 ### `Virtual`
 
-固定行高的窗口化列表，只渲染可视区 + `overscan` 的行。
+窗口化列表，只渲染可视区 + `overscan` 的行。支持固定行高、逐项预知高度和
+未知行高（估算后实测）三种模式。
 
 ```tsx
-<Virtual
-  items={this.rows()}
-  itemHeight={24}
-  height={240}
-  overscan={3}
-  key={(row) => row.id}
-  onScroll={(top) => this.setScrollTop(top)}
->
+// 固定行高：零测量成本，最快
+<Virtual value={this.rows()} itemHeight={24} height={240} overscan={3}>
   {(row, index) => <div>{index}: {row.title}</div>}
+</Virtual>
+
+// 未知行高：估算器占位，渲染后实测覆盖，并做滚动锚定
+<Virtual value={this.rows()} itemHeight={() => 40} height={240}>
+  {(row) => <Card row={row} />}
 </Virtual>
 ```
 
-- `children`：必须是 `(item, index) => renderable`。
-- 滚动容器的总高度由 `items.length * itemHeight` 撑开，行绝对定位在对应偏移。
-- `key` 结果会写到行的 `data-key` 上，便于调试与测试。
-- 只支持固定行高；变高行需要等后续版本。
+#### 行高
+
+`itemHeight` 支持三态：
+
+| 形态 | 行为 |
+| --- | --- |
+| `number` | 固定行高，不测量，行高直接写进内联样式 |
+| `number[]` | 逐项预知高度，首帧即可正确定位，省掉测量抖动 |
+| `(index) => number` | 估算器；未测量的行用估算值占位，渲染后用实测值覆盖 |
+
+可变行高时，前缀偏移由 Fenwick 树维护，滚动定位是 `O(log n)`。实测值写入后会
+按「可视区首行」做**滚动锚定**：首行之前的行变高/变矮时同步补偿 `scrollTop`，
+用户看到的第一行不会跳走。
+
+#### 双向虚拟滚动
+
+同时提供 `width` 与 `itemWidth` 时启用横向虚拟化，否则只做纵向。
+
+```tsx
+<Virtual value={this.cells()} itemHeight={32} height={240} width={320} itemWidth={120}>
+  {(cell) => <span>{cell.label}</span>}
+</Virtual>
+```
+
+#### 分组头
+
+`groupBy` 返回分组名时自动插入分组头行，并用 sticky 层把当前分组的头钉在顶部。
+
+```tsx
+<Virtual
+  value={this.contacts()}
+  itemHeight={44}
+  headerHeight={28}
+  height={320}
+  groupBy={(contact) => contact.initial}
+  header={(group) => <strong>{group}</strong>}
+>
+  {(contact) => <span>{contact.name}</span>}
+</Virtual>
+```
+
+#### 空态与增量加载
+
+- `fallback`：`value` 为空时渲染，支持节点或 `() => node`。
+- `onEndReached`：滚动到距底部小于 `endReachedThreshold`（默认 160）时触发。
+- `hasMore`：为 `true` 时允许反复触发；为 `false` 时判定已到底，只触发一次。
+
+#### 命令式 API
+
+渲染出的宿主元素上挂有：
+
+- `scrollToIndex(index, { align })`：`align` 取 `'start' | 'center' | 'end'`。
+- `scrollToOffset(offset)`：直接定位到纵向偏移。
+- `measure()`：强制重测当前窗口内的行（例如图片加载完成后）。
+
+声明式场景也可以直接传 `scrollTo`：数字表示偏移，`'#12'` 表示第 12 项。
+
+#### 其他 props
+
+- `key`：结果写到行的 `data-key` 上，便于调试与测试。
+- `onScroll({ scrollTop, scrollLeft, startIndex, endIndex, direction })`：窗口与方向快照。
+- `onResize(rowIndex, { height, width })`：行实测尺寸回调。
+- `tag`：宿主标签名，默认 `div`。
+
+### `Reach`
+
+触底 / 进入视口哨兵，用于无限滚动、懒加载与曝光埋点。
+
+```tsx
+// 无限滚动：盯滚动容器底部
+<Reach root="#list" rootMargin="240px" hasMore={hasMore.value} onReach={loadMore}>
+  <p>加载中…</p>
+</Reach>
+
+// 懒加载 / 曝光：盯哨兵自身进入视口
+<Reach mode="viewport" once onReach={track}>
+  <Card />
+</Reach>
+```
+
+- `mode`：`'root'`（默认）盯滚动容器底部；`'viewport'` 盯哨兵进入视口。
+- `root`：CSS 选择器、元素，或 `null` 表示浏览器视口；省略时自动向上查找可滚动祖先。
+- `rootMargin`：提前量，`'240px'` 表示距底部还有 240px 就触发。
+- `once`：只触发一次。
+- 离开底部区域后会自动重新武装，支持「加载 → 继续滚 → 再加载」。
+- 未提供 `root` 且找不到滚动祖先时，退回视口判定。
 
 ## 当前边界
 
 - 增强组件第一版运行时主路径已可用。
 - 增强组件 SSR 边界元信息、Teleport 跨容器 SSR、Suspense 流式回填已落地。
+- `Virtual` 的行尺寸测量依赖 `ResizeObserver` 与真实布局；SSR 首屏按估算值输出完整高度占位。
 - 复杂组合场景建议优先参考测试与 playground。

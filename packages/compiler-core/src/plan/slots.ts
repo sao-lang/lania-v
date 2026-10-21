@@ -157,8 +157,8 @@ const allocateDirectiveSlot = (
     // 指令种类需要被归一到运行时认识的 slot 类型上，便于后续生成 updater。
     directive.kind === 'style'
       ? 'style'
-      : directive.kind === 'class'
-        ? 'class'
+      : directive.kind === 'attr'
+        ? 'attribute'
         : directive.kind === 'bind'
           ? 'property'
           : directive.kind === 'ref'

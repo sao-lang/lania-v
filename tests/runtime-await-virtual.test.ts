@@ -43,7 +43,7 @@ describe('Await and Virtual enhanced components', () => {
   it('windows a long list and re-renders on scroll', () => {
     const items = Array.from({ length: 100 }, (_, index) => index);
     const host = Virtual({
-      items,
+      value: items,
       itemHeight: 20,
       height: 60,
       overscan: 1,

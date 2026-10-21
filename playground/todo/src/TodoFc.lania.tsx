@@ -109,7 +109,7 @@ const TodoFc = defineComponent(function TodoFc() {
 
       <div className="list">
         <Each
-          items={filteredTodos()}
+          value={filteredTodos()}
           key={(item) => item.id}
           fallback={<p className="empty">No todos</p>}
         >
