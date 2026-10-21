@@ -1,9 +1,9 @@
-import { trackSignals, type Signal } from '../reactivity/signal';
+import { trackSignals, type Signal } from '@lania-v/reactivity/internal';
 import {
   type JobPriority,
   defaultScheduler,
   type Scheduler,
-} from '../reactivity/scheduler';
+} from '@lania-v/reactivity';
 import { SlotTable } from './slot-table';
 import type { Slot } from './slots';
 import { emitDevtoolsEvent, hasDevtoolsSubscribers, isDevEnvironment } from '../core/debug';

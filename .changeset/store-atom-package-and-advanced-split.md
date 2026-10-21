@@ -1,4 +1,5 @@
 ---
+'@lania-v/reactivity': major
 '@lania/store': minor
 '@lania-v/runtime': major
 '@lania-v/advanced': major
@@ -6,7 +7,15 @@
 '@lania-v/compiler-tsx': minor
 ---
 
-新增原子化状态管理包 `@lania/store`，并把 runtime 的增强组件拆到 `@lania-v/advanced`。
+新增原子化状态管理包 `@lania/store`，把响应式核心提取为 `@lania-v/reactivity`，
+并把 runtime 的增强组件拆到 `@lania-v/advanced`。
+
+### `@lania-v/reactivity`
+
+- Signal / Memo / Effect / watch / Scheduler / Resource / Selector / Transition 整体独立成包；
+- 不依赖框架运行时，可单独用于纯状态或副作用场景；
+- `@lania-v/reactivity/internal` 暴露 `trackSignals` / `linkTrackedSignals` / `isTracking`；
+- 自带 dev 判定与调试事件通道，runtime 通过 `setDevEnvironmentOverride()` 保持同步。
 
 ### `@lania/store`
 

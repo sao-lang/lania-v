@@ -22,14 +22,20 @@ export interface ResourceControls<T> {
   refetch(): Promise<T | undefined>;
 }
 
-const attachJobToSignals = (signals: Iterable<Signal<any>>, job: () => void): void => {
+const attachJobToSignals = (
+  signals: Iterable<Signal<any>>,
+  job: () => void
+): void => {
   for (const signal of signals) {
     // 资源不做依赖 diff，直接把同一个调度 job 订阅到所有 key signal 上。
     signal.updaters.add(job);
   }
 };
 
-const detachJobFromSignals = (signals: Iterable<Signal<any>>, job: () => void): void => {
+const detachJobFromSignals = (
+  signals: Iterable<Signal<any>>,
+  job: () => void
+): void => {
   for (const signal of signals) {
     signal.updaters.delete(job);
   }

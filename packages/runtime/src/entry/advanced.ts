@@ -7,7 +7,7 @@ export {
   isTracking,
   linkTrackedSignals,
   trackSignals,
-} from '../reactivity/signal';
+} from '@lania-v/reactivity/internal';
 export {
   installDevtoolsOverlay,
   type DevtoolsOverlayOptions,

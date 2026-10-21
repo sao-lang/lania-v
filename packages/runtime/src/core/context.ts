@@ -7,7 +7,7 @@
  * - 适用于 Custom Element 与函数组件混用的场景（只要能 dispatchEvent）。
  */
 
-import { createSignal, readonly, type ReadonlySignal } from '../reactivity/signal';
+import { createSignal, readonly, type ReadonlySignal } from '@lania-v/reactivity';
 
 export interface Context<T> {
   readonly id: symbol;

@@ -1,5 +1,17 @@
 # 响应式 API
 
+响应式核心位于独立包 `@lania-v/reactivity`：
+
+```ts
+import {
+  createSignal,
+  createMemo,
+  createEffect,
+  watch,
+} from '@lania-v/reactivity';
+```
+
+`@lania-v/runtime` 会整体再导出它，所以 `from '@lania-v/runtime'` 同样可用；框架内部（组件宿主、slot updater、SSR）也统一从这里取用。
 `lania-v` 的响应式系统只有四个核心概念：
 
 - **Signal**：可读可写的最小状态单元；

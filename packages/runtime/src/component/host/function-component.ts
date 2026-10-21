@@ -18,7 +18,7 @@ import {
 } from '../../dev/hmr';
 import type { StaticStyles } from '../styles';
 import type { PropOptionsMap } from './prop-options';
-import type { ReadonlySignal } from '../../reactivity/signal';
+import type { ReadonlySignal } from '@lania-v/reactivity';
 import type { ChangedProps } from './reactive-element';
 import { appendRenderable, collectRenderableNodes } from '../renderable';
 import { markRefExposed, setRef, type RefBinding } from '../../dom/ref';

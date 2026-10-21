@@ -9,7 +9,8 @@ packages/
 ├── shared/          跨包共享协议
 ├── compiler-core/   协议无关编译核心
 ├── compiler-tsx/    .lania.tsx 编译入口
-├── runtime/         运行时核心（响应式 + 组件宿主 + DOM）
+├── reactivity/      响应式核心（Signal / Scheduler / Resource / Selector）
+├── runtime/         框架运行时（组件宿主 + DOM + SSR）
 ├── advanced/        增强组件（When / Each / KeepAlive / Transition …）
 ├── store/           原子化状态管理
 └── vite-plugin/     Vite 集成
@@ -27,7 +28,7 @@ packages/
 | `@lania-v/runtime/dev`                  | 强制开启调试                                | 开发 / 测试  |
 | `@lania-v/runtime/prod`                 | 强制关闭调试                                | 生产验证     |
 | `@lania-v/runtime/core`                 | Context / Debug / Env / UniqueId            | 上下文、调试 |
-| `@lania-v/runtime/reactivity`           | Signal / Scheduler / Resource / Selector    | 响应式       |
+| `@lania-v/runtime/reactivity`           | 兼容入口，转发 `@lania-v/reactivity`        | 旧路径       |
 | `@lania-v/runtime/component`            | 组件宿主 / 样式 / 事件 / 渲染值类型         | 组件层       |
 | `@lania-v/runtime/dom`                  | Slot / Updater / 指令 / class / style / ref | DOM 绑定     |
 | `@lania-v/runtime/render`               | DOM 渲染 / SSR / DSD / Hydration            | 渲染与 SSR   |
@@ -54,11 +55,7 @@ export * from './dom/slot-table';
 export * from './dom/slots';
 export * from './dom/style-value';
 export * from './dom/updaters';
-export * from './reactivity/owner';
-export * from './reactivity/resource';
-export * from './reactivity/scheduler';
-export * from './reactivity/selector';
-export * from './reactivity/transition';
+export * from '@lania-v/reactivity';
 export * from './render';
 export * from './dev/hmr';
 ```
@@ -115,20 +112,13 @@ import {
 - 环境判断；
 - 唯一 ID。
 
-### `reactivity`
+### `reactivity`（兼容入口）
 
 ```ts
-import {
-  createSignal,
-  createMemo,
-  createEffect,
-  createResource,
-  createSelector,
-  defaultScheduler,
-} from '@lania-v/runtime/reactivity';
+import { createSignal } from '@lania-v/runtime/reactivity';
 ```
 
-不包含组件与 DOM。
+响应式核心已独立为 `@lania-v/reactivity`，这里只是转发，便于旧代码平滑迁移。
 
 ### `component`
 
@@ -292,6 +282,34 @@ import {
 | `withDevtools(options)`                     | 调试快照                                               |
 
 `@lania/store/internal` 只暴露编译器产物使用的 `getAtomDependency`，不面向业务代码。
+
+## `@lania-v/reactivity`
+
+响应式核心，独立于框架运行时，可用于纯状态/副作用场景。
+
+```ts
+import {
+  createSignal,
+  createMemo,
+  createEffect,
+  watch,
+  batch,
+  createResource,
+  createSelector,
+  startTransition,
+  createScope,
+  defaultScheduler,
+} from '@lania-v/reactivity';
+```
+
+| 子路径                         | 内容                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `@lania-v/reactivity`          | Signal / Memo / Effect / watch / Scheduler / Resource / Selector              |
+| `@lania-v/reactivity/internal` | `trackSignals` / `linkTrackedSignals` / `isTracking`（编译器与 updater 使用） |
+
+- 该包不依赖 `@lania-v/runtime`，可单独使用；
+- `@lania-v/runtime` 会整体再导出它，因此既有的 `from '@lania-v/runtime'` 导入不受影响；
+- dev/prod 判定通过 `setDevEnvironmentOverride()` 与 runtime 保持同步。
 
 ## `@lania-v/shared`
 

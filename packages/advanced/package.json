@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@lania-v/runtime": "^0.0.0",
-    "@lania-v/shared": "^0.0.0"
+    "@lania-v/shared": "^0.0.0",
+    "@lania-v/reactivity": "^0.0.0"
   },
   "files": [
     "src",

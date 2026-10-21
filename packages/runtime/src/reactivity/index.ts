@@ -1,31 +1,6 @@
 /**
- * 响应式子模块入口。
+ * 兼容入口：响应式核心已独立为 `@lania-v/reactivity`。
  *
- * - resource/store/scheduler：更偏“运行时设施”
- * - signal：用户最常用的 API（createSignal/createMemo/createEffect/watch...）
+ * 旧的 `@lania-v/runtime/reactivity` 导入路径仍然可用，内部只是转发。
  */
-export * from './owner';
-export * from './resource';
-export * from './scheduler';
-export * from './selector';
-export * from './transition';
-export {
-  createComputedAccessor,
-  createDeferred,
-  createEffect,
-  createMemo,
-  createSignal,
-  readonly,
-  untrack,
-  watch,
-  type ComputedAccessor,
-  type DeferredOptions,
-  type EffectCallback,
-  type EffectCleanup,
-  type ReadonlySignal,
-  type Signal,
-  type SignalSetter,
-  type SignalSource,
-  type WatchSource,
-  type WatchStopHandle,
-} from './signal';
+export * from '@lania-v/reactivity';

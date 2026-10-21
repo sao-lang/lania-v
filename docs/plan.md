@@ -72,6 +72,7 @@
 - [x] 初始化根目录 `.gitignore`
 - [x] 初始化根目录 `.editorconfig`
 - [x] 初始化根目录 README 占位
+- [x] 建立 `packages/reactivity`（响应式核心从 runtime 提取）
 - [x] 建立 `packages/runtime`
 - [x] 建立 `packages/advanced`（增强组件从 runtime 拆出）
 - [x] 建立 `packages/store`

@@ -54,6 +54,12 @@ export default defineConfig({
         ),
       },
       {
+        find: '@lania-v/reactivity',
+        replacement: fileURLToPath(
+          new URL('../../packages/reactivity/src', import.meta.url)
+        ),
+      },
+      {
         find: '@lania-v/runtime',
         replacement: fileURLToPath(
           new URL('../../packages/runtime/src', import.meta.url)

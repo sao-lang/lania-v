@@ -1,5 +1,9 @@
-import type { SchedulerPriority } from '../reactivity/scheduler';
-import { __DEV__ } from './env';
+import type { SchedulerPriority } from '@lania-v/reactivity';
+import {
+  addPrimitiveDebugHooks,
+  isDevEnvironment as reactiveIsDevEnvironment,
+  setDevEnvironmentOverride as setReactiveDevEnvironmentOverride,
+} from '@lania-v/reactivity';
 
 /**
  * 运行时调试与插件系统。
@@ -79,16 +83,19 @@ export const isDevEnvironment = (): boolean => {
     return devEnvironmentOverride;
   }
 
-  return __DEV__;
+  return reactiveIsDevEnvironment();
 };
 
 /**
  * 在打包时无法可靠注入 `__DEV__` 的场景下，允许手动覆盖 dev 判定。
  * - `index.dev.ts` 会强制设为 true
  * - `index.prod.ts` 会强制设为 false
+ *
+ * 同时把结果同步给 `@lania-v/reactivity`，保证信号/调度器的调试短路行为一致。
  */
 export const setDevEnvironmentOverride = (value: boolean | null): void => {
   devEnvironmentOverride = value;
+  setReactiveDevEnvironmentOverride(value);
 };
 
 export const emitDevtoolsEvent = (type: string, payload?: unknown): void => {
@@ -126,7 +133,10 @@ export const warning = (message: string, condition = false): boolean => {
   return true;
 };
 
-export const assert = (condition: unknown, message: string): asserts condition => {
+export const assert = (
+  condition: unknown,
+  message: string
+): asserts condition => {
   if (condition) {
     return;
   }
@@ -136,7 +146,9 @@ export const assert = (condition: unknown, message: string): asserts condition =
 };
 
 /** 注册一组 debug hooks；返回清理函数。 */
-export const registerRuntimeDebugHooks = (hooks: RuntimeDebugHooks): (() => void) => {
+export const registerRuntimeDebugHooks = (
+  hooks: RuntimeDebugHooks
+): (() => void) => {
   runtimeDebugHooks.add(hooks);
 
   return () => {
@@ -157,6 +169,14 @@ export const emitSchedulerDebugEvent = (event: SchedulerDebugEvent): void => {
     hooks.onSchedulerEvent?.(event);
   });
 };
+
+// 响应式核心的调试事件通过同一个 hook 集合转发，保持 devtools 只有一条订阅链路。
+addPrimitiveDebugHooks({
+  onSchedulerEvent: (event) =>
+    emitSchedulerDebugEvent(event as unknown as SchedulerDebugEvent),
+  onSignalEvent: (event) =>
+    emitSignalDebugEvent(event as unknown as SignalDebugEvent),
+});
 
 export const emitSignalDebugEvent = (event: SignalDebugEvent): void => {
   if (!isDevEnvironment()) {

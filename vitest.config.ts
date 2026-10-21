@@ -31,7 +31,7 @@ export default defineConfig({
       {
         find: '@lania-v/runtime/reactivity',
         replacement: fileURLToPath(
-          new URL('./packages/runtime/src/reactivity/index.ts', import.meta.url)
+          new URL('./packages/reactivity/src/index.ts', import.meta.url)
         ),
       },
       {
@@ -80,6 +80,18 @@ export default defineConfig({
         find: '@lania/store/internal',
         replacement: fileURLToPath(
           new URL('./packages/store/src/internal.ts', import.meta.url)
+        ),
+      },
+      {
+        find: '@lania-v/reactivity/internal',
+        replacement: fileURLToPath(
+          new URL('./packages/reactivity/src/internal.ts', import.meta.url)
+        ),
+      },
+      {
+        find: '@lania-v/reactivity',
+        replacement: fileURLToPath(
+          new URL('./packages/reactivity/src/index.ts', import.meta.url)
         ),
       },
       {

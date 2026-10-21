@@ -9,7 +9,7 @@ import {
   untrack,
   useTransition,
   watch,
-} from '@lania-v/runtime/reactivity';
+} from '@lania-v/reactivity';
 import {
   lazy,
   onCleanup,

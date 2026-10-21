@@ -15,10 +15,11 @@
  * - flush 期间新增任务不会插入当前快照中途，而是进入下一轮消费；
  * - `tick()` 等待的是一次“稳定 flush”结束，而不只是当前队列瞬时为空。
  */
-import { emitSchedulerDebugEvent, isDevEnvironment } from '../core/debug';
+import { emitSchedulerDebugEvent, isDevEnvironment } from './debug';
 
 export type Job = () => void;
-export type SchedulerPriority = 'immediate' | 'high' | 'normal' | 'low' | 'idle';
+export type SchedulerPriority =
+  'immediate' | 'high' | 'normal' | 'low' | 'idle';
 export type JobPriority = SchedulerPriority;
 
 export const IMMEDIATE: SchedulerPriority = 'immediate';
@@ -356,7 +357,11 @@ export class Scheduler {
   }
 
   private resolveTicksIfIdle(): void {
-    if (this.isFlushing || this.hasQueuedJobs() || this.tickResolvers.size === 0) {
+    if (
+      this.isFlushing ||
+      this.hasQueuedJobs() ||
+      this.tickResolvers.size === 0
+    ) {
       return;
     }
 
@@ -380,7 +385,9 @@ export class Scheduler {
   }
 
   private hasUnitOfWork(): boolean {
-    return [...this.unitQueue.values()].some((workItems) => workItems.length > 0);
+    return [...this.unitQueue.values()].some(
+      (workItems) => workItems.length > 0
+    );
   }
 
   private getChannel(): MessageChannel {
@@ -478,7 +485,9 @@ export const batch = <T>(fn: () => T): T => {
   return defaultScheduler.batch(fn);
 };
 
-export const createDoubleBufferState = <T>(initialValue: T): DoubleBufferState<T> => {
+export const createDoubleBufferState = <T>(
+  initialValue: T
+): DoubleBufferState<T> => {
   return defaultScheduler.createDoubleBufferState(initialValue);
 };
 

@@ -10,7 +10,7 @@
  *
  * 因此组件内外写法完全一致：`atom.value` / `atom.set(...)`。
  */
-import { batch } from '@lania-v/runtime';
+import { batch } from '@lania-v/reactivity';
 
 export interface StoreAtomRecord {
   readonly atomId: number;

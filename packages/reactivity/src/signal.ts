@@ -5,7 +5,7 @@ import {
   type Scheduler,
 } from './scheduler';
 import { onOwnerCleanup } from './owner';
-import { emitSignalDebugEvent, isDevEnvironment } from '../core/debug';
+import { emitSignalDebugEvent, isDevEnvironment } from './debug';
 
 /**
  * 响应式 Signal 实现（类似 Solid 的 signal / memo / effect 思路）。
@@ -24,7 +24,10 @@ export type SignalSetter<T> = {
   (path: string, value: unknown | ((prev: unknown) => unknown)): T;
 };
 
-const readPathValue = (value: unknown, path: readonly (string | number)[]): unknown => {
+const readPathValue = (
+  value: unknown,
+  path: readonly (string | number)[]
+): unknown => {
   return path.reduce<unknown>((current, segment) => {
     if (current === null || typeof current !== 'object') {
       return undefined;
@@ -47,7 +50,10 @@ export interface PathViewRuntime<T> {
   /** 订阅某个路径；读取视图属性时调用。 */
   trackPath: (path: readonly (string | number)[]) => void;
   /** 只读写入错误信息。 */
-  describeReadonly: (path: readonly (string | number)[], property: PropertyKey) => string;
+  describeReadonly: (
+    path: readonly (string | number)[],
+    property: PropertyKey
+  ) => string;
   /** 视图缓存：同一路径必须返回同一实例。 */
   cache: Map<string, unknown>;
   /** 按路径读取后的值转换（例如冻结）。 */
@@ -98,7 +104,9 @@ const createPathView = (
         // 迭代结果必须是当前真实元素，因此先把快照转成普通数组再迭代。
         if (property === Symbol.iterator) {
           const snapshot = Array.isArray(raw) ? [...raw] : null;
-          return snapshot ? snapshot[Symbol.iterator].bind(snapshot) : undefined;
+          return snapshot
+            ? snapshot[Symbol.iterator].bind(snapshot)
+            : undefined;
         }
 
         const proto = Array.isArray(raw) ? Array.prototype : Object.prototype;
@@ -124,7 +132,9 @@ const createPathView = (
         return createPathView(runtime, nextPath);
       }
 
-      return runtime.transformLeaf ? runtime.transformLeaf(nextValue) : nextValue;
+      return runtime.transformLeaf
+        ? runtime.transformLeaf(nextValue)
+        : nextValue;
     },
     set(_target, property) {
       throw new TypeError(runtime.describeReadonly(path, property));
@@ -138,12 +148,16 @@ const createPathView = (
     has(_target, property) {
       runtime.trackPath(path);
       const raw = readPathValue(runtime.readRoot(), path);
-      return raw !== null && typeof raw === 'object' ? property in (raw as object) : false;
+      return raw !== null && typeof raw === 'object'
+        ? property in (raw as object)
+        : false;
     },
     ownKeys() {
       runtime.trackPath(path);
       const raw = readPathValue(runtime.readRoot(), path);
-      return raw !== null && typeof raw === 'object' ? Reflect.ownKeys(raw as object) : [];
+      return raw !== null && typeof raw === 'object'
+        ? Reflect.ownKeys(raw as object)
+        : [];
     },
     getOwnPropertyDescriptor(_target, property) {
       if (typeof property === 'symbol') {
@@ -154,10 +168,19 @@ const createPathView = (
 
       if (Array.isArray(raw) && property === 'length') {
         // 数组 target 上的 length 不可配置，描述符形状必须一致。
-        return { configurable: false, enumerable: false, value: raw.length, writable: true };
+        return {
+          configurable: false,
+          enumerable: false,
+          value: raw.length,
+          writable: true,
+        };
       }
 
-      if (raw === null || typeof raw !== 'object' || !(property in (raw as object))) {
+      if (
+        raw === null ||
+        typeof raw !== 'object' ||
+        !(property in (raw as object))
+      ) {
         // 属性不存在时不建立路径订阅：`Object.keys` / 展开 / 描述符探测本身
         // 不应把整棵子树变成依赖，否则兄弟字段变化会误触发重算。
         return undefined;
@@ -259,7 +282,6 @@ export type SignalSource<T> = Signal<T> | ReadonlySignal<T>;
  * 因此可以自然表达 `store.a` 这种路径读取，不需要额外的路径 API。
  */
 export type WatchSource<T> = SignalSource<T> | (() => T);
-
 
 export type ReadonlySignal<T> = {
   readonly value: T;
@@ -367,7 +389,9 @@ class CompactJobSet<T> implements Iterable<T> {
   }
 
   has(value: T): boolean {
-    return this.indexMap ? this.indexMap.has(value) : this.items.includes(value);
+    return this.indexMap
+      ? this.indexMap.has(value)
+      : this.items.includes(value);
   }
 
   clear(): void {
@@ -396,7 +420,8 @@ class CompactJobSet<T> implements Iterable<T> {
   entries(): IterableIterator<[T, T]> {
     return this.items
       .slice()
-      .map((value) => [value, value] as [T, T])[Symbol.iterator]();
+      .map((value) => [value, value] as [T, T])
+      [Symbol.iterator]();
   }
 
   [Symbol.iterator](): IterableIterator<T> {
@@ -430,7 +455,10 @@ const attachJobToSignals = (signals: Iterable<Signal<any>>, job: Job): void => {
 };
 
 // 解绑 job（effect/memo 重新收集 deps 时需要先清理旧 deps）
-const detachJobFromSignals = (signals: Iterable<Signal<any>>, job: Job): void => {
+const detachJobFromSignals = (
+  signals: Iterable<Signal<any>>,
+  job: Job
+): void => {
   for (const signal of signals) {
     signal.updaters.delete(job);
   }
@@ -521,7 +549,9 @@ export const createSignal = <T>(
   // 只读视图按路径缓存，保证 `sig.value.user === sig.value.user`。
   const viewCache = new Map<string, unknown>();
 
-  const ensurePathVersion = (path: readonly (string | number)[]): Signal<number> => {
+  const ensurePathVersion = (
+    path: readonly (string | number)[]
+  ): Signal<number> => {
     const key = path.join('\u0000');
     const existing = pathVersions.get(key);
 
@@ -540,8 +570,12 @@ export const createSignal = <T>(
     nextValue: unknown
   ): void => {
     const changed = changedPath.map(String);
-    const isPrefix = (short: readonly string[], long: readonly string[]): boolean =>
-      short.length <= long.length && short.every((segment, index) => segment === long[index]);
+    const isPrefix = (
+      short: readonly string[],
+      long: readonly string[]
+    ): boolean =>
+      short.length <= long.length &&
+      short.every((segment, index) => segment === long[index]);
 
     for (const [key, signal] of pathVersions) {
       const registered = key.length === 0 ? [] : key.split('\u0000');
@@ -574,8 +608,12 @@ export const createSignal = <T>(
   const notifyPathVersion = (path: readonly (string | number)[]): void => {
     // 路径级写入只唤醒「该路径自身」与「其后代」，祖先由 notifyPath 统一处理。
     const normalized = path.map(String);
-    const isPrefix = (short: readonly string[], long: readonly string[]): boolean =>
-      short.length <= long.length && short.every((segment, index) => segment === long[index]);
+    const isPrefix = (
+      short: readonly string[],
+      long: readonly string[]
+    ): boolean =>
+      short.length <= long.length &&
+      short.every((segment, index) => segment === long[index]);
 
     for (const [key, signal] of pathVersions) {
       if (key.length === 0) {
@@ -617,7 +655,10 @@ export const createSignal = <T>(
     return currentValue;
   };
 
-  const commit = (nextValue: T, changedPath: readonly (string | number)[] = []): T => {
+  const commit = (
+    nextValue: T,
+    changedPath: readonly (string | number)[] = []
+  ): T => {
     // 使用 Object.is 确保 NaN 等边界值行为一致
     if (Object.is(currentValue, nextValue)) {
       return toReadonlyValue(currentValue);
@@ -660,7 +701,11 @@ export const createSignal = <T>(
       const [first, ...rest] = args;
       const segments: (string | number)[] =
         typeof first === 'string' && rest.length === 1
-          ? first.split('.').map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment))
+          ? first
+              .split('.')
+              .map((segment) =>
+                /^\d+$/.test(segment) ? Number(segment) : segment
+              )
           : Array.isArray(first)
             ? (first as (string | number)[])
             : (args.slice(0, -1) as (string | number)[]);
@@ -695,8 +740,10 @@ export const createSignal = <T>(
     },
     set: setSignal,
     // 供 @lania/store 之类的外层封装使用：写入整棵新树，但按指定路径精确通知。
-    setValueWithPath: (nextValue: T, changedPath: readonly (string | number)[]) =>
-      commit(nextValue, changedPath),
+    setValueWithPath: (
+      nextValue: T,
+      changedPath: readonly (string | number)[]
+    ) => commit(nextValue, changedPath),
     peek: () => toReadonlyValue(currentValue),
     updaters,
     debugId: nextSignalDebugId++,
@@ -720,7 +767,9 @@ export const createSignal = <T>(
  * 调用 `this.x()` 总能拿到最新派生值，裸引用 `this.x` 得到的对象与 signal 形态一致。
  * 因为不缓存，也不会把调度顺序问题带进组件更新链路。
  */
-export const createComputedAccessor = <T>(compute: () => T): ComputedAccessor<T> => {
+export const createComputedAccessor = <T>(
+  compute: () => T
+): ComputedAccessor<T> => {
   return {
     get value(): T {
       return compute();
@@ -805,7 +854,9 @@ export const createEffect = (
   return stop;
 };
 
-const isPlainObject = (value: unknown): value is Record<PropertyKey, unknown> => {
+const isPlainObject = (
+  value: unknown
+): value is Record<PropertyKey, unknown> => {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -891,7 +942,9 @@ interface NormalizedWatchSource {
   valueCompared: boolean;
 }
 
-const normalizeWatchSource = (source: WatchSource<unknown>): NormalizedWatchSource => {
+const normalizeWatchSource = (
+  source: WatchSource<unknown>
+): NormalizedWatchSource => {
   if (isSignalLike(source)) {
     const signal = source as Signal<unknown>;
     return {
@@ -903,7 +956,9 @@ const normalizeWatchSource = (source: WatchSource<unknown>): NormalizedWatchSour
   }
 
   if (typeof source !== 'function') {
-    throw new TypeError('watch() expects a signal or a getter function as its source.');
+    throw new TypeError(
+      'watch() expects a signal or a getter function as its source.'
+    );
   }
 
   const getter = source as () => unknown;
@@ -961,7 +1016,10 @@ export function watch<T, Immediate extends boolean = false>(
   options?: WatchOptions & { immediate?: Immediate },
   scheduler?: Scheduler
 ): WatchStopHandle;
-export function watch<T extends readonly unknown[], Immediate extends boolean = false>(
+export function watch<
+  T extends readonly unknown[],
+  Immediate extends boolean = false,
+>(
   sources: { [K in keyof T]: WatchSource<T[K]> },
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
@@ -977,19 +1035,28 @@ export function watch<T>(
 ): WatchStopHandle {
   const rawSources = Array.isArray(source) ? source : [source];
   const isMultiSource = Array.isArray(source);
-  const sources = rawSources.map((entry) => normalizeWatchSource(entry as WatchSource<unknown>));
+  const sources = rawSources.map((entry) =>
+    normalizeWatchSource(entry as WatchSource<unknown>)
+  );
   const { immediate = false, deep = false } = options;
   const takeSnapshot = (value: unknown): unknown =>
     deep ? cloneWatchSnapshot(value) : value;
 
-  let previousValues: unknown[] = sources.map((entry) => takeSnapshot(entry.peek()));
+  let previousValues: unknown[] = sources.map((entry) =>
+    takeSnapshot(entry.peek())
+  );
 
-  const invoke = (currentValues: unknown[], snapshot: unknown[] | undefined): void => {
+  const invoke = (
+    currentValues: unknown[],
+    snapshot: unknown[] | undefined
+  ): void => {
     if (isMultiSource) {
-      (callback as (current: unknown[], previous: unknown[] | undefined) => void)(
-        currentValues,
-        snapshot
-      );
+      (
+        callback as (
+          current: unknown[],
+          previous: unknown[] | undefined
+        ) => void
+      )(currentValues, snapshot);
       return;
     }
 
@@ -1023,7 +1090,12 @@ export function watch<T>(
       }
     }
 
-    if (deep && previousValues.every((previous, index) => isDeepEqual(nextValues[index], previous))) {
+    if (
+      deep &&
+      previousValues.every((previous, index) =>
+        isDeepEqual(nextValues[index], previous)
+      )
+    ) {
       // 内容没变时不回调，但仍然保留最新引用，避免用户原地改值后快照过期。
       previousValues = nextValues.map(takeSnapshot);
       return;
@@ -1045,7 +1117,10 @@ export function watch<T>(
 
   if (immediate) {
     // 首次执行与 createEffect 对齐：同步跑一次，旧值语义是“不存在”。
-    invoke(sources.map((entry) => entry.peek()), undefined);
+    invoke(
+      sources.map((entry) => entry.peek()),
+      undefined
+    );
   }
 
   return () => {

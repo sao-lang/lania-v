@@ -16,7 +16,7 @@ import {
   watch,
   type ReadonlySignal,
   type Signal,
-} from '@lania-v/runtime';
+} from '@lania-v/reactivity';
 import {
   createAnonymousKey,
   getStore,

@@ -3,12 +3,12 @@ import {
   isComponentHmrEnabled,
 } from '../../dev/hmr';
 import type { PropOptionsMap } from './prop-options';
-import type { Signal } from '../../reactivity/signal';
+import type { Signal } from '@lania-v/reactivity';
 import {
   HIGH,
   defaultScheduler,
   type Scheduler,
-} from '../../reactivity/scheduler';
+} from '@lania-v/reactivity';
 import { SlotTable } from '../../dom/slot-table';
 import { adoptStyles, registerAppliedStyleTexts, type StaticStyles } from '../styles';
 import type { Slot } from '../../dom/slots';

@@ -42,11 +42,15 @@ export * from './dom/updaters';
 // 增强组件构造器注册表：runtime 的动态 slot 用它解析保留字符串，
 // `@lania-v/advanced` 在加载时把真实构造器注册进来。
 export { registerEnhancedConstructor } from './dom/slots/dynamic-slot';
-export * from './reactivity/owner';
-export * from './reactivity/resource';
-export * from './reactivity/scheduler';
-export * from './reactivity/selector';
-export * from './reactivity/transition';
+export * from '@lania-v/reactivity';
+// core 也导出同名调试入口与 `isDevEnvironment`，这里显式让 core 的实现优先，
+// 避免两个包各自维护一份 dev 判定导致行为分叉。
+export {
+  emitSchedulerDebugEvent,
+  emitSignalDebugEvent,
+  isDevEnvironment,
+  setDevEnvironmentOverride,
+} from './core';
 export * from './render';
 
 // 增强组件（When/Each/KeepAlive/Transition...）已拆分到 @lania-v/advanced；
@@ -71,7 +75,7 @@ import {
   type WatchOptions,
   type WatchSource,
   type WatchStopHandle,
-} from './reactivity/signal';
+} from '@lania-v/reactivity';
 export {
   createComputedAccessor,
   createDeferred,
@@ -92,12 +96,12 @@ export {
   type WatchOptions,
   type WatchSource,
   type WatchStopHandle,
-} from './reactivity/signal';
+} from '@lania-v/reactivity';
 export function watch<T, Immediate extends boolean = false>(
   source: WatchSource<T>,
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
-  scheduler?: import('./reactivity/scheduler').Scheduler
+  scheduler?: import('@lania-v/reactivity').Scheduler
 ): WatchStopHandle;
 export function watch<
   T extends readonly unknown[],
@@ -106,7 +110,7 @@ export function watch<
   sources: { [K in keyof T]: WatchSource<T[K]> },
   callback: WatchCallback<T, Immediate>,
   options?: WatchOptions & { immediate?: Immediate },
-  scheduler?: import('./reactivity/scheduler').Scheduler
+  scheduler?: import('@lania-v/reactivity').Scheduler
 ): WatchStopHandle;
 export function watch(
   sourceOrSourceKey: WatchSource<unknown> | readonly WatchSource<unknown>[],
@@ -114,7 +118,7 @@ export function watch(
     | ((current: unknown, previous: unknown | undefined) => void)
     | ((current: unknown[], previous: unknown[] | undefined) => void),
   options?: WatchOptions,
-  scheduler?: import('./reactivity/scheduler').Scheduler
+  scheduler?: import('@lania-v/reactivity').Scheduler
 ): WatchStopHandle {
   return reactiveWatch(
     sourceOrSourceKey as never,

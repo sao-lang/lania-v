@@ -32,6 +32,9 @@ export interface CompiledTsxModule {
 const RUNTIME_IMPORT_PATTERN = /^['"]@lania-v\/runtime(?:\/[^'"]+)?['"]$/;
 // `@lania/store` 是生态包而非 runtime 内部模块：它的具名导入必须原样保留在产物里。
 const STORE_IMPORT_PATTERN = /^['"]@lania\/store(?:\/[^'"]+)?['"]$/;
+// `@lania-v/reactivity` 是独立的响应式核心包：其具名导入同样需要保留，
+// 但其中的信号工厂仍参与编译期声明识别。
+const REACTIVITY_IMPORT_PATTERN = /^['"]@lania-v\/reactivity(?:\/[^'"]+)?['"]$/;
 
 // 运行时能力按“组件基类/响应式 API/模板 slot/SSR 辅助”混合列举，
 // 目的是让生成代码始终可以从单一入口稳定解构，而不是按需拼出多条 import。
@@ -195,19 +198,31 @@ const collectUserRuntimeBindings = (
   const advanced: string[] = [];
 
   sourceFile.statements.forEach((stmt) => {
-    if (!ts.isImportDeclaration(stmt) || !stmt.moduleSpecifier || !stmt.importClause) {
+    if (
+      !ts.isImportDeclaration(stmt) ||
+      !stmt.moduleSpecifier ||
+      !stmt.importClause
+    ) {
       return;
     }
 
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
     // 只有 runtime 自身的具名导入需要并入统一前导；`@lania/store` 会原样保留。
-    if (!RUNTIME_IMPORT_PATTERN.test(specifier) || STORE_IMPORT_PATTERN.test(specifier)) {
+    if (
+      !RUNTIME_IMPORT_PATTERN.test(specifier) ||
+      STORE_IMPORT_PATTERN.test(specifier) ||
+      REACTIVITY_IMPORT_PATTERN.test(specifier)
+    ) {
       return;
     }
 
     const clause = stmt.importClause;
     const namedBindings = clause.namedBindings;
-    if (clause.isTypeOnly || !namedBindings || !ts.isNamedImports(namedBindings)) {
+    if (
+      clause.isTypeOnly ||
+      !namedBindings ||
+      !ts.isNamedImports(namedBindings)
+    ) {
       return;
     }
 
@@ -265,7 +280,13 @@ const createLaniaTsxModuleCode = (
       advancedBindings
     ),
     ...(internalBindings.length > 0
-      ? [createRuntimeBindingBlock('__laniaInternal', '@lania-v/runtime/internal', internalBindings)]
+      ? [
+          createRuntimeBindingBlock(
+            '__laniaInternal',
+            '@lania-v/runtime/internal',
+            internalBindings
+          ),
+        ]
       : []),
     '',
     classCode,
@@ -460,7 +481,11 @@ const extractNonRuntimeImports = (fileName: string, source: string): string => {
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
     // 运行时依赖由编译器统一注入，避免与用户源码中的导入重复。
     // `@lania/store` 属于生态包，编译器不接管它的导入，必须原样保留。
-    if (RUNTIME_IMPORT_PATTERN.test(specifier) && !STORE_IMPORT_PATTERN.test(specifier)) {
+    if (
+      RUNTIME_IMPORT_PATTERN.test(specifier) &&
+      !STORE_IMPORT_PATTERN.test(specifier) &&
+      !REACTIVITY_IMPORT_PATTERN.test(specifier)
+    ) {
       return;
     }
     imports.push(stmt.getText(sourceFile));
@@ -479,9 +504,7 @@ export const emitFunctionComponentTsxModule = (
   const preambleCode = extractNonRuntimeImports(fileName, source);
   const userRuntimeBindings = collectUserRuntimeBindings(fileName, source);
   const classCode = normalizeModelObjectUpdaters(
-    compiled.componentClasses
-      .map((entry) => entry.classCode.code)
-      .join('\n\n')
+    compiled.componentClasses.map((entry) => entry.classCode.code).join('\n\n')
   );
   const preservedCode = extractPreservedModuleStatements(
     fileName,
@@ -497,7 +520,10 @@ export const emitFunctionComponentTsxModule = (
       classCode,
       compiled.classNames,
       mergeBindingNames(TSX_RUNTIME_BINDINGS, userRuntimeBindings.root),
-      mergeBindingNames(TSX_ADVANCED_RUNTIME_BINDINGS, userRuntimeBindings.advanced)
+      mergeBindingNames(
+        TSX_ADVANCED_RUNTIME_BINDINGS,
+        userRuntimeBindings.advanced
+      )
     ),
     preservedCode.after,
   ]
