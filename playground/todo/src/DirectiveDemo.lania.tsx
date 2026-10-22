@@ -55,7 +55,7 @@ export default defineComponent(function DirectiveDemo() {
         <div className="row">
           <input
             className="input"
-            value={watermarkText()}
+            value={watermarkText.value}
             onInput={(event: Event) => {
               const target = event.target as HTMLInputElement | null;
               watermarkText.set(target?.value || 'LANIA DEMO');
@@ -70,7 +70,7 @@ export default defineComponent(function DirectiveDemo() {
               )
             }
           >
-            tone: {directiveTone()}
+            tone: {directiveTone.value}
           </button>
           <button
             className="btn"
@@ -80,26 +80,26 @@ export default defineComponent(function DirectiveDemo() {
               )
             }
           >
-            rotate: {rotate()}deg
+            rotate: {rotate.value}deg
           </button>
           <button
             className="btn"
             onClick={() => directiveVisible.set((value) => !value)}
           >
-            visible: {String(directiveVisible())}
+            visible: {String(directiveVisible.value)}
           </button>
         </div>
 
         <When
-          value={directiveVisible()}
+          value={directiveVisible.value}
           fallback={renderEmpty('target removed, directive unmounted')}
         >
           <div
             use={{
               watermark: {
-                text: watermarkText(),
-                tone: directiveTone(),
-                rotate: rotate(),
+                text: watermarkText.value,
+                tone: directiveTone.value,
+                rotate: rotate.value,
                 onPhase: pushDirectiveLog,
               },
             }}
@@ -110,7 +110,7 @@ export default defineComponent(function DirectiveDemo() {
               borderRadius: '14px',
               border: '1px solid #8b5cf6',
               backgroundColor:
-                directiveTone() === 'violet'
+                directiveTone.value === 'violet'
                   ? 'rgba(30, 41, 59, 0.88)'
                   : 'rgba(15, 23, 42, 0.88)',
               color: '#f8fafc',
@@ -120,14 +120,16 @@ export default defineComponent(function DirectiveDemo() {
               registered name: <code>watermark</code>
             </p>
             <p className="empty">这个面板会被自定义指令重复铺上文字水印。</p>
-            <p className="empty">dataset.watermark = {watermarkText()}</p>
-            <p className="empty">dataset.watermarkTone = {directiveTone()}</p>
-            <p className="empty">dataset.watermarkRotate = {rotate()}deg</p>
+            <p className="empty">dataset.watermark = {watermarkText.value}</p>
+            <p className="empty">
+              dataset.watermarkTone = {directiveTone.value}
+            </p>
+            <p className="empty">dataset.watermarkRotate = {rotate.value}deg</p>
           </div>
         </When>
 
         <Each
-          value={directiveLog()}
+          value={directiveLog.value}
           fallback={renderEmpty('no directive logs')}
         >
           {(line: string): any => <p className="empty">{line}</p>}

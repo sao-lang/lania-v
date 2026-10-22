@@ -42,6 +42,7 @@ import {
   trackSignals,
 } from '@lania-v/runtime/advanced';
 import { createRef } from '@lania-v/runtime/dom';
+import { createAtom } from '@lania/store';
 import ShowcaseCard from './ShowcaseCard.lania.tsx';
 import TodoFc from './TodoFc.lania.tsx';
 
@@ -222,7 +223,7 @@ function TransitionDemoSection() {
             className="btn"
             onClick={() => visible.set((value) => !value)}
           >
-            {visible() ? '出场（leave）' : '进场（enter）'}
+            {visible.value ? '出场（leave）' : '进场（enter）'}
           </button>
         </div>
         <Transition
@@ -236,7 +237,7 @@ function TransitionDemoSection() {
             pushLog(`leave:${ctx.phase}`);
           }}
         >
-          <When value={visible()}>
+          <When value={visible.value}>
             <div
               data-demo="transition-block"
               style={{
@@ -270,7 +271,7 @@ function TransitionDemoSection() {
           </button>
         </div>
         <TransitionGroup
-          keys={items().map((item) => item.id)}
+          keys={items.value.map((item) => item.id)}
           onEnter={(
             element: Element,
             ctx: { key: PropertyKey; phase: string }
@@ -299,7 +300,7 @@ function TransitionDemoSection() {
           }}
         >
           <Each
-            value={items()}
+            value={items.value}
             key={itemKey}
             fallback={<p className="empty">empty</p>}
           >
@@ -330,7 +331,7 @@ function TransitionDemoSection() {
 
       <div className="item">
         <p className="summary">transition logs</p>
-        <Each value={logs()} fallback={<p className="empty">no logs</p>}>
+        <Each value={logs.value} fallback={<p className="empty">no logs</p>}>
           {(line: string): any => <p className="empty">{line}</p>}
         </Each>
       </div>
@@ -408,13 +409,13 @@ function FcShowcase() {
 
   // 1) Reactivity
   const count = createSignal(0);
-  const doubled = createMemo(() => count() * 2);
+  const doubled = createMemo(() => count.value * 2);
   const readonlyCount = readonly(count);
   const deferredCount = createDeferred(count, { timeoutMs: 400 });
   const trackingFlag = createMemo(() =>
     isTracking() ? 'tracking' : 'not-tracking'
   );
-  const untrackedSnapshot = createMemo(() => untrack(() => count()));
+  const untrackedSnapshot = createMemo(() => untrack(() => count.value));
   const watchLog = createSignal<string[]>([]);
   const watchMultiLog = createSignal<string[]>([]);
   const watchEnabled = createSignal(true);
@@ -422,7 +423,7 @@ function FcShowcase() {
   const inputText = createSignal('focus me');
   const batchLeft = createSignal(1);
   const batchRight = createSignal(10);
-  const batchSum = createMemo(() => batchLeft() + batchRight());
+  const batchSum = createMemo(() => batchLeft.value + batchRight.value);
   const batchEffectRuns = createSignal(0);
   const transitionUrgent = createSignal(0);
   const transitionDeferred = createSignal(0);
@@ -457,9 +458,9 @@ function FcShowcase() {
   const trackedDeps = createSignal<number | null>(null);
   const runTrackSignals = () => {
     const tracked = trackSignals(() => {
-      // Intentionally do not read count() directly here. We "link" deps from inner trackers.
-      const a = trackSignals(() => count());
-      const b = trackSignals(() => doubled());
+      // Intentionally do not read count.value directly here. We "link" deps from inner trackers.
+      const a = trackSignals(() => count.value);
+      const b = trackSignals(() => doubled.value);
       linkTrackedSignals(a.deps);
       linkTrackedSignals(b.deps);
       return a.value + (b.value as number);
@@ -544,7 +545,7 @@ function FcShowcase() {
   // 3) Resource (async + auto refetch on deps)
   const query = createSignal('hello');
   const [result, controls] = createResource(query, async () => {
-    const q = query();
+    const q = query.value;
     await sleep(350);
     return `server(${q})@${Date.now()}`;
   });
@@ -552,7 +553,7 @@ function FcShowcase() {
   // Declarative provider: compiler rewrites to `provideContext(this, DemoContext, contextValue)`.
   provideContext(DemoContext, contextValue);
   const contextSnapshot = createMemo(() => {
-    return useContext(DemoContext)();
+    return useContext(DemoContext).value;
   });
 
   const whenFlag = createSignal(true);
@@ -570,7 +571,7 @@ function FcShowcase() {
     item.id) as never;
   const dynamicTag = createSignal<any>('section');
   const dynamicLabel = createMemo(() => {
-    const v = dynamicTag();
+    const v = dynamicTag.value;
     if (typeof v === 'string') {
       return v;
     }
@@ -701,10 +702,10 @@ function FcShowcase() {
 
   createEffect(() => {
     // Basic proof that effects run and track signals.
-    void count();
+    void count.value;
   });
   createEffect(() => {
-    void batchSum();
+    void batchSum.value;
     batchEffectRuns.set(batchEffectRuns.peek() + 1);
   });
 
@@ -718,28 +719,28 @@ function FcShowcase() {
       <div className="filters">
         <button
           className="chip"
-          aria-pressed={tab() === 'reactivity'}
+          aria-pressed={tab.value === 'reactivity'}
           onClick={() => tab.set('reactivity')}
         >
           Reactivity
         </button>
         <button
           className="chip"
-          aria-pressed={tab() === 'store'}
+          aria-pressed={tab.value === 'store'}
           onClick={() => tab.set('store')}
         >
           Store
         </button>
         <button
           className="chip"
-          aria-pressed={tab() === 'resource'}
+          aria-pressed={tab.value === 'resource'}
           onClick={() => tab.set('resource')}
         >
           Resource
         </button>
         <button
           className="chip"
-          aria-pressed={tab() === 'enhanced'}
+          aria-pressed={tab.value === 'enhanced'}
           onClick={() => {
             tab.set('enhanced');
             resetEnhancedTabState();
@@ -749,7 +750,7 @@ function FcShowcase() {
         </button>
         <button
           className="chip"
-          aria-pressed={tab() === 'suspense'}
+          aria-pressed={tab.value === 'suspense'}
           onClick={() => {
             tab.set('suspense');
             resetSuspenseTabState();
@@ -759,7 +760,7 @@ function FcShowcase() {
         </button>
         <button
           className="chip"
-          aria-pressed={tab() === 'transition'}
+          aria-pressed={tab.value === 'transition'}
           onClick={() => {
             tab.set('transition');
             resetTransitionTabState();
@@ -769,7 +770,7 @@ function FcShowcase() {
         </button>
         <button
           className="chip"
-          aria-pressed={tab() === 'local'}
+          aria-pressed={tab.value === 'local'}
           onClick={() => {
             tab.set('local');
             resetTransitionTabState();
@@ -780,15 +781,15 @@ function FcShowcase() {
       </div>
 
       <div className="list">
-        <When value={tab() === 'reactivity'} mode="remount">
+        <When value={tab.value === 'reactivity'} mode="remount">
           <div>
             <div className="item">
               <p className="summary">
                 createSignal / createMemo / createEffect
               </p>
               <p>
-                count: <span>{count()}</span> | doubled:{' '}
-                <span>{doubled()}</span>
+                count: <span>{count.value}</span> | doubled:{' '}
+                <span>{doubled.value}</span>
               </p>
               <div className="row">
                 <button className="btn" onClick={() => count.set((v) => v + 1)}>
@@ -803,24 +804,25 @@ function FcShowcase() {
             <div className="item">
               <p className="summary">readonly / createDeferred</p>
               <p>
-                readonly(count): <span>{readonlyCount()}</span>
+                readonly(count): <span>{readonlyCount.value}</span>
               </p>
               <p>
-                deferred(count, 400ms): <span>{deferredCount()}</span>
+                deferred(count, 400ms): <span>{deferredCount.value}</span>
               </p>
             </div>
 
             <div className="item">
               <p className="summary">FC lifecycle hooks</p>
               <p>
-                ready: <span>{lifecycleReady() ? 'mounted' : 'idle'}</span> |
-                mounts/unmounts:
-                <span> {lifecycleMountCount()}</span> /{' '}
-                <span>{lifecycleUnmountCount()}</span>
+                ready: <span>{lifecycleReady.value ? 'mounted' : 'idle'}</span>{' '}
+                | mounts/unmounts:
+                <span> {lifecycleMountCount.value}</span> /{' '}
+                <span>{lifecycleUnmountCount.value}</span>
               </p>
               <p>
-                beforeUpdate/updated: <span>{lifecycleWillUpdateCount()}</span>{' '}
-                / <span>{lifecycleUpdatedCount()}</span>
+                beforeUpdate/updated:{' '}
+                <span>{lifecycleWillUpdateCount.value}</span> /{' '}
+                <span>{lifecycleUpdatedCount.value}</span>
               </p>
               <p className="summary">
                 支持的 FC hooks: {lifecycleHookNames.join(' / ')}
@@ -842,13 +844,13 @@ function FcShowcase() {
                 </button>
               </div>
               <Each
-                value={lifecycleLog()}
+                value={lifecycleLog.value}
                 fallback={renderEmpty('no lifecycle logs yet')}
               >
                 {(line): any => <p className="empty">{line}</p>}
               </Each>
               <Each
-                value={lifecycleHookLog()}
+                value={lifecycleHookLog.value}
                 fallback={renderEmpty('no hook logs yet')}
               >
                 {(line: string): any => <p className="empty">{line}</p>}
@@ -861,7 +863,7 @@ function FcShowcase() {
                 <input
                   className="input"
                   ref={inputRef}
-                  value={inputText()}
+                  value={inputText.value}
                   onInput={(event: Event) => {
                     const target = event.target as HTMLInputElement | null;
                     inputText.set(target?.value ?? '');
@@ -883,24 +885,29 @@ function FcShowcase() {
                 isTracking / untrack / trackSignals / linkTrackedSignals
               </p>
               <p>
-                isTracking() inside memo: <span>{trackingFlag()}</span>
+                isTracking() inside memo: <span>{trackingFlag.value}</span>
               </p>
               <p>
-                untrack(() =&gt; count()): <span>{untrackedSnapshot()}</span>{' '}
-                (不会随 count 更新)
+                untrack(() =&gt; count.value):{' '}
+                <span>{untrackedSnapshot.value}</span> (不会随 count 更新)
               </p>
               <button className="btn" onClick={runTrackSignals}>
                 计算依赖数量
               </button>
               <p>
                 依赖数量:{' '}
-                <span>{trackedDeps() == null ? '-' : trackedDeps()}</span>
+                <span>
+                  {trackedDeps.value == null ? '-' : trackedDeps.value}
+                </span>
               </p>
             </div>
 
             <div className="item">
               <p className="summary">watch</p>
-              <Each value={watchLog()} fallback={renderEmpty('no watch logs')}>
+              <Each
+                value={watchLog.value}
+                fallback={renderEmpty('no watch logs')}
+              >
                 {(line: string): any => <p className="empty">{line}</p>}
               </Each>
             </div>
@@ -909,7 +916,7 @@ function FcShowcase() {
               <p className="summary">watch（多源 + stop/resume）</p>
               <p>
                 watch([count, batchLeft]) active:{' '}
-                <span>{watchEnabled() ? 'yes' : 'no'}</span>
+                <span>{watchEnabled.value ? 'yes' : 'no'}</span>
               </p>
               <div className="row">
                 <button className="btn" onClick={resumeMultiWatch}>
@@ -923,7 +930,7 @@ function FcShowcase() {
                 </button>
               </div>
               <Each
-                value={watchMultiLog()}
+                value={watchMultiLog.value}
                 fallback={renderEmpty('no watch logs')}
               >
                 {(line: string): any => <p className="empty">{line}</p>}
@@ -933,11 +940,11 @@ function FcShowcase() {
             <div className="item">
               <p className="summary">batch</p>
               <p>
-                left/right/sum: <span>{batchLeft()}</span> /{' '}
-                <span>{batchRight()}</span> / <span>{batchSum()}</span>
+                left/right/sum: <span>{batchLeft.value}</span> /{' '}
+                <span>{batchRight.value}</span> / <span>{batchSum.value}</span>
               </p>
               <p>
-                effect runs: <span>{batchEffectRuns()}</span>
+                effect runs: <span>{batchEffectRuns.value}</span>
               </p>
               <div className="row">
                 <button className="btn" onClick={runSplitBatchDemo}>
@@ -961,11 +968,12 @@ function FcShowcase() {
                 useTransition + startTransition（scheduler）
               </p>
               <p>
-                urgent: <span>{transitionUrgent()}</span> | deferred:{' '}
-                <span>{transitionDeferred()}</span>
+                urgent: <span>{transitionUrgent.value}</span> | deferred:{' '}
+                <span>{transitionDeferred.value}</span>
               </p>
               <p>
-                pending: <span>{transitionPendingState() ? 'yes' : 'no'}</span>
+                pending:{' '}
+                <span>{transitionPendingState.value ? 'yes' : 'no'}</span>
               </p>
               <div className="row">
                 <button className="btn" onClick={runSchedulerTransition}>
@@ -976,7 +984,7 @@ function FcShowcase() {
                 </button>
               </div>
               <Each
-                value={transitionStateLog()}
+                value={transitionStateLog.value}
                 fallback={renderEmpty('no transition logs')}
               >
                 {(line: string): any => <p className="empty">{line}</p>}
@@ -985,12 +993,12 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When value={tab() === 'store'}>
+        <When value={tab.value === 'store'}>
           <div className="item">
             <p className="summary">@lania/store 原子读写链路</p>
-            <p>store.value.user.name: {storeUserName()}</p>
-            <p>store.value.user.clicks: {storeUserClicks()}</p>
-            <p>store.value.nested.counter: {storeNestedCounter()}</p>
+            <p>store.value.user.name: {storeUserName.value}</p>
+            <p>store.value.user.clicks: {storeUserClicks.value}</p>
+            <p>store.value.nested.counter: {storeNestedCounter.value}</p>
             <div className="row">
               <button
                 className="btn"
@@ -1027,14 +1035,14 @@ function FcShowcase() {
                 append item
               </button>
             </div>
-            <p>store.value.list ids: {storeListIds().join(', ') || '-'}</p>
+            <p>store.value.list ids: {storeListIds.value.join(', ') || '-'}</p>
           </div>
         </When>
 
-        <When value={tab() === 'resource'}>
+        <When value={tab.value === 'resource'}>
           <div className="item">
             <p className="summary">createResource（依赖追踪 + 异步刷新）</p>
-            <p>query: {query()}</p>
+            <p>query: {query.value}</p>
             <div className="row">
               <button className="btn" onClick={() => query.set('hello')}>
                 hello
@@ -1049,9 +1057,11 @@ function FcShowcase() {
                 refetch()
               </button>
             </div>
-            <p>loading: {String(controls.loading())}</p>
-            <p>error: {controls.error() ? String(controls.error()) : '-'}</p>
-            <p>value: {result() ?? '-'}</p>
+            <p>loading: {String(controls.loading.value)}</p>
+            <p>
+              error: {controls.error.value ? String(controls.error.value) : '-'}
+            </p>
+            <p>value: {result.value ?? '-'}</p>
           </div>
 
           <div className="item">
@@ -1079,18 +1089,21 @@ function FcShowcase() {
               </button>
             </div>
             <p className="empty">
-              useContext(DemoContext): {contextSnapshot()}
+              useContext(DemoContext): {contextSnapshot.value}
             </p>
           </div>
         </When>
 
-        <When value={tab() === 'enhanced'}>
+        <When value={tab.value === 'enhanced'}>
           <div className="item">
             <p className="summary">&lt;When fallback /&gt;</p>
             <button className="btn" onClick={() => whenFlag.set((v) => !v)}>
-              toggle: {String(whenFlag())}
+              toggle: {String(whenFlag.value)}
             </button>
-            <When value={whenFlag()} fallback={renderEmpty('fallback branch')}>
+            <When
+              value={whenFlag.value}
+              fallback={renderEmpty('fallback branch')}
+            >
               <p className="summary">truthy branch</p>
             </When>
           </div>
@@ -1106,9 +1119,9 @@ function FcShowcase() {
               className="btn"
               onClick={() => whenBranchFlag.set((v) => !v)}
             >
-              toggle branch: {String(whenBranchFlag())}
+              toggle branch: {String(whenBranchFlag.value)}
             </button>
-            <When value={whenBranchFlag()}>
+            <When value={whenBranchFlag.value}>
               <Then>
                 <p className="summary">Then branch: visible = true</p>
               </Then>
@@ -1128,7 +1141,7 @@ function FcShowcase() {
               className="btn"
               onClick={() => whenModeDemoVisible.set((v) => !v)}
             >
-              toggle demo: {String(whenModeDemoVisible())}
+              toggle demo: {String(whenModeDemoVisible.value)}
             </button>
             <div
               style={{
@@ -1138,7 +1151,7 @@ function FcShowcase() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               }}
             >
-              <When value={whenModeDemoVisible()}>
+              <When value={whenModeDemoVisible.value}>
                 <div
                   className="surface-light"
                   style={{
@@ -1153,7 +1166,7 @@ function FcShowcase() {
                   <input className="input" placeholder="type in retain block" />
                 </div>
               </When>
-              <When value={whenModeDemoVisible()} mode="remount">
+              <When value={whenModeDemoVisible.value} mode="remount">
                 <div
                   className="surface-light"
                   style={{
@@ -1201,14 +1214,14 @@ function FcShowcase() {
               <button
                 className="btn"
                 onClick={() => switchMode.set('retain')}
-                disabled={switchMode() === 'retain'}
+                disabled={switchMode.value === 'retain'}
               >
                 mode=retain
               </button>
               <button
                 className="btn"
                 onClick={() => switchMode.set('remount')}
-                disabled={switchMode() === 'remount'}
+                disabled={switchMode.value === 'remount'}
               >
                 mode=remount
               </button>
@@ -1217,10 +1230,10 @@ function FcShowcase() {
               tips: 在 A/B/Default 里输入内容，来回切分支再回来；retain
               会保留输入值，remount 会清空。
             </p>
-            <When value={switchMode() === 'retain'}>
+            <When value={switchMode.value === 'retain'}>
               <Then>
                 <Switch mode="retain">
-                  <Case value={switchCase() === 1}>
+                  <Case when={switchCase.value === 1}>
                     <div
                       className="surface-light"
                       style={{
@@ -1234,7 +1247,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 1" />
                     </div>
                   </Case>
-                  <Case value={switchCase() === 2}>
+                  <Case when={switchCase.value === 2}>
                     <div
                       className="surface-light"
                       style={{
@@ -1248,7 +1261,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 2" />
                     </div>
                   </Case>
-                  <Case value={switchCase() === 3}>
+                  <Case when={switchCase.value === 3}>
                     <div
                       className="surface-light"
                       style={{
@@ -1280,7 +1293,7 @@ function FcShowcase() {
               </Then>
               <Else>
                 <Switch mode="remount">
-                  <Case value={switchCase() === 1}>
+                  <Case when={switchCase.value === 1}>
                     <div
                       className="surface-light"
                       style={{
@@ -1294,7 +1307,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 1" />
                     </div>
                   </Case>
-                  <Case value={switchCase() === 2}>
+                  <Case when={switchCase.value === 2}>
                     <div
                       className="surface-light"
                       style={{
@@ -1308,7 +1321,7 @@ function FcShowcase() {
                       <input className="input" placeholder="type in 2" />
                     </div>
                   </Case>
-                  <Case value={switchCase() === 3}>
+                  <Case when={switchCase.value === 3}>
                     <div
                       className="surface-light"
                       style={{
@@ -1365,7 +1378,7 @@ function FcShowcase() {
               </button>
             </div>
             <Each
-              value={eachItems()}
+              value={eachItems.value}
               key={eachItemKey}
               fallback={renderEmpty('empty')}
             >
@@ -1409,9 +1422,9 @@ function FcShowcase() {
               </button>
             </div>
             <Fragment>
-              <p className="empty">dynamic: {dynamicLabel()}</p>
+              <p className="empty">dynamic: {dynamicLabel.value}</p>
               <Dynamic
-                is={dynamicTag()}
+                is={dynamicTag.value}
                 props={{
                   title: 'dynamic-title',
                   style: {
@@ -1455,8 +1468,8 @@ function FcShowcase() {
               </button>
             </div>
             <KeepAlive
-              scope={`fc-showcase-${enhancedTabSession()}`}
-              cacheKey={keepAliveKey()}
+              scope={`fc-showcase-${enhancedTabSession.value}`}
+              cacheKey={keepAliveKey.value}
               max={2}
               onCache={(_value: unknown, key: string) =>
                 pushKeepAliveLog(`cache ${key}`)
@@ -1471,12 +1484,12 @@ function FcShowcase() {
                 pushKeepAliveLog(`evict ${key}`)
               }
             >
-              {keepAliveKey() === 'page-a'
-                ? keepAliveViews().pageA
-                : keepAliveViews().pageB}
+              {keepAliveKey.value === 'page-a'
+                ? keepAliveViews.value.pageA
+                : keepAliveViews.value.pageB}
             </KeepAlive>
             <Each
-              value={keepAliveLog()}
+              value={keepAliveLog.value}
               fallback={renderEmpty('no keep-alive logs')}
             >
               {(line: string): any => <p className="empty">{line}</p>}
@@ -1496,7 +1509,7 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When value={tab() === 'suspense'} mode="remount">
+        <When value={tab.value === 'suspense'} mode="remount">
           <div className="item">
             <p className="summary">
               &lt;Suspense /&gt; + lazy() + &lt;LazyLoad /&gt;
@@ -1518,9 +1531,12 @@ function FcShowcase() {
               )}
             >
               <Suspense fallback={<p className="empty">loading...</p>}>
-                <When value={!throwError()}>
+                <When value={!throwError.value}>
                   <Then>
-                    <LazyHello name={lazyName()} key={suspenseTabSession()} />
+                    <LazyHello
+                      name={lazyName.value}
+                      key={suspenseTabSession.value}
+                    />
                   </Then>
                   <Else>
                     {(() => {
@@ -1545,10 +1561,10 @@ function FcShowcase() {
           </div>
         </When>
 
-        <When value={tab() === 'transition'} mode="remount">
+        <When value={tab.value === 'transition'} mode="remount">
           <TransitionDemoSection />
         </When>
-        <When value={tab() === 'local'} mode="remount">
+        <When value={tab.value === 'local'} mode="remount">
           <Dynamic component="x-local-state-counter-card" />
         </When>
       </div>

@@ -1,5 +1,5 @@
 import { createSignal, defineComponent } from '@lania-v/runtime';
-import { Each, When } from '@lania-v/runtime/component';
+import { Each, When } from '@lania-v/advanced';
 
 import {
   type BenchItem,
@@ -17,7 +17,7 @@ export default defineComponent(function BenchmarkFc() {
   const toggleVisible = createSignal(true);
   const draft = createSignal('seed');
   const middleSnapshot = createSignal(
-    describeBenchItem(items()[BENCH_MIDDLE_ROW_INDEX])
+    describeBenchItem(items.value[BENCH_MIDDLE_ROW_INDEX])
   );
 
   const increment = () => {
@@ -25,8 +25,8 @@ export default defineComponent(function BenchmarkFc() {
   };
 
   const patchMiddle = () => {
-    const nextVersion = patchVersion() + 1;
-    const nextItems = patchBenchItems(items(), nextVersion);
+    const nextVersion = patchVersion.value + 1;
+    const nextItems = patchBenchItems(items.value, nextVersion);
     const middle = nextItems[BENCH_MIDDLE_ROW_INDEX];
 
     items.set(nextItems);
@@ -60,7 +60,7 @@ export default defineComponent(function BenchmarkFc() {
               increment
             </button>
             <output className="bench-output" data-bench-output="count">
-              {String(count())}
+              {String(count.value)}
             </output>
           </div>
           <p className="bench-note">signal update to text slot</p>
@@ -76,17 +76,17 @@ export default defineComponent(function BenchmarkFc() {
               patch middle
             </button>
             <output className="bench-output" data-bench-output="patch-version">
-              {String(patchVersion())}
+              {String(patchVersion.value)}
             </output>
             <output
               className="bench-output bench-output-wide"
               data-bench-output="middle-row"
             >
-              {middleSnapshot()}
+              {middleSnapshot.value}
             </output>
           </div>
           <ul className="bench-list" data-bench-list="patch">
-            <Each value={items()} key={eachItemKey}>
+            <Each value={items.value} key={eachItemKey}>
               {(item): any => (
                 <li
                   className="bench-list-row"
@@ -113,10 +113,10 @@ export default defineComponent(function BenchmarkFc() {
               toggle panel
             </button>
             <output className="bench-output" data-bench-output="toggle-state">
-              {toggleVisible() ? 'visible' : 'hidden'}
+              {toggleVisible.value ? 'visible' : 'hidden'}
             </output>
           </div>
-          <When value={toggleVisible()}>
+          <When value={toggleVisible.value}>
             <section className="bench-panel" data-bench-output="toggle-panel">
               <p className="bench-note">mounted conditional subtree</p>
               <p className="bench-meta">panel body: visible</p>
@@ -136,7 +136,7 @@ export default defineComponent(function BenchmarkFc() {
               className="bench-output bench-output-wide"
               data-bench-output="draft"
             >
-              {draft()}
+              {draft.value}
             </output>
           </div>
           <p className="bench-note">

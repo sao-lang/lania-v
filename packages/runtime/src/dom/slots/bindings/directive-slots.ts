@@ -374,6 +374,28 @@ export class ModelBindingSlot implements Slot<unknown> {
       };
     }
 
+    // `createSignal()` 返回 `{ value, set }` 对象，语义同样可读写。
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      'value' in value &&
+      typeof (value as { set?: unknown }).set === 'function'
+    ) {
+      const holder = value as {
+        readonly value: unknown;
+        set: (next: unknown) => unknown;
+      };
+      const eventName = this.resolveEventName(this.name, this.modifiers);
+      return {
+        get: () => holder.value,
+        set: (next) => holder.set(next),
+        prop: this.name,
+        modifiers: this.modifiers,
+        debounceMs: parseModelDebounceModifier(this.modifiers),
+        eventName,
+      };
+    }
+
     if (!value || typeof value !== 'object') {
       return null;
     }
@@ -398,6 +420,30 @@ export class ModelBindingSlot implements Slot<unknown> {
       return {
         get: binding.target,
         set: binding.target.set,
+        prop,
+        modifiers: mergedModifiers,
+        debounceMs,
+        eventName,
+      };
+    }
+
+    // `createSignal()` 返回 `{ value, set }` 对象而不是可调用函数，
+    // 但语义上同样是「可读可写的 target」，因此这里一并接受。
+    if (
+      'target' in binding &&
+      binding.target !== null &&
+      typeof binding.target === 'object' &&
+      'value' in binding.target &&
+      typeof (binding.target as { set?: unknown }).set === 'function'
+    ) {
+      const holder = binding.target as {
+        readonly value: unknown;
+        set: (next: unknown) => unknown;
+      };
+
+      return {
+        get: () => holder.value,
+        set: (next) => holder.set(next),
         prop,
         modifiers: mergedModifiers,
         debounceMs,

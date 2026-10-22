@@ -198,7 +198,7 @@ export default defineComponent(function FcBindingApiDemo() {
       header: (
         <div>
           <p className="summary">named slot: header</p>
-          <h4 style={{ margin: '6px 0 0' }}>{panelTitle()}</h4>
+          <h4 style={{ margin: '6px 0 0' }}>{panelTitle.value}</h4>
         </div>
       ),
       default: (
@@ -206,10 +206,12 @@ export default defineComponent(function FcBindingApiDemo() {
           <p className="empty">
             这里是默认插槽内容。可以直接看到 `bindSlots()` 如何读取默认槽。
           </p>
-          <p className="empty">当前状态: collapsed = {String(collapsed())}</p>
+          <p className="empty">
+            当前状态: collapsed = {String(collapsed.value)}
+          </p>
         </div>
       ),
-      ...(footerEnabled()
+      ...(footerEnabled.value
         ? {
             footer: <p className="empty">named slot: footer is enabled</p>,
           }
@@ -236,7 +238,7 @@ export default defineComponent(function FcBindingApiDemo() {
               className="btn"
               onClick={() => collapsed.set((value) => !value)}
             >
-              collapsed: {String(collapsed())}
+              collapsed: {String(collapsed.value)}
             </button>
             <button
               className="btn"
@@ -254,7 +256,7 @@ export default defineComponent(function FcBindingApiDemo() {
               className="btn"
               onClick={() => footerEnabled.set((value) => !value)}
             >
-              footer slot: {String(footerEnabled())}
+              footer slot: {String(footerEnabled.value)}
             </button>
           </div>
           <div className="row">
@@ -280,10 +282,10 @@ export default defineComponent(function FcBindingApiDemo() {
           <p className="summary">子组件实例</p>
           <BindingPanel
             ref={panelRef}
-            title={panelTitle()}
-            count={submitLog().length}
-            collapsed={collapsed()}
-            status={footerEnabled() ? 'footer-ready' : 'footer-hidden'}
+            title={panelTitle.value}
+            count={submitLog.value.length}
+            collapsed={collapsed.value}
+            status={footerEnabled.value ? 'footer-ready' : 'footer-hidden'}
             onToggle={() => {
               collapsed.set((value) => !value);
               pushSubmitLog('toggle from bindHandlers');
@@ -311,7 +313,7 @@ export default defineComponent(function FcBindingApiDemo() {
         <div className="item">
           <p className="summary">submit logs</p>
           <Each
-            value={submitLog()}
+            value={submitLog.value}
             fallback={<p className="empty">no logs yet</p>}
           >
             {(line: string): any => <p className="empty">{line}</p>}

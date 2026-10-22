@@ -34,7 +34,13 @@ export interface ModelModifierOptions {
 }
 
 export interface ModelTargetBinding<T = unknown> {
-  target: (() => T) & { set(value: T): unknown };
+  /**
+   * 可读写数据源。既接受可调用句柄 `() => T`（带 `.set`），
+   * 也接受 `createSignal()` 返回的 `{ value, set }` 对象。
+   */
+  target:
+    | ((() => T) & { set(value: T): unknown })
+    | { readonly value: T; set(value: T): unknown };
   prop?: 'value' | 'checked' | 'selected';
   modifiers?: ModelModifierOptions;
 }

@@ -68,8 +68,46 @@ export type JsxElement = LaniaJsxElement;
 
 type JsxChild = JsxElement | readonly JsxElement[];
 
-type WritableSignalLike<T = unknown> = (() => T) & {
-  set(value: T | ((previous: T) => T)): unknown;
+type WritableSignalLike<T = unknown> =
+  | ((() => T) & {
+      set(value: T | ((previous: T) => T)): unknown;
+    })
+  | {
+      readonly value: T;
+      set(value: T | ((previous: T) => T)): unknown;
+    };
+
+/**
+ * 统一可读写数据源：既接受可调用句柄 `() => T`，也接受
+ * `createSignal()` 返回的 `{ value, set }` 对象。
+ */
+const readWritableSource = (
+  value: unknown
+): { get: () => unknown; set: (next: unknown) => unknown } | null => {
+  if (
+    typeof value === 'function' &&
+    typeof (value as { set?: unknown }).set === 'function'
+  ) {
+    const callable = value as (() => unknown) & {
+      set: (next: unknown) => unknown;
+    };
+    return { get: () => callable(), set: (next) => callable.set(next) };
+  }
+
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'value' in value &&
+    typeof (value as { set?: unknown }).set === 'function'
+  ) {
+    const holder = value as {
+      readonly value: unknown;
+      set: (next: unknown) => unknown;
+    };
+    return { get: () => holder.value, set: (next) => holder.set(next) };
+  }
+
+  return null;
 };
 
 // JSX 事件既支持直接传函数，也支持携带 modifiers/listener 选项的对象写法。
@@ -587,13 +625,14 @@ const applyProp = (element: Element, name: string, value: unknown): void => {
 
   if (name.startsWith('model:')) {
     const prop = name.slice('model:'.length) || 'value';
-    if (value && typeof value === 'function' && 'set' in value) {
+    const writable = readWritableSource(value);
+
+    if (writable) {
       // signal 风格 model 既要回填初值，也要自动注册输入事件完成双向同步。
-      const signal = value as { (): unknown; set(next: unknown): unknown };
-      writeProperty(element, prop, signal());
+      writeProperty(element, prop, writable.get());
       element.addEventListener(
         prop === 'checked' ? 'change' : 'input',
-        createModelEventHandler(signal, [], prop)
+        createModelEventHandler(writable, [], prop)
       );
     } else {
       writeProperty(element, prop, value);

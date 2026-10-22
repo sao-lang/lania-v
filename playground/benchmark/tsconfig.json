@@ -10,6 +10,17 @@
     "paths": {
       "@lania-v/vite-plugin": ["../../packages/vite-plugin/src/index.ts"],
       "@lania-v/runtime": ["../../packages/runtime/src/index.ts"],
+      "@lania-v/runtime/jsx-runtime": [
+        "../../packages/runtime/src/entry/jsx-runtime.ts"
+      ],
+      "@lania-v/runtime/jsx-dev-runtime": [
+        "../../packages/runtime/src/entry/jsx-dev-runtime.ts"
+      ],
+      "@lania-v/runtime/component": [
+        "../../packages/runtime/src/component/index.ts"
+      ],
+      "@lania-v/runtime/core": ["../../packages/runtime/src/core/index.ts"],
+      "@lania-v/runtime/dom": ["../../packages/runtime/src/dom/index.ts"],
       "@lania-v/runtime/advanced": [
         "../../packages/runtime/src/entry/advanced.ts"
       ],
@@ -19,7 +30,10 @@
       "@lania-v/runtime/testing": [
         "../../packages/runtime/src/entry/testing.ts"
       ],
-      "@lania-v/shared": ["../../packages/shared/src/index.ts"]
+      "@lania-v/shared": ["../../packages/shared/src/index.ts"],
+      "@lania-v/advanced": ["../../packages/advanced/src/index.ts"],
+      "@lania/store": ["../../packages/store/src/index.ts"],
+      "@lania-v/reactivity": ["../../packages/reactivity/src/index.ts"]
     },
     "noEmit": true
   },

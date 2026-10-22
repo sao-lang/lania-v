@@ -33,7 +33,7 @@ const MouseTracker = defineComponent(function MouseTracker() {
     };
 
     createEffect(() => {
-      console.log('[useMouse]', snapshot());
+      console.log('[useMouse]', snapshot.value);
     });
 
     return {
@@ -61,32 +61,32 @@ const MouseTracker = defineComponent(function MouseTracker() {
           <p className="mouse-eyebrow">lania-v custom hook</p>
           <h2>Live mouse snapshot</h2>
         </div>
-        <span className="mouse-event">{mouse().type}</span>
+        <span className="mouse-event">{mouse.value.type}</span>
       </header>
 
       <div className="mouse-coordinates">
         <div>
           <span>client</span>
           <strong>
-            {mouse().clientX}, {mouse().clientY}
+            {mouse.value.clientX}, {mouse.value.clientY}
           </strong>
         </div>
         <div>
           <span>page</span>
           <strong>
-            {mouse().pageX}, {mouse().pageY}
+            {mouse.value.pageX}, {mouse.value.pageY}
           </strong>
         </div>
         <div>
           <span>screen</span>
           <strong>
-            {mouse().screenX}, {mouse().screenY}
+            {mouse.value.screenX}, {mouse.value.screenY}
           </strong>
         </div>
         <div>
           <span>movement</span>
           <strong>
-            {mouse().movementX}, {mouse().movementY}
+            {mouse.value.movementX}, {mouse.value.movementY}
           </strong>
         </div>
       </div>
@@ -94,24 +94,25 @@ const MouseTracker = defineComponent(function MouseTracker() {
       <dl className="mouse-details">
         <div>
           <dt>target</dt>
-          <dd>{mouse().target}</dd>
+          <dd>{mouse.value.target}</dd>
         </div>
         <div>
           <dt>button / buttons</dt>
           <dd>
-            {mouse().button} / {mouse().buttons}
+            {mouse.value.button} / {mouse.value.buttons}
           </dd>
         </div>
         <div>
           <dt>modifiers</dt>
           <dd>
-            alt {String(mouse().altKey)} · ctrl {String(mouse().ctrlKey)} ·
-            shift {String(mouse().shiftKey)} · meta {String(mouse().metaKey)}
+            alt {String(mouse.value.altKey)} · ctrl{' '}
+            {String(mouse.value.ctrlKey)} · shift {String(mouse.value.shiftKey)}{' '}
+            · meta {String(mouse.value.metaKey)}
           </dd>
         </div>
         <div>
           <dt>event timestamp</dt>
-          <dd>{mouse().timeStamp.toFixed(1)} ms</dd>
+          <dd>{mouse.value.timeStamp.toFixed(1)} ms</dd>
         </div>
       </dl>
 

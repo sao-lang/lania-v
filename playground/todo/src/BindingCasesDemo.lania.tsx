@@ -14,12 +14,12 @@ export default defineComponent(function BindingCasesDemo() {
   const htmlTone = createSignal<'violet' | 'emerald'>('violet');
   const htmlContent = createMemo(() => {
     const badge =
-      htmlTone() === 'violet'
+      htmlTone.value === 'violet'
         ? '<span style="color:#7c3aed;">violet</span>'
         : '<span style="color:#059669;">emerald</span>';
     return html`
       <div>
-        <p><strong>${htmlTitle()}</strong></p>
+        <p><strong>${htmlTitle.value}</strong></p>
         <p>tone: ${badge}</p>
       </div>
     `;
@@ -31,10 +31,10 @@ export default defineComponent(function BindingCasesDemo() {
   const classPreview = createMemo(() => [
     'surface-light',
     'binding-case-card',
-    `binding-case-card--${classTone()}`,
+    `binding-case-card--${classTone.value}`,
     {
-      'binding-case-card--compact': classCompact(),
-      'binding-case-card--ready': classReady(),
+      'binding-case-card--compact': classCompact.value,
+      'binding-case-card--ready': classReady.value,
     },
   ]);
 
@@ -44,16 +44,16 @@ export default defineComponent(function BindingCasesDemo() {
   const stylePreview = createMemo(() => [
     'margin-top: 12px;',
     {
-      width: `${styleWidth()}px`,
-      padding: `${stylePadding()}px`,
+      width: `${styleWidth.value}px`,
+      padding: `${stylePadding.value}px`,
       borderRadius: '14px',
       border: '1px solid rgba(148, 163, 184, 0.45)',
       background:
-        styleTone() === 'violet'
+        styleTone.value === 'violet'
           ? 'linear-gradient(180deg, #ffffff, #f5f3ff)'
           : 'linear-gradient(180deg, #ffffff, #ecfdf5)',
       boxShadow:
-        styleTone() === 'violet'
+        styleTone.value === 'violet'
           ? '0 12px 32px rgba(124, 58, 237, 0.12)'
           : '0 12px 32px rgba(16, 185, 129, 0.12)',
     },
@@ -98,8 +98,9 @@ export default defineComponent(function BindingCasesDemo() {
             </label>
           </div>
           <p className="empty">
-            snapshot: title={modelTitle()} | width={modelWidth()} | ready=
-            {String(modelReady())}
+            snapshot: title={modelTitle.value} | width={modelWidth.value} |
+            ready=
+            {String(modelReady.value)}
           </p>
         </div>
 
@@ -113,7 +114,7 @@ export default defineComponent(function BindingCasesDemo() {
           <div className="row">
             <input
               className="input"
-              value={htmlTitle()}
+              value={htmlTitle.value}
               onInput={(event: Event) => {
                 const target = event.target as HTMLInputElement | null;
                 htmlTitle.set(target?.value || 'Raw HTML Preview');
@@ -128,7 +129,7 @@ export default defineComponent(function BindingCasesDemo() {
                 )
               }
             >
-              tone: {htmlTone()}
+              tone: {htmlTone.value}
             </button>
           </div>
           <div
@@ -141,7 +142,7 @@ export default defineComponent(function BindingCasesDemo() {
               background: '#ffffff',
             }}
           >
-            <article html={htmlContent()} />
+            <article html={htmlContent.value} />
           </div>
         </div>
 
@@ -155,13 +156,13 @@ export default defineComponent(function BindingCasesDemo() {
               className="btn"
               onClick={() => classCompact.set((value) => !value)}
             >
-              compact: {String(classCompact())}
+              compact: {String(classCompact.value)}
             </button>
             <button
               className="btn"
               onClick={() => classReady.set((value) => !value)}
             >
-              ready: {String(classReady())}
+              ready: {String(classReady.value)}
             </button>
             <button
               className="btn"
@@ -171,11 +172,11 @@ export default defineComponent(function BindingCasesDemo() {
                 )
               }
             >
-              tone: {classTone()}
+              tone: {classTone.value}
             </button>
           </div>
           <div
-            className={classPreview()}
+            className={classPreview.value}
             style={{
               marginTop: '12px',
               padding: '18px 20px',
@@ -211,7 +212,7 @@ export default defineComponent(function BindingCasesDemo() {
                 stylePadding.set((value) => (value === 18 ? 12 : 18))
               }
             >
-              padding: {stylePadding()}
+              padding: {stylePadding.value}
             </button>
             <button
               className="btn"
@@ -221,14 +222,14 @@ export default defineComponent(function BindingCasesDemo() {
                 )
               }
             >
-              tone: {styleTone()}
+              tone: {styleTone.value}
             </button>
           </div>
-          <div className="surface-light" style={stylePreview()}>
+          <div className="surface-light" style={stylePreview.value}>
             <p className="summary">style preview</p>
             <p className="empty">
-              style = ['margin-top: 12px;', {'{'} width: '{styleWidth()}px',
-              padding: '{stylePadding()}px' {'}'}]
+              style = ['margin-top: 12px;', {'{'} width: '{styleWidth.value}px',
+              padding: '{stylePadding.value}px' {'}'}]
             </p>
           </div>
         </div>

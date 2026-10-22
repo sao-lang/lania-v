@@ -12,7 +12,7 @@ export default defineComponent(function LocalStateCounterCard() {
         后回来。因为状态定义在子组件内部，所以会回到初始值。
       </p>
       <p>
-        local count: <span>{localCount()}</span>
+        local count: <span>{localCount.value}</span>
       </p>
       <div className="row">
         <button className="btn" onClick={() => localCount.set((v) => v + 1)}>
@@ -24,7 +24,7 @@ export default defineComponent(function LocalStateCounterCard() {
       </div>
       <input
         className="input"
-        value={localDraft()}
+        value={localDraft.value}
         onInput={(event: Event) => {
           const target = event.target as HTMLInputElement | null;
           localDraft.set(target?.value ?? '');

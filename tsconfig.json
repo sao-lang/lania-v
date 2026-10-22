@@ -15,5 +15,14 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "**/dist",
+    "**/coverage",
+    "compile-preview-out",
+    "graphify-out",
+    "website/.vitepress/cache",
+    "website/.vitepress/dist"
+  ]
 }
