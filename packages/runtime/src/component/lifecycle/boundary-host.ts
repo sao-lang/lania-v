@@ -119,7 +119,8 @@ export const createSuspenseBoundaryHost = <TValue>(options: {
 
 // 从当前运行时作用域中读出上层宿主，仅暴露 requestUpdate 给 boundary 复用。
 export const readContextBoundaryHost = (): BoundaryHost => {
-  const host = getCurrentRuntimeScope()?.host as BoundaryContextHost | undefined;
+  const host = getCurrentRuntimeScope()?.host as
+    BoundaryContextHost | undefined;
 
   return createBoundaryHost({
     requestUpdate: () => {

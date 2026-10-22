@@ -1,20 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { compileFunctionComponentTsx } from "@lania-v/compiler-tsx";
+import { compileFunctionComponentTsx } from '@lania-v/compiler-tsx';
 
 const compile = (source: string) =>
-  compileFunctionComponentTsx("BoundaryDependency.tsx", source.trim());
+  compileFunctionComponentTsx('BoundaryDependency.tsx', source.trim());
 
 const storePathKeys = (source: string): string[] => {
   const compiled = compile(source);
   const reads = compiled.ir.dependencyAnalysis.storePathReads ?? {};
   return Object.entries(reads).flatMap(([storeName, paths]) =>
-    paths.map((path) => `${storeName}.${path.join(".")}`)
+    paths.map((path) => `${storeName}.${path.join('.')}`)
   );
 };
 
-describe("boundary and transition dependencies", () => {
-  it("keeps store reads from the Suspense children subtree", () => {
+describe('boundary and transition dependencies', () => {
+  it('keeps store reads from the Suspense children subtree', () => {
     const keys = storePathKeys(`
 import { createStore, defineComponent, Suspense } from '@lania-v/runtime';
 
@@ -27,10 +27,10 @@ export default defineComponent(function SuspenseChildHost() {
   );
 });
 `);
-    expect(keys).toContain("form.account");
+    expect(keys).toContain('form.account');
   });
 
-  it("keeps store reads from the Transition children subtree", () => {
+  it('keeps store reads from the Transition children subtree', () => {
     const keys = storePathKeys(`
 import { createStore, defineComponent, Transition } from '@lania-v/runtime';
 
@@ -43,10 +43,10 @@ export default defineComponent(function TransitionHost() {
   );
 });
 `);
-    expect(keys).toContain("form.mode");
+    expect(keys).toContain('form.mode');
   });
 
-  it("keeps store reads referenced only from an ErrorBoundary fallback expression", () => {
+  it('keeps store reads referenced only from an ErrorBoundary fallback expression', () => {
     const keys = storePathKeys(`
 import { createStore, defineComponent, ErrorBoundary } from '@lania-v/runtime';
 
@@ -59,6 +59,6 @@ export default defineComponent(function ErrorBoundaryHost() {
   );
 });
 `);
-    expect(keys).toContain("form.message");
+    expect(keys).toContain('form.message');
   });
 });

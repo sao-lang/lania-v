@@ -138,7 +138,9 @@ describe('partial hydration islands', () => {
 
     element.title = 'Client';
     await flush();
-    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe('Client');
+    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe(
+      'Client'
+    );
 
     element.remove();
     container.remove();
@@ -159,9 +161,9 @@ describe('partial hydration islands', () => {
       );
     document.body.appendChild(container);
 
-    const [first, second] = Array.from(
-      container.children
-    ) as Array<HTMLElement & { isHydrated: boolean; title: string }>;
+    const [first, second] = Array.from(container.children) as Array<
+      HTMLElement & { isHydrated: boolean; title: string }
+    >;
     await flush();
 
     const records = collectIslands(container);
@@ -185,7 +187,9 @@ describe('partial hydration islands', () => {
     second?.dispatchEvent(new Event('pointerdown'));
     await flush();
     expect(second?.isHydrated).toBe(true);
-    expect(second?.shadowRoot?.querySelector('div')?.textContent).toBe('Second');
+    expect(second?.shadowRoot?.querySelector('div')?.textContent).toBe(
+      'Second'
+    );
     expect(onHydrate).toHaveBeenCalledTimes(2);
 
     first?.remove();
@@ -231,9 +235,13 @@ export default IslandParent;
     const ChildClass = IslandModule.IslandChild;
 
     // 1) SSR：父组件输出宿主 + DSD，内部包含 island 宿主（子组件自己输出 DSD 内容）
-    const html = runtime.renderComponentToString(ParentClass, {}, {
-      tagName: 'island-parent',
-    });
+    const html = runtime.renderComponentToString(
+      ParentClass,
+      {},
+      {
+        tagName: 'island-parent',
+      }
+    );
     expect(html).toContain('data-lania-island="visible"');
     expect(html).toContain('data-lania-island-name="IslandChild"');
     expect(html).toContain('data-lania-island-props');
@@ -253,22 +261,27 @@ export default IslandParent;
       isHydrated: boolean;
     };
     const island = parent.shadowRoot?.querySelector('island-child') as
-      | (HTMLElement & { isHydrated: boolean })
-      | null;
+      (HTMLElement & { isHydrated: boolean }) | null;
 
     expect(parent.isHydrated).toBe(true);
     expect(island).not.toBeNull();
     // island 宿主升级后仍然保持静态（SSR 内容可见，但没有被接管）
     expect(island?.isHydrated).toBe(false);
-    expect(island?.shadowRoot?.querySelector('.island-child')?.textContent).toBe('nested');
+    expect(
+      island?.shadowRoot?.querySelector('.island-child')?.textContent
+    ).toBe('nested');
 
     // 3) hydrateIslands 只接管 island，不影响已水合的父组件
-    const hydrated = await hydrateIslands({ root: parent.shadowRoot ?? container });
+    const hydrated = await hydrateIslands({
+      root: parent.shadowRoot ?? container,
+    });
     await flush();
 
     expect(hydrated.length).toBe(1);
     expect(island?.isHydrated).toBe(true);
-    expect(island?.shadowRoot?.querySelector('.island-child')?.textContent).toBe('nested');
+    expect(
+      island?.shadowRoot?.querySelector('.island-child')?.textContent
+    ).toBe('nested');
 
     parent.remove();
     container.remove();

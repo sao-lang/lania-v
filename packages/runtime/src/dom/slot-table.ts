@@ -53,10 +53,12 @@ export class SlotTable {
   }
 
   getDirtySlots(): Slot[] {
-    return [...this.slots.values()]
-      .filter((slot) => this.isDirty(slot.index))
-      // 始终按 index 升序返回，保证提交顺序稳定、可预测。
-      .sort((left, right) => left.index - right.index);
+    return (
+      [...this.slots.values()]
+        .filter((slot) => this.isDirty(slot.index))
+        // 始终按 index 升序返回，保证提交顺序稳定、可预测。
+        .sort((left, right) => left.index - right.index)
+    );
   }
 
   getSlotsByFrequency(frequency: SlotFrequency): Slot[] {
@@ -67,7 +69,9 @@ export class SlotTable {
 
   destroyAll(): void {
     // 销毁顺序同样保持稳定，避免 teardown 过程因为遍历顺序不同而出现隐性差异。
-    for (const slot of [...this.slots.values()].sort((left, right) => left.index - right.index)) {
+    for (const slot of [...this.slots.values()].sort(
+      (left, right) => left.index - right.index
+    )) {
       slot.destroy();
     }
 

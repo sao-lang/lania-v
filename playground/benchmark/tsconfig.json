@@ -11,9 +11,15 @@
     "paths": {
       "@lania-v/vite-plugin": ["../../packages/vite-plugin/src/index.ts"],
       "@lania-v/runtime": ["../../packages/runtime/src/index.ts"],
-      "@lania-v/runtime/advanced": ["../../packages/runtime/src/entry/advanced.ts"],
-      "@lania-v/runtime/internal": ["../../packages/runtime/src/entry/internal.ts"],
-      "@lania-v/runtime/testing": ["../../packages/runtime/src/entry/testing.ts"],
+      "@lania-v/runtime/advanced": [
+        "../../packages/runtime/src/entry/advanced.ts"
+      ],
+      "@lania-v/runtime/internal": [
+        "../../packages/runtime/src/entry/internal.ts"
+      ],
+      "@lania-v/runtime/testing": [
+        "../../packages/runtime/src/entry/testing.ts"
+      ],
       "@lania-v/shared": ["../../packages/shared/src/index.ts"]
     },
     "noEmit": true

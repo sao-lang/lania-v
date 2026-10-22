@@ -37,9 +37,7 @@ const resolveModuleFile = (
 
   const base = path.resolve(path.dirname(fromFileName), specifier);
   // `./types.js` 这种 ESM 写法实际对应 `.ts` 源码。
-  const normalizedBase = base.endsWith('.js')
-    ? `${base.slice(0, -3)}`
-    : base;
+  const normalizedBase = base.endsWith('.js') ? `${base.slice(0, -3)}` : base;
 
   for (const extension of CANDIDATE_EXTENSIONS) {
     const candidate = `${normalizedBase}${extension}`;
@@ -107,7 +105,9 @@ export const resolveImportedTypeDeclaration = (
       continue;
     }
 
-    const specifier = statement.moduleSpecifier.getText(fromSourceFile).slice(1, -1);
+    const specifier = statement.moduleSpecifier
+      .getText(fromSourceFile)
+      .slice(1, -1);
     const resolved = resolveModuleFile(specifier, fromSourceFile.fileName);
 
     if (!resolved) {

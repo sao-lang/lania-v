@@ -21,12 +21,12 @@ export interface CSSResult {
 export type StyleValue = CSSStyleSheet | CSSResult;
 export type StaticStyles = StyleValue | StyleValue[];
 export type StylePrimitive = string | number | boolean | null | undefined;
-type CSSPropertyDefinitions =
-  CSS.Properties<string | number> &
+type CSSPropertyDefinitions = CSS.Properties<string | number> &
   CSS.PropertiesHyphen<string | number>;
 
 export type CSSProperties = {
-  [K in keyof CSSPropertyDefinitions]?: CSSPropertyDefinitions[K] | null | undefined | false;
+  [K in keyof CSSPropertyDefinitions]?:
+    CSSPropertyDefinitions[K] | null | undefined | false;
 } & {
   [propertyName: `--${string}`]: StylePrimitive;
 };
@@ -37,7 +37,10 @@ export type CSSVariables = Record<string, StylePrimitive>;
 
 const STYLESHEET_TEXT = new WeakMap<CSSStyleSheet, string>();
 const APPLIED_STYLE_TEXT = new WeakMap<object, Set<string>>();
-export const StyleVariablesContext = createContext<CSSVariables>({}, 'lania-style-variables');
+export const StyleVariablesContext = createContext<CSSVariables>(
+  {},
+  'lania-style-variables'
+);
 
 const normalizeTemplateValue = (value: unknown): string => {
   if (value == null) {
@@ -186,7 +189,10 @@ export const createCSSVariables = (variables: CSSVariables): StyleObject => {
   return Object.fromEntries(
     Object.entries(variables).map(([key, value]) => {
       // 变量键统一映射成 CSS 变量，调用方可直接传 `primaryColor` 或 `--primary-color`。
-      return [key.startsWith('--') ? key : `--${normalizeStyleName(key)}`, value];
+      return [
+        key.startsWith('--') ? key : `--${normalizeStyleName(key)}`,
+        value,
+      ];
     })
   );
 };
@@ -214,13 +220,15 @@ export const provideStyleVariables = (
   return provideContext(host, StyleVariablesContext, variables);
 };
 
-export const consumeStyleVariables = (
-  host: { dispatchEvent(event: Event): boolean }
-): CSSVariables => {
+export const consumeStyleVariables = (host: {
+  dispatchEvent(event: Event): boolean;
+}): CSSVariables => {
   return consumeContext(host, StyleVariablesContext).value;
 };
 
-export const toStyleArray = (styles: StaticStyles | undefined): StyleValue[] => {
+export const toStyleArray = (
+  styles: StaticStyles | undefined
+): StyleValue[] => {
   if (!styles) {
     return [];
   }

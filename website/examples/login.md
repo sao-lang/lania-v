@@ -61,7 +61,7 @@ const restored = LocalStorageHelper.get<AuthSession>('lania-v.auth.session');
 
 两个容易踩坑的点：
 
-1. `tokenProvider` 只返回**裸 token**——`AxiosWrapper` 内部会自己拼 `Bearer ` 前缀。
+1. `tokenProvider` 只返回**裸 token**——`AxiosWrapper` 内部会自己拼 `Bearer` 前缀。
 2. 子组件的回调 prop 不要用 `onXxx` 命名——编译器会把它当作事件绑定（`__lania_events`），
    组件里读不到该 prop。示例中使用 `signedOut` 这类普通命名。
 

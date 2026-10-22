@@ -48,7 +48,9 @@ const indent = (source: string, level = 1): string => {
 
 const stringifyInitializer = (initializer: string | null): string => {
   // 统一把“空初始化器”收敛成 `undefined`，避免生成不完整成员声明。
-  return initializer && initializer.trim().length > 0 ? initializer : 'undefined';
+  return initializer && initializer.trim().length > 0
+    ? initializer
+    : 'undefined';
 };
 
 const toKebabCase = (value: string): string => {
@@ -157,7 +159,9 @@ const createFieldMembers = (
 
   return {
     declarations: members.map((member) => member.code),
-    setup: members.map((member) => member.setup).filter((line) => line.length > 0),
+    setup: members
+      .map((member) => member.setup)
+      .filter((line) => line.length > 0),
   };
 };
 
@@ -218,7 +222,9 @@ const createSetupBindingMembers = (component: ComponentIR): string[] => {
 
 const getStatementSetupBindings = (component: ComponentIR) => {
   // statement 型 setup 语义接近“执行一段副作用并可返回清理函数”。
-  return component.setupBindings.filter((binding) => binding.kind === 'statement');
+  return component.setupBindings.filter(
+    (binding) => binding.kind === 'statement'
+  );
 };
 
 const createSetupConnectedLines = (component: ComponentIR): string[] => {
@@ -312,7 +318,9 @@ const createPropFields = (
  * 选项原文在运行时求值：`propOptions` / `emits` / `observedAttributes` 全部由
  * 选项对象推导，因此选项里可以写任意表达式，也不需要在编译期把它拆成字面量。
  */
-const createComponentOptionsFields = (component: ComponentIR): string | null => {
+const createComponentOptionsFields = (
+  component: ComponentIR
+): string | null => {
   const propNames = component.props.map((prop) => prop.name);
   const fields: string[] = [];
 
@@ -365,7 +373,9 @@ const createUpdaterMethodBody = (
 
   if (updater.kind === 'effect') {
     // effect 已经是完整语句块，不需要额外包裹。
-    return updater.expression.trim().length > 0 ? updater.expression : 'return;';
+    return updater.expression.trim().length > 0
+      ? updater.expression
+      : 'return;';
   }
 
   if (updater.expression.trim().length === 0) {
@@ -401,7 +411,10 @@ const CLASS_LIFECYCLE_DEFAULT_SIGNATURES: Record<string, string> = {
   updated: 'changedProps: ChangedProps',
 };
 
-const FUNCTION_LIFECYCLE_METHODS: Record<string, { method: string; signature: string }> = {
+const FUNCTION_LIFECYCLE_METHODS: Record<
+  string,
+  { method: string; signature: string }
+> = {
   onMount: {
     method: '__fcOnMount',
     signature: '',
@@ -421,7 +434,9 @@ const createClassLifecycleMethodBody = (
   hook: string,
   callbackBodies: readonly string[]
 ): string[] => {
-  const bodies = callbackBodies.map((body) => body.trim()).filter((body) => body.length > 0);
+  const bodies = callbackBodies
+    .map((body) => body.trim())
+    .filter((body) => body.length > 0);
   const setupConnectedLines = createSetupConnectedLines(component);
   const setupDisconnectedLines = createSetupDisconnectedLines(component);
 
@@ -468,10 +483,16 @@ const createClassLifecycleMethods = (component: ComponentIR): string[] => {
   const hasStatementBindings = component.setupBindings.some(
     (binding) => binding.kind === 'statement'
   );
-  const groupedCallbacks = new Map<string, { params: string; bodies: string[] }>();
+  const groupedCallbacks = new Map<
+    string,
+    { params: string; bodies: string[] }
+  >();
   const orderedHooks: string[] = [];
   // 这里先按 hook 分组，再按首次出现顺序回放，避免多来源生命周期输出顺序抖动。
-  const ensureHookGroup = (hook: string, params = ''): { params: string; bodies: string[] } => {
+  const ensureHookGroup = (
+    hook: string,
+    params = ''
+  ): { params: string; bodies: string[] } => {
     const existing = groupedCallbacks.get(hook);
     if (existing) {
       if (!existing.params && params.trim().length > 0) {
@@ -511,7 +532,9 @@ const createClassLifecycleMethods = (component: ComponentIR): string[] => {
       });
     }
 
-    if (!callbacks.some((callback) => callback.hook === 'disconnectedCallback')) {
+    if (
+      !callbacks.some((callback) => callback.hook === 'disconnectedCallback')
+    ) {
       callbacks.push({
         hook: 'disconnectedCallback',
         params: '',
@@ -542,7 +565,11 @@ const createClassLifecycleMethods = (component: ComponentIR): string[] => {
       signature.length > 0
         ? `${hook}(${signature}): void {`
         : `${hook}(): void {`;
-    const bodyLines = createClassLifecycleMethodBody(component, hook, callback.bodies);
+    const bodyLines = createClassLifecycleMethodBody(
+      component,
+      hook,
+      callback.bodies
+    );
     // 同名 hook 的多个来源会先合并，再统一生成一个稳定的方法实现。
 
     return [methodHeader, indent(bodyLines.join('\n')), `}`].join('\n');
@@ -550,10 +577,16 @@ const createClassLifecycleMethods = (component: ComponentIR): string[] => {
 };
 
 const createFunctionLifecycleMethods = (component: ComponentIR): string[] => {
-  const groupedCallbacks = new Map<string, { params: string; bodies: string[] }>();
+  const groupedCallbacks = new Map<
+    string,
+    { params: string; bodies: string[] }
+  >();
   const orderedHooks: string[] = [];
   // 函数式生命周期会被改写成一组内部专用方法，生成策略与类生命周期分开处理。
-  const ensureHookGroup = (hook: string, params = ''): { params: string; bodies: string[] } => {
+  const ensureHookGroup = (
+    hook: string,
+    params = ''
+  ): { params: string; bodies: string[] } => {
     const existing = groupedCallbacks.get(hook);
     if (existing) {
       if (!existing.params && params.trim().length > 0) {
@@ -586,12 +619,16 @@ const createFunctionLifecycleMethods = (component: ComponentIR): string[] => {
   return orderedHooks.map((hook) => {
     const callback = groupedCallbacks.get(hook)!;
     const meta = FUNCTION_LIFECYCLE_METHODS[hook];
-    const signature = callback.params.trim().length > 0 ? callback.params.trim() : meta.signature;
+    const signature =
+      callback.params.trim().length > 0
+        ? callback.params.trim()
+        : meta.signature;
     const methodHeader =
       signature.length > 0
         ? `protected ${meta.method}(${signature}): void {`
         : `protected ${meta.method}(): void {`;
-    const body = callback.bodies.length > 0 ? callback.bodies.join('\n') : 'return;';
+    const body =
+      callback.bodies.length > 0 ? callback.bodies.join('\n') : 'return;';
 
     return [methodHeader, indent(body), `}`].join('\n');
   });

@@ -607,10 +607,10 @@ const panelRef = createRef<{ open(): void; close(): void }>();
 推荐组合就是：
 
 ```ts
-bindProps()
-bindHandlers()
-bindSlots()
-createExpose(props, exposed)
+bindProps();
+bindHandlers();
+bindSlots();
+createExpose(props, exposed);
 ```
 
 分别解决的是：

@@ -28,7 +28,8 @@ export const rebuildRenderPlan = (nodes: TemplateIRNode[]) => {
   const conditionBindings: ComponentIR['renderPlan']['conditionBindings'] = [];
   const dynamicBindings: ComponentIR['renderPlan']['dynamicBindings'] = [];
   const boundaryBindings: ComponentIR['renderPlan']['boundaryBindings'] = [];
-  const transitionBindings: ComponentIR['renderPlan']['transitionBindings'] = [];
+  const transitionBindings: ComponentIR['renderPlan']['transitionBindings'] =
+    [];
   const keepAliveBindings: ComponentIR['renderPlan']['keepAliveBindings'] = [];
   const teleportBindings: ComponentIR['renderPlan']['teleportBindings'] = [];
 
@@ -171,7 +172,9 @@ export const rebuildRenderPlan = (nodes: TemplateIRNode[]) => {
   // `collectNestedBindings` 又会在父 block 的 children 里再次遇到同一个节点，
   // 不去重会生成重复的 hoist 常量声明。
   const collectedSlotIndices = new Set<number>();
-  const collectConditionBinding = (node: Extract<TemplateIRNode, { type: 'IfIR' }>): void => {
+  const collectConditionBinding = (
+    node: Extract<TemplateIRNode, { type: 'IfIR' }>
+  ): void => {
     if (collectedSlotIndices.has(node.slotIndex)) {
       return;
     }
@@ -255,7 +258,9 @@ export const rebuildRenderPlan = (nodes: TemplateIRNode[]) => {
   };
 };
 
-export const analyzeExpressionMerges = (component: ComponentIR): ExpressionMergeGroupIR[] => {
+export const analyzeExpressionMerges = (
+  component: ComponentIR
+): ExpressionMergeGroupIR[] => {
   const groups = new Map<string, ExpressionMergeGroupIR>();
 
   component.slotAllocation.slots.forEach((slot) => {
@@ -300,13 +305,15 @@ export const analyzeExpressionMerges = (component: ComponentIR): ExpressionMerge
     });
   });
 
-  return [...groups.values()]
-    // 单个 slot 没有合并价值，只保留真正“一对多”的共享 updater 组。
-    .filter((group) => group.slotIndices.length > 1)
-    .map((group) => ({
-      ...group,
-      // 输出阶段会把 slot 顺序编码进 updaterName，先排序以保证命名稳定、可预测。
-      slotIndices: group.slotIndices.sort((left, right) => left - right),
-      updaterName: `updateMergedSlots_${group.slotIndices.sort((left, right) => left - right).join('_')}`,
-    }));
+  return (
+    [...groups.values()]
+      // 单个 slot 没有合并价值，只保留真正“一对多”的共享 updater 组。
+      .filter((group) => group.slotIndices.length > 1)
+      .map((group) => ({
+        ...group,
+        // 输出阶段会把 slot 顺序编码进 updaterName，先排序以保证命名稳定、可预测。
+        slotIndices: group.slotIndices.sort((left, right) => left - right),
+        updaterName: `updateMergedSlots_${group.slotIndices.sort((left, right) => left - right).join('_')}`,
+      }))
+  );
 };

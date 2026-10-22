@@ -47,7 +47,8 @@ const indent = (source: string, level = 1): string => {
 };
 
 // 编译期路径使用数字数组表示，落成源码时直接序列化为字面量数组。
-const getPathExpression = (path: readonly number[]): string => `[${path.join(', ')}]`;
+const getPathExpression = (path: readonly number[]): string =>
+  `[${path.join(', ')}]`;
 
 export const generateRenderCode = ({
   className,
@@ -69,11 +70,15 @@ export const generateRenderCode = ({
 }: RenderCodegenOptions): RenderCodegenResult => {
   // 先根据 render plan 预计算一批局部辅助函数和分类索引，后续模板串接会更直接。
   // 某些静态模板除了 hoist 名本身，还会生成一个 `xxx_factory` 用于按需 clone childNodes。
-  const getFactoryName = (templateHoistName: string): string => `${templateHoistName}_factory`;
+  const getFactoryName = (templateHoistName: string): string =>
+    `${templateHoistName}_factory`;
   // 一部分特殊 block slot 会拥有“专属 updater”，这里通过 slot 反查规划结果。
-  const findRuntimeUpdaterForSlot = (slotIndex: number): RenderRuntimeUpdaterPlan | undefined => {
+  const findRuntimeUpdaterForSlot = (
+    slotIndex: number
+  ): RenderRuntimeUpdaterPlan | undefined => {
     return runtimeUpdaters.find(
-      (updater) => updater.slotIndices.length === 1 && updater.slotIndices[0] === slotIndex
+      (updater) =>
+        updater.slotIndices.length === 1 && updater.slotIndices[0] === slotIndex
     );
   };
   // 这些 slot 会在后面单独生成 payload updater，因此需要从通用 updater 声明中排除。
@@ -132,8 +137,9 @@ export const generateRenderCode = ({
   // 子 payload 的 hoist 收集必须与上面的主 hoist 共享同一份去重集合：
   // 嵌套 block 的模板名会同时出现在 `conditionBindings` 与 children 里，
   // 两边各自去重仍会产生重复的 const 声明。
-  const collectUniqueChildPayloadHoists = (nodes: readonly TemplateIRNode[]): string[] =>
-    collectChildPayloadHoists(nodes, emittedHoistNames);
+  const collectUniqueChildPayloadHoists = (
+    nodes: readonly TemplateIRNode[]
+  ): string[] => collectChildPayloadHoists(nodes, emittedHoistNames);
 
   // 其它 binding 类型（list / dynamic / boundary / transition / keepAlive / teleport）
   // 也会 hoist 各自的模板名，先统一登记，后续子 payload 收集才不会重复。
@@ -147,9 +153,13 @@ export const generateRenderCode = ({
     rememberHoist(binding.keyedItemHoistName);
     rememberHoist(binding.itemTemplateHoistName);
   });
-  [...dynamicBindings, ...boundaryBindings, ...transitionBindings, ...keepAliveBindings, ...teleportBindings].forEach(
-    (binding) => rememberHoist(binding.hoistName)
-  );
+  [
+    ...dynamicBindings,
+    ...boundaryBindings,
+    ...transitionBindings,
+    ...keepAliveBindings,
+    ...teleportBindings,
+  ].forEach((binding) => rememberHoist(binding.hoistName));
   const hoists = [
     `const ${hoistName} = createStaticTemplate(${JSON.stringify(staticHtml)});`,
     ...uniqueConditionHoists.map(
@@ -158,7 +168,9 @@ export const generateRenderCode = ({
 const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clone().childNodes];`
     ),
     ...uniqueConditionHoists
-      .filter((binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName)
+      .filter(
+        (binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName
+      )
       .filter((binding) => {
         if (emittedHoistNames.has(binding.fallbackHoistName!)) {
           return false;
@@ -172,20 +184,26 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 const ${getFactoryName(binding.fallbackHoistName!)} = () => [...${binding.fallbackHoistName}.clone().childNodes];`
       ),
     ...listBindings
-      .filter((binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName)
+      .filter(
+        (binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName
+      )
       .map(
         (binding) =>
           `const ${binding.fallbackHoistName} = createStaticTemplate(${JSON.stringify(binding.fallbackTemplateHtml)});
 const ${getFactoryName(binding.fallbackHoistName!)} = () => [...${binding.fallbackHoistName}.clone().childNodes];`
       ),
     ...listBindings
-      .filter((binding) => binding.keyedItemTemplateHtml && binding.keyedItemHoistName)
+      .filter(
+        (binding) => binding.keyedItemTemplateHtml && binding.keyedItemHoistName
+      )
       .map(
         (binding) =>
           `const ${binding.keyedItemHoistName} = createStaticTemplate(${JSON.stringify(binding.keyedItemTemplateHtml!)});`
       ),
     ...listBindings
-      .filter((binding) => binding.itemTemplateHtml && binding.itemTemplateHoistName)
+      .filter(
+        (binding) => binding.itemTemplateHtml && binding.itemTemplateHoistName
+      )
       .map(
         (binding) =>
           `const ${binding.itemTemplateHoistName} = createStaticTemplate(${JSON.stringify(binding.itemTemplateHtml!)});`
@@ -201,7 +219,9 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clone().childNodes];`
     ),
     ...boundaryBindings
-      .filter((binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName)
+      .filter(
+        (binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName
+      )
       .map(
         (binding) =>
           `const ${binding.fallbackHoistName} = createStaticTemplate(${JSON.stringify(binding.fallbackTemplateHtml!)});
@@ -213,7 +233,9 @@ const ${getFactoryName(binding.fallbackHoistName!)} = () => [...${binding.fallba
 const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clone().childNodes];`
     ),
     ...transitionBindings
-      .filter((binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName)
+      .filter(
+        (binding) => binding.fallbackTemplateHtml && binding.fallbackHoistName
+      )
       .map(
         (binding) =>
           `const ${binding.fallbackHoistName} = createStaticTemplate(${JSON.stringify(binding.fallbackTemplateHtml!)});
@@ -235,11 +257,21 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
         ...(binding.fallbackChildren ?? []),
       ])
     ),
-    ...collectUniqueChildPayloadHoists(dynamicBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectUniqueChildPayloadHoists(boundaryBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectUniqueChildPayloadHoists(transitionBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectUniqueChildPayloadHoists(keepAliveBindings.flatMap((binding) => binding.children ?? [])),
-    ...collectUniqueChildPayloadHoists(teleportBindings.flatMap((binding) => binding.children ?? [])),
+    ...collectUniqueChildPayloadHoists(
+      dynamicBindings.flatMap((binding) => binding.children ?? [])
+    ),
+    ...collectUniqueChildPayloadHoists(
+      boundaryBindings.flatMap((binding) => binding.children ?? [])
+    ),
+    ...collectUniqueChildPayloadHoists(
+      transitionBindings.flatMap((binding) => binding.children ?? [])
+    ),
+    ...collectUniqueChildPayloadHoists(
+      keepAliveBindings.flatMap((binding) => binding.children ?? [])
+    ),
+    ...collectUniqueChildPayloadHoists(
+      teleportBindings.flatMap((binding) => binding.children ?? [])
+    ),
   ];
 
   // 以下各组声明负责把“编译期 slot 规划”翻译成“运行时 slot 实例化代码”。
@@ -341,7 +373,15 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
     ].join('\n');
   });
   const interactiveSlots = allocatedSlots.filter((slot) =>
-    ['attribute', 'property', 'style', 'class', 'event', 'ref', 'directive'].includes(slot.type)
+    [
+      'attribute',
+      'property',
+      'style',
+      'class',
+      'event',
+      'ref',
+      'directive',
+    ].includes(slot.type)
   );
   // 这类 slot 直接指向真实 DOM 节点，初始化阶段只需解析路径并构造对应包装器。
   const interactiveSlotDeclarations = interactiveSlots.map((slot) => {
@@ -445,8 +485,12 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
         return '';
       }
 
-      const truthyBindings = binding.children ? `[${renderChildPayloadBindings(binding.children).join(', ')}]` : '[]';
-      const falsyBindings = binding.fallbackChildren ? `[${renderChildPayloadBindings(binding.fallbackChildren).join(', ')}]` : '[]';
+      const truthyBindings = binding.children
+        ? `[${renderChildPayloadBindings(binding.children).join(', ')}]`
+        : '[]';
+      const falsyBindings = binding.fallbackChildren
+        ? `[${renderChildPayloadBindings(binding.fallbackChildren).join(', ')}]`
+        : '[]';
       const payloadDependencies = [
         ...updater.dependencies,
         ...collectChildPayloadDependencyKeys(
@@ -476,7 +520,11 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
+          ...collectChildPayloadDependencyKeys(
+            binding.children ?? [],
+            signalBindingMap,
+            storeBindingMap
+          ),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -499,7 +547,11 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
+          ...collectChildPayloadDependencyKeys(
+            binding.children ?? [],
+            signalBindingMap,
+            storeBindingMap
+          ),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -521,7 +573,11 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
+          ...collectChildPayloadDependencyKeys(
+            binding.children ?? [],
+            signalBindingMap,
+            storeBindingMap
+          ),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -543,7 +599,11 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
+          ...collectChildPayloadDependencyKeys(
+            binding.children ?? [],
+            signalBindingMap,
+            storeBindingMap
+          ),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -565,7 +625,11 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
 
         const payloadDependencies = [
           ...updater.dependencies,
-          ...collectChildPayloadDependencyKeys(binding.children ?? [], signalBindingMap, storeBindingMap),
+          ...collectChildPayloadDependencyKeys(
+            binding.children ?? [],
+            signalBindingMap,
+            storeBindingMap
+          ),
         ];
         return createRuntimeUpdaterDeclaration(
           updater.name,
@@ -585,7 +649,9 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
   const declaredRuntimeUpdaters = runtimeUpdaters.filter(
     (updater) =>
       updater.slotIndices.length === 0 ||
-      !updater.slotIndices.some((slotIndex) => specialRuntimeUpdaterSlotIndices.has(slotIndex))
+      !updater.slotIndices.some((slotIndex) =>
+        specialRuntimeUpdaterSlotIndices.has(slotIndex)
+      )
   );
 
   const runtimeUpdaterDeclarations = declaredRuntimeUpdaters
@@ -593,8 +659,8 @@ const ${getFactoryName(binding.hoistName)} = () => [...${binding.hoistName}.clon
       const slotReference =
         updater.slotIndices.length === 1
           ? `slot${updater.slotIndices[0]}`
-          // 多 slot updater 会同时驱动多个目标，构造函数接收的是 slot 引用数组。
-          : `[${updater.slotIndices.map((slotIndex) => `slot${slotIndex}`).join(', ')}]`;
+          : // 多 slot updater 会同时驱动多个目标，构造函数接收的是 slot 引用数组。
+            `[${updater.slotIndices.map((slotIndex) => `slot${slotIndex}`).join(', ')}]`;
       const ctor =
         updater.kind === 'condition'
           ? 'ConditionUpdater'
@@ -648,7 +714,10 @@ ${indent(updater.expression, 1)}
   const renderBindingsBody = textBindings
     .map((binding) => `slot${binding.slotIndex}.write(${binding.expression});`)
     .concat(
-      componentBindings.map((binding) => `slot${binding.slotIndex}.write(${binding.propsExpression});`)
+      componentBindings.map(
+        (binding) =>
+          `slot${binding.slotIndex}.write(${binding.propsExpression});`
+      )
     )
     .concat(
       listBindings.map((binding) => {
@@ -664,8 +733,12 @@ ${indent(updater.expression, 1)}
     )
     .concat(
       conditionBindings.map((binding) => {
-        const truthyBindings = binding.children ? `[${renderChildPayloadBindings(binding.children).join(', ')}]` : '[]';
-        const falsyBindings = binding.fallbackChildren ? `[${renderChildPayloadBindings(binding.fallbackChildren).join(', ')}]` : '[]';
+        const truthyBindings = binding.children
+          ? `[${renderChildPayloadBindings(binding.children).join(', ')}]`
+          : '[]';
+        const falsyBindings = binding.fallbackChildren
+          ? `[${renderChildPayloadBindings(binding.fallbackChildren).join(', ')}]`
+          : '[]';
         return `if (!hasHydrationSlot(mounted, ${binding.slotIndex})) {
   slot${binding.slotIndex}.write({ __lania_if: "block", when: ${binding.expression}, truthyBindings: ${truthyBindings}, falsyBindings: ${falsyBindings} });
 }`;
@@ -749,10 +822,14 @@ ${indent(updater.expression, 1)}
   // 4. 最后执行一次初始写入。
   const methodLines = [
     'protected _renderAndMount(): void {',
-    '  const mounted = mountStaticTemplate(this.renderRoot, ' + hoistName + ', { hydrate: true });',
+    '  const mounted = mountStaticTemplate(this.renderRoot, ' +
+      hoistName +
+      ', { hydrate: true });',
     '  reflectInitialProps(this);',
     finalSlotDeclarations ? indent(finalSlotDeclarations) : '',
-    payloadRuntimeUpdaterDeclarations ? indent(payloadRuntimeUpdaterDeclarations) : '',
+    payloadRuntimeUpdaterDeclarations
+      ? indent(payloadRuntimeUpdaterDeclarations)
+      : '',
     runtimeUpdaterDeclarations ? indent(runtimeUpdaterDeclarations) : '',
     '  const applyInitialBindings = () => {',
     renderBindingsBody ? indent(renderBindingsBody, 2) : '',

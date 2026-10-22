@@ -9,11 +9,14 @@ const send = async (run: () => Promise<any>): Promise<any> => {
   }
 };
 
-export const get = (url: string, params?: unknown) => send(() => client.get(url, params));
+export const get = (url: string, params?: unknown) =>
+  send(() => client.get(url, params));
 
-export const post = (url: string, body?: unknown) => send(() => client.post(url, body));
+export const post = (url: string, body?: unknown) =>
+  send(() => client.post(url, body));
 
-export const put = (url: string, body?: unknown) => send(() => client.put(url, body));
+export const put = (url: string, body?: unknown) =>
+  send(() => client.put(url, body));
 
-export const del = (url: string, params?: unknown) => send(() => client.delete(url, params));
-
+export const del = (url: string, params?: unknown) =>
+  send(() => client.delete(url, params));

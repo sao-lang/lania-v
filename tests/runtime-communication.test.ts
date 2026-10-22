@@ -98,9 +98,9 @@ describe('communication runtime', () => {
     const slot = new ComponentSlot(
       anchor,
       () =>
-        document.createElement(
-          'x-communication-child'
-        ) as InstanceType<typeof CommunicationChildElement>,
+        document.createElement('x-communication-child') as InstanceType<
+          typeof CommunicationChildElement
+        >,
       0
     );
 
@@ -176,7 +176,10 @@ describe('communication runtime', () => {
 
     const eventSlot = new EventSlot(child, 'toggle', 0);
     eventSlot.write((event) => {
-      const customEvent = event as CustomEvent<{ label: string; count: number }>;
+      const customEvent = event as CustomEvent<{
+        label: string;
+        count: number;
+      }>;
       received.push(customEvent.detail);
     });
 
@@ -193,7 +196,9 @@ describe('communication runtime', () => {
     const provider = document.createElement('section');
     const child = document.createElement('div');
     const domRef: RefObject<HTMLDivElement> = { current: null };
-    const componentRef: RefObject<InstanceType<typeof CommunicationChildElement>> = {
+    const componentRef: RefObject<
+      InstanceType<typeof CommunicationChildElement>
+    > = {
       current: null,
     };
 
@@ -216,10 +221,9 @@ describe('communication runtime', () => {
     document.body.appendChild(component);
     await flushMicrotasks();
 
-    const componentRefSlot = new RefSlot<InstanceType<typeof CommunicationChildElement>>(
-      component,
-      1
-    );
+    const componentRefSlot = new RefSlot<
+      InstanceType<typeof CommunicationChildElement>
+    >(component, 1);
     componentRefSlot.write(componentRef);
     await flushMicrotasks();
     expect(componentRef.current).toBe(component);

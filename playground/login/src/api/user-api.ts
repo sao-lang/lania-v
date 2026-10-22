@@ -25,7 +25,9 @@ export type ListUsersResult = {
 };
 
 /** 分页查询用户列表（需要登录）。 */
-export const listUsers = (params: ListUsersParams = {}): Promise<ListUsersResult> =>
+export const listUsers = (
+  params: ListUsersParams = {}
+): Promise<ListUsersResult> =>
   request<ListUsersResult>(() => get('/users', params));
 
 /** 按 ID 查询单个用户（需要登录）。 */

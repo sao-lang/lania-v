@@ -50,7 +50,10 @@ export class SourceDiagnosticError extends Error {
   }
 }
 
-export const getSourcePosition = (source: string, offset: number): SourcePosition => {
+export const getSourcePosition = (
+  source: string,
+  offset: number
+): SourcePosition => {
   // 先把 offset 钳制到源码边界内，避免越界时得到负数或超长切片。
   const safeOffset = Math.max(0, Math.min(offset, source.length));
   // 只截取当前位置之前的前缀，再用换行拆分即可得到当前位置所在的行列。
@@ -113,8 +116,8 @@ export const createCodeFrame = (source: string, offset: number): string => {
       const gutter = `${actualLine}`.padStart(4, ' ');
       const marker =
         actualLine === position.line
-          // 插入符只打在目标行，对齐列号后直观标出出错位置。
-          ? `\n     | ${' '.repeat(Math.max(0, position.column - 1))}^`
+          ? // 插入符只打在目标行，对齐列号后直观标出出错位置。
+            `\n     | ${' '.repeat(Math.max(0, position.column - 1))}^`
           : '';
 
       return `${gutter} | ${line}${marker}`;

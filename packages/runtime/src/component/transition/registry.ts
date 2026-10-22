@@ -19,8 +19,9 @@ export interface TransitionLeaveEntry {
   leaveVersion: number;
 }
 
-export interface TransitionLeavingEntry<TRenderable>
-  extends TransitionLeaveEntry {
+export interface TransitionLeavingEntry<
+  TRenderable,
+> extends TransitionLeaveEntry {
   snapshot: TRenderable;
 }
 
@@ -73,7 +74,8 @@ const setTransitionState = <TRenderable>(
 export const getTransitionState = <TRenderable>(
   stateKey: string
 ): TransitionState<TRenderable> | undefined => {
-  return transitionStates.get(stateKey) as TransitionState<TRenderable> | undefined;
+  return transitionStates.get(stateKey) as
+    TransitionState<TRenderable> | undefined;
 };
 
 export const createDebugSummary = <TRenderable>(

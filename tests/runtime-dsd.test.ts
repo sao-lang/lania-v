@@ -66,7 +66,9 @@ describe('declarative shadow DOM', () => {
     });
 
     expect(html.startsWith('<template shadowrootmode="open">')).toBe(true);
-    expect(html).toContain('<style data-lania-ssr-style>p { color: red; }</style>');
+    expect(html).toContain(
+      '<style data-lania-ssr-style>p { color: red; }</style>'
+    );
     expect(html).toContain('<p>hi</p>');
     expect(html.endsWith('</template>')).toBe(true);
   });
@@ -81,7 +83,9 @@ describe('declarative shadow DOM', () => {
     });
 
     expect(html).toContain('<my-card title="Hello" disabled>');
-    expect(html).toContain('<template shadowrootmode="closed" shadowrootdelegatesfocus>');
+    expect(html).toContain(
+      '<template shadowrootmode="closed" shadowrootdelegatesfocus>'
+    );
     expect(html.endsWith('</template><b>slot</b></my-card>')).toBe(true);
   });
 
@@ -149,14 +153,17 @@ export default CardDsd;
 
     element.title = 'Client';
     await flush();
-    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe('Client');
+    expect(element.shadowRoot?.querySelector('div')?.textContent).toBe(
+      'Client'
+    );
     expect(element.shadowRoot?.querySelectorAll('style').length).toBe(1);
 
     element.remove();
     container.remove();
   });
 
-  it('streams the same shadow wrapper as the sync output', async () => {    const CardStreamDsd = loadComponent(`
+  it('streams the same shadow wrapper as the sync output', async () => {
+    const CardStreamDsd = loadComponent(`
 import { defineComponent } from '@lania-v/runtime';
 const CardStreamDsd = defineComponent(function CardStreamDsd(props: { title: string }) {
   return <div>{props.title}</div>;
@@ -173,9 +180,11 @@ export default CardStreamDsd;
       output += chunk;
     }
 
-    expect(output.startsWith('<card-stream-dsd title="Chunk"><template shadowrootmode="open">')).toBe(
-      true
-    );
+    expect(
+      output.startsWith(
+        '<card-stream-dsd title="Chunk"><template shadowrootmode="open">'
+      )
+    ).toBe(true);
     expect(output).toContain('Chunk');
     expect(output.endsWith('</template></card-stream-dsd>')).toBe(true);
   });

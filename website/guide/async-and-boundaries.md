@@ -223,8 +223,8 @@ import { lazy } from '@lania-v/runtime';
 
 const LazyPanel = lazy(() => import('./LazyPanel.lania.tsx'));
 
-await LazyPanel.preload();     // 手动预加载
-LazyPanel.resolved();          // 已解析的组件或 null
+await LazyPanel.preload(); // 手动预加载
+LazyPanel.resolved(); // 已解析的组件或 null
 ```
 
 语义：
@@ -236,13 +236,13 @@ LazyPanel.resolved();          // 已解析的组件或 null
 
 ## 如何选择
 
-| 场景 | 推荐 |
-| --- | --- |
-| 请求数据并需要 loading / error 状态 | `createResource()` |
-| 懒加载组件代码 | `lazy()` + `Suspense` |
-| 局部异步内容，不想引入边界协议 | `Await` |
-| 长列表 / 图片 / 图表进入视口再渲染 | `LazyLoad` |
-| 捕获子树渲染错误 | `ErrorBoundary` |
+| 场景                                | 推荐                  |
+| ----------------------------------- | --------------------- |
+| 请求数据并需要 loading / error 状态 | `createResource()`    |
+| 懒加载组件代码                      | `lazy()` + `Suspense` |
+| 局部异步内容，不想引入边界协议      | `Await`               |
+| 长列表 / 图片 / 图表进入视口再渲染  | `LazyLoad`            |
+| 捕获子树渲染错误                    | `ErrorBoundary`       |
 
 ## 完整示例
 

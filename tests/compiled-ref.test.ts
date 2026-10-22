@@ -81,13 +81,17 @@ export default defineComponent(function ElementRef() {
 
     clickButton(element, 0);
     await flush();
-    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('seed');
-    expect(element.shadowRoot?.querySelector('input') as HTMLInputElement).toBeTruthy();
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe(
+      'seed'
+    );
+    expect(
+      element.shadowRoot?.querySelector('input') as HTMLInputElement
+    ).toBeTruthy();
 
     clickButton(element, 1);
-    expect((element.shadowRoot?.querySelector('input') as HTMLInputElement).value).toBe(
-      'updated'
-    );
+    expect(
+      (element.shadowRoot?.querySelector('input') as HTMLInputElement).value
+    ).toBe('updated');
 
     element.remove();
   });
@@ -114,7 +118,9 @@ export default defineComponent(function LegacyRef() {
 
     clickButton(element);
     await flush();
-    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('legacy');
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe(
+      'legacy'
+    );
     element.remove();
   });
 
@@ -147,7 +153,9 @@ export default defineComponent(function Parent() {
 
     clickButton(element);
     await flush();
-    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('focused');
+    expect(element.shadowRoot?.querySelector('output')?.textContent).toBe(
+      'focused'
+    );
     element.remove();
   });
 });

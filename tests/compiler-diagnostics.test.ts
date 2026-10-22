@@ -8,7 +8,10 @@ import {
   getSourcePosition,
   SourceDiagnosticError,
 } from '@lania-v/compiler-core';
-import { createLaniaTsxCompileError, LaniaTsxCompileError } from '@lania-v/compiler-tsx';
+import {
+  createLaniaTsxCompileError,
+  LaniaTsxCompileError,
+} from '@lania-v/compiler-tsx';
 
 describe('compiler diagnostics', () => {
   it('shares source position, range and code-frame helpers through compiler-core', () => {

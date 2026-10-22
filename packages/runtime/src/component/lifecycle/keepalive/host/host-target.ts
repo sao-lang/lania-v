@@ -9,14 +9,7 @@
  * 可以把它理解成 keepalive 的“宿主层适配中枢”，上层实例与 bucket 逻辑都通过这里与真实 DOM 对接。
  */
 import {
-  type KeepAliveBucketEntry,
-  type KeepAliveLifecycle,
   type KeepAliveHostAdapter,
-  createTargetReader,
-  keepAliveDomHostAdapter,
-  type KeepAliveHostRuntime,
-  type KeepAliveNodeRuntime,
-  type KeepAliveRuntimeController,
   type KeepAliveHostCommitter,
   type KeepAliveHostTarget,
   type KeepAliveTargetOptions,
@@ -24,11 +17,12 @@ import {
   type KeepAliveMountedHostState,
   type KeepAliveHostState,
   type KeepAliveQueuedSurface,
-  type KeepAliveActiveState,
-  type KeepAliveUncached,
-  type KeepAliveUncachedState,
 } from '../types';
-import { getCurrentDomHostTarget, getDomHostRedirect, type DomHostOwner } from '../../../host/function-component';
+import {
+  getCurrentDomHostTarget,
+  getDomHostRedirect,
+  type DomHostOwner,
+} from '../../../host/function-component';
 import {
   createMountedSurfaceDef,
   createQueuedSurface,
@@ -159,7 +153,10 @@ export const createNodeHostState = (options: {
       if (!cachedHostTarget) {
         return false;
       }
-      if (cachedHostTarget.anchor && cachedHostTarget.anchor.parentNode !== cachedHostTarget.parent) {
+      if (
+        cachedHostTarget.anchor &&
+        cachedHostTarget.anchor.parentNode !== cachedHostTarget.parent
+      ) {
         return false;
       }
       return (currentNodes ?? []).some((node) => node.parentNode !== null);
@@ -219,7 +216,13 @@ export const createHostCommitter = (options: {
   unmountNodes(nodes: readonly Node[]): void;
   syncNodes(nodes: readonly Node[]): void;
 }): KeepAliveHostCommitter => {
-  const { readCurrentNodes, resolveTarget, mountNodes, unmountNodes, syncNodes } = options;
+  const {
+    readCurrentNodes,
+    resolveTarget,
+    mountNodes,
+    unmountNodes,
+    syncNodes,
+  } = options;
 
   return {
     commit(nodes) {
@@ -249,15 +252,16 @@ export const createTargetResolver = (
   };
 };
 
-export const readRedirectTarget = (anchor: Node): KeepAliveHostTarget | null => {
+export const readRedirectTarget = (
+  anchor: Node
+): KeepAliveHostTarget | null => {
   const redirect = getDomHostRedirect(anchor);
   return redirect ? { parent: redirect.parent, anchor: redirect.anchor } : null;
 };
 
 export const readContextualTarget = (): KeepAliveHostTarget | null => {
   const domHost = getCurrentDomHostTarget() as
-    | { parent: Node; anchor: Node; owner?: DomHostOwner }
-    | undefined;
+    { parent: Node; anchor: Node; owner?: DomHostOwner } | undefined;
   return domHost
     ? { parent: domHost.parent, anchor: domHost.anchor, owner: domHost.owner }
     : null;
@@ -360,8 +364,14 @@ export const createAnchorResolver = (options: {
   isMounted(): boolean;
   inferTarget?(nodes: readonly Node[]): KeepAliveHostTarget | null;
 }): KeepAliveTargetResolver => {
-  const { anchor, readNodes, readCachedTarget, writeCachedTarget, isMounted, inferTarget } =
-    options;
+  const {
+    anchor,
+    readNodes,
+    readCachedTarget,
+    writeCachedTarget,
+    isMounted,
+    inferTarget,
+  } = options;
 
   return createCachedTargetResolver({
     readNodes,
@@ -455,7 +465,11 @@ export const resolvePreferredTarget = (options: {
   redirectedTarget?: KeepAliveHostTarget | null;
   contextualTarget?: KeepAliveHostTarget | null;
 }): KeepAliveHostTarget | null => {
-  const { fallbackTarget, redirectedTarget = null, contextualTarget = null } = options;
+  const {
+    fallbackTarget,
+    redirectedTarget = null,
+    contextualTarget = null,
+  } = options;
 
   if (!fallbackTarget) {
     return null;

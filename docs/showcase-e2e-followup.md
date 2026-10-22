@@ -38,12 +38,12 @@ npx playwright test        # 1 passed / 5 failed（全部是 fc-showcase）
 
 `npm run bench` 的当前读数（同机同轮，生产构建）：
 
-| Case | lania-v | Solid |
-| --- | --- | --- |
-| mount | 3.995 ms | 1.685 ms |
+| Case        | lania-v  | Solid    |
+| ----------- | -------- | -------- |
+| mount       | 3.995 ms | 1.685 ms |
 | text-update | 0.006 ms | 0.005 ms |
-| list-patch | 0.018 ms | 0.043 ms |
-| toggle | 0.006 ms | 0.007 ms |
+| list-patch  | 0.018 ms | 0.043 ms |
+| toggle      | 0.006 ms | 0.007 ms |
 | model-input | 0.007 ms | 0.006 ms |
 
 ---
@@ -96,15 +96,15 @@ FC 组件默认 `renderMode = 'shadow'`。调试页面内容请用 `page.locator
 
 ## 4. 本轮已经修完的根因（不要重复排查）
 
-| # | 现象 | 根因 | 落点 |
-| --- | --- | --- | --- |
-| 1 | `bindProps is not defined` / `provideContext is not defined` | 用户 `.lania.tsx` 里的 runtime 具名导入被整体过滤，只按固定白名单重新解构 | `compiler-tsx/src/compile/module-output.ts`（收集用户导入并合并注入） |
-| 2 | `Template node path "0.x" was not found` | Boundary / Transition 子树被抽成独立模板，但 binding 仍用父模板坐标 | `compiler-core/.../lower-boundaries.ts`（子模板 path 从 `[]` 起算） |
-| 3 | `props is not defined` | `bindProps(props)` 在字段初始化期执行，props 要等构造完才赋值 | `runtime/.../function-component.ts`（构造期 props 栈 + `getComponentCreationProps`）、`compiler-tsx/src/parse/function/index.ts`（注入 `props` 字段）、`component-slot.ts`（首建带 props） |
-| 4 | `<this.p>` 非法标签 | props 别名/局部绑定改写没有排除 JSX tag / attribute 名 | `compiler-tsx/src/parse/function/bindings.ts` |
-| 5 | `count: 0\| doubled:0` 少空格 | TS 把 `</span>` 之后的前导空格算作前一个 token 的 trivia，`getText()` 拿不到 | `compiler-tsx/src/parse/template.ts`（改用 `getFullText`） |
-| 6 | `{' '}` 渲染为空 | 常量折叠成 `TextIR`，但 block 模板 HTML 在 lowering 阶段已固化，占位符留下而 binding 没了 | `compiler-core/src/transform/optimization/template.ts`（block 模板内不折叠） |
-| 7 | keyed 列表项 `classname="x"` | 静态属性拼接沿用了 JSX 的 `className` | `compiler-core/.../helpers/keyed-each.ts` |
+| #   | 现象                                                         | 根因                                                                                      | 落点                                                                                                                                                                                       |
+| --- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `bindProps is not defined` / `provideContext is not defined` | 用户 `.lania.tsx` 里的 runtime 具名导入被整体过滤，只按固定白名单重新解构                 | `compiler-tsx/src/compile/module-output.ts`（收集用户导入并合并注入）                                                                                                                      |
+| 2   | `Template node path "0.x" was not found`                     | Boundary / Transition 子树被抽成独立模板，但 binding 仍用父模板坐标                       | `compiler-core/.../lower-boundaries.ts`（子模板 path 从 `[]` 起算）                                                                                                                        |
+| 3   | `props is not defined`                                       | `bindProps(props)` 在字段初始化期执行，props 要等构造完才赋值                             | `runtime/.../function-component.ts`（构造期 props 栈 + `getComponentCreationProps`）、`compiler-tsx/src/parse/function/index.ts`（注入 `props` 字段）、`component-slot.ts`（首建带 props） |
+| 4   | `<this.p>` 非法标签                                          | props 别名/局部绑定改写没有排除 JSX tag / attribute 名                                    | `compiler-tsx/src/parse/function/bindings.ts`                                                                                                                                              |
+| 5   | `count: 0\| doubled:0` 少空格                                | TS 把 `</span>` 之后的前导空格算作前一个 token 的 trivia，`getText()` 拿不到              | `compiler-tsx/src/parse/template.ts`（改用 `getFullText`）                                                                                                                                 |
+| 6   | `{' '}` 渲染为空                                             | 常量折叠成 `TextIR`，但 block 模板 HTML 在 lowering 阶段已固化，占位符留下而 binding 没了 | `compiler-core/src/transform/optimization/template.ts`（block 模板内不折叠）                                                                                                               |
+| 7   | keyed 列表项 `classname="x"`                                 | 静态属性拼接沿用了 JSX 的 `className`                                                     | `compiler-core/.../helpers/keyed-each.ts`                                                                                                                                                  |
 
 同时修掉的测试/工程问题：
 
@@ -125,8 +125,8 @@ FC 组件默认 `renderMode = 'shadow'`。调试页面内容请用 `page.locator
 
   ```tsx
   const keepAliveViews = createSignal({
-    pageA: (<div data-key="page-a">…</div>),
-    pageB: (<div data-key="page-b">…</div>),
+    pageA: <div data-key="page-a">…</div>,
+    pageB: <div data-key="page-b">…</div>,
   });
   ```
 
@@ -158,12 +158,14 @@ FC 组件默认 `renderMode = 'shadow'`。调试页面内容请用 `page.locator
 class TextSlot {
   private injected: Node[] = [];
   write(value: unknown): void {
-    if (isNodeLike(value)) {          // Node | DocumentFragment | Node[]
+    if (isNodeLike(value)) {
+      // Node | DocumentFragment | Node[]
       this.clearInjected();
       this.injected = normalizeDynamicResult(value);
       const parent = this.node.parentNode;
       let anchor: Node = this.node;
-      for (const n of this.injected) parent.insertBefore(n, anchor.nextSibling), anchor = n;
+      for (const n of this.injected)
+        (parent.insertBefore(n, anchor.nextSibling), (anchor = n));
       this.node.data = '';
       this.previous = '';
       return;
@@ -234,7 +236,10 @@ test('debug suspense', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   await page.waitForSelector('.filters');
-  await page.locator('.filters').getByRole('button', { name: 'Suspense', exact: true }).click();
+  await page
+    .locator('.filters')
+    .getByRole('button', { name: 'Suspense', exact: true })
+    .click();
   await page.waitForTimeout(400);
   console.log(await page.locator('.list').textContent());
   console.log('errors:', errors);
@@ -273,21 +278,21 @@ test('debug suspense', async ({ page }) => {
 
 #### C1. `runs TransitionGroup list interactions`
 
-| 现状 | 断言 |
-| --- | --- |
+| 现状                                                                                   | 断言                                                                                 |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `count: 3 \| ids: a, b, c` 属于 **Store** demo（`store.list ids:`），Transition 页没有 | 改为断言窗口内出现 `A`/`B`/`C` 三个 chip，以及 `move:*` / `leave:*` / `enter:*` 日志 |
-| 按钮是 `append item` / `move first` / `remove first` | 不再点 `reverse` / `pop` / `push`（这三个按钮不存在） |
+| 按钮是 `append item` / `move first` / `remove first`                                   | 不再点 `reverse` / `pop` / `push`（这三个按钮不存在）                                |
 
 #### C2. `handles ErrorBoundary reset`
 
-| 现状 | 断言 |
-| --- | --- |
+| 现状                                                                        | 断言                                                               |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 按钮是 `toggle error`（不是 `toggle throw: false/true`），没有 `reset` 按钮 | 改为点击 `toggle error`，断言 `caught: manual suspense demo error` |
 
 #### C3. `resets Suspense state when re-entering the tab`
 
-| 现状 | 断言 |
-| --- | --- |
+| 现状                                 | 断言                                                       |
+| ------------------------------------ | ---------------------------------------------------------- |
 | 按钮是 `name=lania` / `name=runtime` | 点击后断言 `Lazy component resolved: lania` / `…: runtime` |
 
 已完成的小改动（保留）：`runs reactivity smoke flow` 里 `count:` 的 locator 已收窄到 `.list`，
@@ -295,13 +300,13 @@ test('debug suspense', async ({ page }) => {
 
 ### 5.4 收尾时补修的根因（2026-10-18）
 
-| # | 现象 | 根因 | 落点 |
-| --- | --- | --- | --- |
-| 1 | `LazyHello is not defined`，Suspense 子树空白 | 局部组件绑定被提升为 `this.LazyHello`，但 JSX 标签名不走表达式重写 | `compiler-tsx/src/parse/function/bindings.ts`（改写 `ElementNode.tagName`）、`compiler-core/.../lower-dynamic.ts`（接受 `this.X` 组件引用） |
-| 2 | KeepAlive 只移动空文本占位符 | `TextSlot` 注入的节点不在 `MountedBindingInstance.nodes` 里 | `runtime/.../slots/core.ts`（`injectedNodes` + `currentNodes`）、`template-factory.ts`（存在注入节点时按区间收集） |
-| 3 | 重新进入 Suspense tab 后内容被清空 | `readMountedNodes` 只返回结构节点，丢失嵌套 slot 的锚点 | `runtime/.../template/template-types.ts`（锚点与结构节点按文档顺序合并） |
-| 4 | TransitionGroup 的 enter/leave/move 从不触发 | `TransitionIR` 被编译成 boundary payload，`BoundarySlot` 未分发 | `runtime/.../slots/boundary-slot.ts`（`renderTransition` / `renderGroup`） |
-| 5 | `caught: …` 不渲染 | `ErrorBoundary` 的函数式 fallback 无法静态成模板，也未进入 payload | `compiler-core/.../helpers/payload.ts`（`metadata.fallback` 原始表达式）+ `boundary-slot.ts`（运行时求值） |
+| #   | 现象                                          | 根因                                                               | 落点                                                                                                                                        |
+| --- | --------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `LazyHello is not defined`，Suspense 子树空白 | 局部组件绑定被提升为 `this.LazyHello`，但 JSX 标签名不走表达式重写 | `compiler-tsx/src/parse/function/bindings.ts`（改写 `ElementNode.tagName`）、`compiler-core/.../lower-dynamic.ts`（接受 `this.X` 组件引用） |
+| 2   | KeepAlive 只移动空文本占位符                  | `TextSlot` 注入的节点不在 `MountedBindingInstance.nodes` 里        | `runtime/.../slots/core.ts`（`injectedNodes` + `currentNodes`）、`template-factory.ts`（存在注入节点时按区间收集）                          |
+| 3   | 重新进入 Suspense tab 后内容被清空            | `readMountedNodes` 只返回结构节点，丢失嵌套 slot 的锚点            | `runtime/.../template/template-types.ts`（锚点与结构节点按文档顺序合并）                                                                    |
+| 4   | TransitionGroup 的 enter/leave/move 从不触发  | `TransitionIR` 被编译成 boundary payload，`BoundarySlot` 未分发    | `runtime/.../slots/boundary-slot.ts`（`renderTransition` / `renderGroup`）                                                                  |
+| 5   | `caught: …` 不渲染                            | `ErrorBoundary` 的函数式 fallback 无法静态成模板，也未进入 payload | `compiler-core/.../helpers/payload.ts`（`metadata.fallback` 原始表达式）+ `boundary-slot.ts`（运行时求值）                                  |
 
 新增测试：
 

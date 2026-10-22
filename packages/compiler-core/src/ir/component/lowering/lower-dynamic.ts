@@ -32,7 +32,9 @@ import type {
 const isComponentReferenceTag = (tagName: string): boolean => {
   // 本地组件绑定会被绑定重写器提升成 `this.Xxx`，这里按名称部分判断组件引用；
   // 注册过的 enhanced component 仍然走另一条分支。
-  const name = tagName.startsWith('this.') ? tagName.slice('this.'.length) : tagName;
+  const name = tagName.startsWith('this.')
+    ? tagName.slice('this.'.length)
+    : tagName;
   return /^[A-Z]/.test(name) && !getEnhancedComponentRegistryEntry(name);
 };
 
@@ -95,7 +97,11 @@ export const lowerDynamicElement = (
   const template = lowerTemplateChildren(child.children, [], 0, 0, 0, {
     preserveChildrenOnlyEnhancedAsDynamic: true,
   });
-  const propsExpression = buildRuntimePropsExpression(child, ['component', 'is', 'props']);
+  const propsExpression = buildRuntimePropsExpression(child, [
+    'component',
+    'is',
+    'props',
+  ]);
 
   return {
     type: 'DynamicIR',

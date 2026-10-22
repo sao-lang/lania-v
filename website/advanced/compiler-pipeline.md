@@ -33,15 +33,15 @@ style:width.px    → style__LANIA_DOT__width__LANIA_DOT__px
 
 `parse/function` 从 `defineComponent(...)` 中提取：
 
-| 产物 | 说明 |
-| --- | --- |
-| props | 参数名、类型声明、解构信息 |
-| signals | `createSignal` 声明 |
-| computed | `createMemo` 声明 |
-| effects | `createEffect` 声明 |
-| lifecycle | `onMount` / `onCleanup` / `onUpdated` |
-| setupBindings | 其余语句与方法 |
-| 模板 | `return` 的 JSX |
+| 产物          | 说明                                  |
+| ------------- | ------------------------------------- |
+| props         | 参数名、类型声明、解构信息            |
+| signals       | `createSignal` 声明                   |
+| computed      | `createMemo` 声明                     |
+| effects       | `createEffect` 声明                   |
+| lifecycle     | `onMount` / `onCleanup` / `onUpdated` |
+| setupBindings | 其余语句与方法                        |
+| 模板          | `return` 的 JSX                       |
 
 同时会把 props 解构重写为实例字段访问：
 
@@ -57,11 +57,7 @@ const { title, count: total } = props;
 `parse/template` 把 JSX 转成 `TemplateNode`：
 
 ```ts
-type TemplateNode =
-  | ElementNode
-  | TextNode
-  | ExpressionNode
-  | DirectiveNode;
+type TemplateNode = ElementNode | TextNode | ExpressionNode | DirectiveNode;
 ```
 
 并完成：
@@ -193,13 +189,13 @@ interface SlotAllocationIR {
 
 `generateComponentUpdaters` 按依赖与 Slot 组合生成：
 
-| kind | 运行时类 |
-| --- | --- |
-| `single-slot` | `SimpleUpdater` |
-| `multi-slot` | `MultiSlotUpdater` |
-| `condition` | `ConditionUpdater` |
-| `effect` | `EffectUpdater` |
-| `computed` | 编译为 `single-slot` |
+| kind            | 运行时类               |
+| --------------- | ---------------------- |
+| `single-slot`   | `SimpleUpdater`        |
+| `multi-slot`    | `MultiSlotUpdater`     |
+| `condition`     | `ConditionUpdater`     |
+| `effect`        | `EffectUpdater`        |
+| `computed`      | 编译为 `single-slot`   |
 | `event-binding` | 不进入 runtime updater |
 
 生成结果：
@@ -363,7 +359,7 @@ Vite 插件会转换成 overlay 可消费的结构。
 ## 15. 调试入口
 
 ```ts
-compileFunctionComponentTsx(fileName, source, { hotReload: true })
+compileFunctionComponentTsx(fileName, source, { hotReload: true });
 ```
 
 返回：

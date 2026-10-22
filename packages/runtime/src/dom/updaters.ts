@@ -6,7 +6,11 @@ import {
 } from '@lania-v/reactivity';
 import { SlotTable } from './slot-table';
 import type { Slot } from './slots';
-import { emitDevtoolsEvent, hasDevtoolsSubscribers, isDevEnvironment } from '../core/debug';
+import {
+  emitDevtoolsEvent,
+  hasDevtoolsSubscribers,
+  isDevEnvironment,
+} from '../core/debug';
 
 /**
  * DOM updater 抽象：把“计算”与“提交到 slot/DOM”拆开。

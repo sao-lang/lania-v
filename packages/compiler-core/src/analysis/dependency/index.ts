@@ -10,4 +10,7 @@ export {
   analyzeBlockDependencies,
   analyzeExpressionDependencies,
 } from './expression';
-export { createEmptyDependencyAnalysis, analyzeComponentDependencies } from './component-analysis';
+export {
+  createEmptyDependencyAnalysis,
+  analyzeComponentDependencies,
+} from './component-analysis';

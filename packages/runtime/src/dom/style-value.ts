@@ -24,7 +24,10 @@ export type StyleBindingValue =
   | CSSProperties
   | readonly StyleBindingValue[];
 
-const parseStyleText = (value: string, declarations: Map<string, string>): void => {
+const parseStyleText = (
+  value: string,
+  declarations: Map<string, string>
+): void => {
   value
     .split(';')
     .map((entry) => entry.trim())
@@ -74,21 +77,25 @@ const collectStyleDeclarations = (
     return;
   }
 
-  Object.entries(value as Record<string, StylePrimitive>).forEach(([property, propertyValue]) => {
-    // 对象输入先做属性名归一化，再沿用组件样式层的序列化规则。
-    const normalizedProperty = normalizeStyleName(property);
-    const serializedValue = serializeStyleValue(propertyValue);
+  Object.entries(value as Record<string, StylePrimitive>).forEach(
+    ([property, propertyValue]) => {
+      // 对象输入先做属性名归一化，再沿用组件样式层的序列化规则。
+      const normalizedProperty = normalizeStyleName(property);
+      const serializedValue = serializeStyleValue(propertyValue);
 
-    if (serializedValue === null) {
-      declarations.delete(normalizedProperty);
-      return;
+      if (serializedValue === null) {
+        declarations.delete(normalizedProperty);
+        return;
+      }
+
+      declarations.set(normalizedProperty, serializedValue);
     }
-
-    declarations.set(normalizedProperty, serializedValue);
-  });
+  );
 };
 
-const serializeStyleDeclarations = (declarations: Map<string, string>): string => {
+const serializeStyleDeclarations = (
+  declarations: Map<string, string>
+): string => {
   return [...declarations.entries()]
     .map(([property, value]) => `${property}: ${value};`)
     .join(' ');
@@ -100,7 +107,10 @@ export const normalizeStyleValue = (value: unknown): string => {
   return serializeStyleDeclarations(declarations);
 };
 
-export const mergeStyleValues = (baseValue: unknown, dynamicValue: unknown): string => {
+export const mergeStyleValues = (
+  baseValue: unknown,
+  dynamicValue: unknown
+): string => {
   const declarations = new Map<string, string>();
   // 先放静态值，再应用动态值，保证动态绑定拥有更高优先级。
   collectStyleDeclarations(baseValue, declarations);

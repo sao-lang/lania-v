@@ -95,7 +95,11 @@ export default defineConfig({
     nav: [
       { text: '指南', link: '/guide/introduction', activeMatch: '/guide/' },
       { text: 'API', link: '/api/', activeMatch: '/api/' },
-      { text: '深入', link: '/advanced/architecture', activeMatch: '/advanced/' },
+      {
+        text: '深入',
+        link: '/advanced/architecture',
+        activeMatch: '/advanced/',
+      },
       { text: '示例', link: '/examples/todo', activeMatch: '/examples/' },
     ],
     sidebar: {

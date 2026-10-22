@@ -15,13 +15,13 @@
 
 开发态与生产态的区别：
 
-| 项 | `vite dev` | `vite build` |
-| --- | --- | --- |
-| 编译快照 | `debug: true` 时输出，并注入 `__laniaCompile` | 不注入 |
-| HMR | 模块尾部追加 `import.meta.hot.accept()` | 不追加 |
-| `__laniaSetup()` | `hotReload: true` 时生成 | 不生成 |
-| 调试事件 | 由 `__DEV__` 决定 | 由 `production` 条件导出决定 |
-| 编译器 | 在 Vite 进程里 | 不在产物里 |
+| 项               | `vite dev`                                    | `vite build`                 |
+| ---------------- | --------------------------------------------- | ---------------------------- |
+| 编译快照         | `debug: true` 时输出，并注入 `__laniaCompile` | 不注入                       |
+| HMR              | 模块尾部追加 `import.meta.hot.accept()`       | 不追加                       |
+| `__laniaSetup()` | `hotReload: true` 时生成                      | 不生成                       |
+| 调试事件         | 由 `__DEV__` 决定                             | 由 `production` 条件导出决定 |
+| 编译器           | 在 Vite 进程里                                | 不在产物里                   |
 
 因此生产包只包含：组件类、运行时（Signal / Scheduler / Slot / Updater）、增强组件实现，以及你的业务代码。
 
@@ -57,12 +57,12 @@ createRoot(document.querySelector('#app')!).render(<App />);
 
 部署时需要把未知路径回退到 `index.html`：
 
-| 平台 | 配置 |
-| --- | --- |
-| Nginx | `try_files $uri $uri/ /index.html;` |
-| Netlify | `[[redirects]] from = "/*" to = "/index.html" status = 200` |
-| Vercel | `rewrites: [{ source: '/(.*)', destination: '/index.html' }]` |
-| GitHub Pages | 使用 `404.html` 回退，或改用 hash 路由 |
+| 平台         | 配置                                                          |
+| ------------ | ------------------------------------------------------------- |
+| Nginx        | `try_files $uri $uri/ /index.html;`                           |
+| Netlify      | `[[redirects]] from = "/*" to = "/index.html" status = 200`   |
+| Vercel       | `rewrites: [{ source: '/(.*)', destination: '/index.html' }]` |
+| GitHub Pages | 使用 `404.html` 回退，或改用 hash 路由                        |
 
 如果 `base` 不是 `/`，记得同步构建配置：
 
@@ -170,18 +170,19 @@ await hydrateIslands({
   root: document,
   components: {
     SearchBox,
-    HeavyChart: () => import('./HeavyChart.lania.tsx').then((mod) => mod.default),
+    HeavyChart: () =>
+      import('./HeavyChart.lania.tsx').then((mod) => mod.default),
   },
   priorities: ['eager', 'visible'],
 });
 ```
 
-| 优先级 | 触发时机 |
-| --- | --- |
-| `eager` | 立即水合 |
-| `idle` | 浏览器空闲 |
-| `visible` | 进入视口 |
-| `interaction` | 首次交互 |
+| 优先级        | 触发时机   |
+| ------------- | ---------- |
+| `eager`       | 立即水合   |
+| `idle`        | 浏览器空闲 |
+| `visible`     | 进入视口   |
+| `interaction` | 首次交互   |
 
 部署建议：
 
@@ -191,14 +192,14 @@ await hydrateIslands({
 
 ## 性能要点
 
-| 做法 | 原因 |
-| --- | --- |
-| 保持 `sideEffects` 正确 | 运行时与插件都声明了 `sideEffects`，避免整包被打入 |
-| 用 `lazy()` / 动态 `import()` 切分重组件 | 首屏只加载用到的组件 |
-| 长列表用 `<Each>` 配稳定 key | 减少节点复用带来的重建 |
-| 高频事件用 `enableEventDelegation()` | 同一 root 上同事件只挂一条监听 |
-| 少在模板里做大对象构造 | 表达式会随依赖重算 |
-| 生产构建显式 `__LANIA_DEV__: 'false'` | 去掉调试事件与警告分支 |
+| 做法                                     | 原因                                               |
+| ---------------------------------------- | -------------------------------------------------- |
+| 保持 `sideEffects` 正确                  | 运行时与插件都声明了 `sideEffects`，避免整包被打入 |
+| 用 `lazy()` / 动态 `import()` 切分重组件 | 首屏只加载用到的组件                               |
+| 长列表用 `<Each>` 配稳定 key             | 减少节点复用带来的重建                             |
+| 高频事件用 `enableEventDelegation()`     | 同一 root 上同事件只挂一条监听                     |
+| 少在模板里做大对象构造                   | 表达式会随依赖重算                                 |
+| 生产构建显式 `__LANIA_DEV__: 'false'`    | 去掉调试事件与警告分支                             |
 
 ## 部署检查清单
 

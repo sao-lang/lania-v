@@ -21,22 +21,22 @@ import {
 const readComponentRefBinding = (
   props: Record<string, unknown>
 ): DynamicDirectiveBinding | null => {
-  return readDynamicDirectives(props).find((binding) => binding.kind === 'ref') ?? null;
+  return (
+    readDynamicDirectives(props).find((binding) => binding.kind === 'ref') ??
+    null
+  );
 };
 
-type ComponentSlotValue<TProps extends Record<string, unknown> = Record<string, unknown>> =
-  | TProps
-  | null
-  | undefined;
+type ComponentSlotValue<
+  TProps extends Record<string, unknown> = Record<string, unknown>,
+> = TProps | null | undefined;
 
 type ComponentSlotTarget<TElement extends HTMLElement> =
-  | string
-  | ComponentElementConstructor<TElement>
-  | (() => TElement);
+  string | ComponentElementConstructor<TElement> | (() => TElement);
 
 export class ComponentSlot<
   TElement extends HTMLElement,
-  TProps extends Record<string, unknown> = Record<string, unknown>
+  TProps extends Record<string, unknown> = Record<string, unknown>,
 > implements Slot<ComponentSlotValue<TProps>> {
   readonly type = 'component';
   readonly frequency = 'normal';
@@ -92,10 +92,15 @@ export class ComponentSlot<
 
     const eventBindings = readDynamicEvents(props);
     const directiveBindings = readDynamicDirectives(props);
-    const refBinding = directiveBindings.find((binding) => binding.kind === 'ref') ?? null;
+    const refBinding =
+      directiveBindings.find((binding) => binding.kind === 'ref') ?? null;
 
     for (const [key, propValue] of Object.entries(props)) {
-      if (key === '__lania_events' || key === '__lania_directives' || key === 'ref') {
+      if (
+        key === '__lania_events' ||
+        key === '__lania_directives' ||
+        key === 'ref'
+      ) {
         continue;
       }
 
@@ -128,7 +133,10 @@ export class ComponentSlot<
                 hints[0]!,
                 binding.modifiers
               )
-            : withEventModifiers(binding.handler as (event: Event) => unknown, binding.modifiers);
+            : withEventModifiers(
+                binding.handler as (event: Event) => unknown,
+                binding.modifiers
+              );
       slot.write(handler);
     });
 
@@ -152,7 +160,11 @@ export class ComponentSlot<
       let slot = this.directiveSlots.get(key);
 
       if (!slot) {
-        slot = createDirectiveSlotForBinding(this.instance as HTMLElement, binding, bindingIndex);
+        slot = createDirectiveSlotForBinding(
+          this.instance as HTMLElement,
+          binding,
+          bindingIndex
+        );
         this.directiveSlots.set(key, slot);
       }
 
@@ -175,7 +187,8 @@ export class ComponentSlot<
     });
 
     if (refBinding) {
-      const refValue = (refBinding.value as RefBinding<unknown> | null | undefined) ?? null;
+      const refValue =
+        (refBinding.value as RefBinding<unknown> | null | undefined) ?? null;
       this.currentRef = refValue;
 
       if (refValue) {

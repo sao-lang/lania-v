@@ -10,7 +10,10 @@ const SESSION_KEY = 'lania-v.auth.session';
 // 演示环境：会话 7 天过期，避免过期 token 被长期当作“已登录”。
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-const STORAGE_OPTIONS = { encryptData: true, expiresInSeconds: SESSION_TTL_SECONDS };
+const STORAGE_OPTIONS = {
+  encryptData: true,
+  expiresInSeconds: SESSION_TTL_SECONDS,
+};
 
 export type AuthSession = {
   token: string;
@@ -73,7 +76,9 @@ export const clearSession = (): void => {
   emit();
 };
 
-export const onSessionChange = (listener: AuthSessionListener): (() => void) => {
+export const onSessionChange = (
+  listener: AuthSessionListener
+): (() => void) => {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

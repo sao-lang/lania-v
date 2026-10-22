@@ -21,9 +21,7 @@ import type {
 } from '../../codegen/render';
 import type { SlotAllocationIR } from '../../plan/slots';
 import type { UpdaterGenerationIR } from '../../plan/updaters';
-import type {
-  TransitionPayloadComponentName,
-} from '@lania-v/shared';
+import type { TransitionPayloadComponentName } from '@lania-v/shared';
 
 /**
  * 组件 IR 全量类型定义。

@@ -41,7 +41,15 @@ const KEYED_ITEM_DOM_EVENT_NAMES = new Set([
 type KeyedEachTemplateBinding = {
   slotIndex: number;
   path: number[];
-  kind: 'text' | 'attr' | 'prop' | 'class' | 'style' | 'event' | 'directive' | 'ref';
+  kind:
+    | 'text'
+    | 'attr'
+    | 'prop'
+    | 'class'
+    | 'style'
+    | 'event'
+    | 'directive'
+    | 'ref';
   evaluate: string;
   name?: string;
   unit?: string;
@@ -57,18 +65,16 @@ type KeyedEachTemplate = {
 // 把表达式最外层括号剥掉，并确认它最终是否真的是 JSX 根节点。
 const unwrapJsxFromExpression = (
   expression: ts.Expression
-):
-  | ts.JsxElement
-  | ts.JsxSelfClosingElement
-  | ts.JsxFragment
-  | null => {
+): ts.JsxElement | ts.JsxSelfClosingElement | ts.JsxFragment | null => {
   let current: ts.Expression = expression;
 
   while (ts.isParenthesizedExpression(current)) {
     current = current.expression;
   }
 
-  return ts.isJsxElement(current) || ts.isJsxSelfClosingElement(current) || ts.isJsxFragment(current)
+  return ts.isJsxElement(current) ||
+    ts.isJsxSelfClosingElement(current) ||
+    ts.isJsxFragment(current)
     ? current
     : null;
 };
@@ -138,7 +144,10 @@ const collectKeyedItemStyleObjectEntries = (
   const entries: KeyedStyleObjectEntry[] = [];
 
   for (const property of expression.properties) {
-    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+    if (
+      !ts.isPropertyAssignment(property) &&
+      !ts.isShorthandPropertyAssignment(property)
+    ) {
       return null;
     }
 
@@ -224,7 +233,10 @@ const collectKeyedItemAttributeBindings = (
         return [null];
       }
 
-      const styleEntries = collectKeyedItemStyleObjectEntries(value.expression, sourceFile);
+      const styleEntries = collectKeyedItemStyleObjectEntries(
+        value.expression,
+        sourceFile
+      );
       if (!styleEntries) {
         return [null];
       }
@@ -332,7 +344,9 @@ const collectKeyedItemAttributeBindings = (
 
     if (name.startsWith('model:')) {
       const slotIndex = slotIndexRef.value;
-      const [bindingName, ...modifiers] = name.slice('model:'.length).split('.');
+      const [bindingName, ...modifiers] = name
+        .slice('model:'.length)
+        .split('.');
       bindings.push({
         kind: 'directive',
         slotIndex,
@@ -409,7 +423,10 @@ const renderJsxNodeToTemplateHtmlWithBindings = (
 ): string | null => {
   let domIndex = 0;
 
-  const renderChildren = (children: readonly ts.JsxChild[], elementPath: number[]): string | null => {
+  const renderChildren = (
+    children: readonly ts.JsxChild[],
+    elementPath: number[]
+  ): string | null => {
     // childDomIndex 只统计真正落成 DOM 的节点，用来和后续 slot path 保持同一套坐标。
     let childDomIndex = 0;
     const parts: string[] = [];
@@ -538,7 +555,9 @@ const renderJsxNodeToTemplateHtmlWithBindings = (
 };
 
 // 从 `items.map(item => <Row ... />)` 这类 render expression 中提取可 keyed 的模板描述。
-export const compileKeyedEachItemTemplate = (renderExpression: string): KeyedEachTemplate | null => {
+export const compileKeyedEachItemTemplate = (
+  renderExpression: string
+): KeyedEachTemplate | null => {
   try {
     const source = parseTypeScriptSource(
       '__lania_each_item__.tsx',
@@ -559,7 +578,10 @@ export const compileKeyedEachItemTemplate = (renderExpression: string): KeyedEac
       initializer = initializer.expression;
     }
 
-    if (!initializer || !(ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer))) {
+    if (
+      !initializer ||
+      !(ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer))
+    ) {
       // 只有“函数 -> JSX”的 render 表达式才有意义，其他形式直接放弃 keyed 模板提取。
       return null;
     }
@@ -572,7 +594,9 @@ export const compileKeyedEachItemTemplate = (renderExpression: string): KeyedEac
     const bodyExpression = (() => {
       if (ts.isBlock(initializer.body)) {
         // 支持 `item => { return <div /> }` 这种块体写法。
-        const returnStatement = initializer.body.statements.find(ts.isReturnStatement);
+        const returnStatement = initializer.body.statements.find(
+          ts.isReturnStatement
+        );
         const expr = returnStatement?.expression;
         return expr ?? null;
       }

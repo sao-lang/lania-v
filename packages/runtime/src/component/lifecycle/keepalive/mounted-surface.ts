@@ -27,15 +27,10 @@ import {
 } from './types';
 import {
   createMountedFactory,
-  createSurfaceInstance,
   createMountedInstance,
   createQueueableInstance,
 } from './instance-adapters';
 import {
-  createCachedTargetResolver,
-  createAdapterCommitter,
-  createMountedHostState,
-  createQueuedState,
   createQueuedMountedSurface,
   resolveContextualPreferred,
 } from './host/host';
@@ -298,9 +293,11 @@ export const createInstanceEntry = <
   return { key, instance };
 };
 
-export const createSourceEntry = <TSource, TValue>(options: {
-  key: string;
-} & KeepAliveSourceDef<TSource, TValue>): KeepAliveInstanceEntry<KeepAliveInstance<TValue>> => {
+export const createSourceEntry = <TSource, TValue>(
+  options: {
+    key: string;
+  } & KeepAliveSourceDef<TSource, TValue>
+): KeepAliveInstanceEntry<KeepAliveInstance<TValue>> => {
   const { key, ...instanceOptions } = options;
   return createLiveSourceFactory({
     createDefinition() {
@@ -354,11 +351,11 @@ export const createNodeFactory = <TValue>(options: {
   });
 };
 
-export const createNodeEntry = <TValue>(options: {
-  key: string;
-} & KeepAliveNodeDef<TValue>): KeepAliveInstanceEntry<
-  KeepAliveQueuedInstance<TValue>
-> => {
+export const createNodeEntry = <TValue>(
+  options: {
+    key: string;
+  } & KeepAliveNodeDef<TValue>
+): KeepAliveInstanceEntry<KeepAliveQueuedInstance<TValue>> => {
   const { key, ...instanceOptions } = options;
   return createNodeFactory({
     createDefinition() {

@@ -68,7 +68,9 @@ export default defineComponent(function Demo() {
     );
 
     expect(moduleCode).toContain('new BoundarySlot(');
-    expect(moduleCode.split('\n').some((line) => line.trim() === 'BoundarySlot,')).toBe(true);
+    expect(
+      moduleCode.split('\n').some((line) => line.trim() === 'BoundarySlot,')
+    ).toBe(true);
   });
 
   it('fires enter and leave hooks', async () => {
@@ -101,8 +103,11 @@ export default defineComponent(function Demo() {
     const element = runtime.mountComponent(document.body, Demo, {});
     await flush();
 
-    const button = element.shadowRoot?.querySelector('button') as HTMLButtonElement;
-    const output = () => element.shadowRoot?.querySelector('output')?.textContent ?? '';
+    const button = element.shadowRoot?.querySelector(
+      'button'
+    ) as HTMLButtonElement;
+    const output = () =>
+      element.shadowRoot?.querySelector('output')?.textContent ?? '';
 
     button.click();
     await flush();
@@ -140,7 +145,8 @@ export default defineComponent(function LeaveCleanupDemo() {
     const element = runtime.mountComponent(document.body, Demo, {});
     await flush();
 
-    const divCount = () => element.shadowRoot?.querySelectorAll('div').length ?? -1;
+    const divCount = () =>
+      element.shadowRoot?.querySelectorAll('div').length ?? -1;
     const button = element.shadowRoot?.querySelector('button');
     const counts = [divCount()];
 

@@ -24,10 +24,8 @@ export type TransitionDispatchContext = {
   phase: TransitionPhase;
 };
 
-export type TransitionDispatchHook<TContext extends TransitionDispatchContext> = (
-  element: Element,
-  context: TContext
-) => void | Promise<void>;
+export type TransitionDispatchHook<TContext extends TransitionDispatchContext> =
+  (element: Element, context: TContext) => void | Promise<void>;
 
 export type TransitionDispatchOptions = {
   defer?: boolean;
@@ -40,7 +38,9 @@ export type NamedTransitionPhaseHooks = {
   leave?: TransitionDispatchHook<TransitionHookContextShape>;
 };
 
-export type NamedTransitionPhaseEnabled = Partial<Record<'appear' | 'enter' | 'leave', boolean>>;
+export type NamedTransitionPhaseEnabled = Partial<
+  Record<'appear' | 'enter' | 'leave', boolean>
+>;
 
 // 在基础 host flow runtime 上补充 `commit()` 这一层可见/离场分派入口。
 export type TransitionRuntime<TRenderable> = BaseHostFlowRuntime<
@@ -58,9 +58,10 @@ export type TransitionRuntime<TRenderable> = BaseHostFlowRuntime<
   commit(input: TransitionCommitInput<TRenderable>): TRenderable | null;
 };
 
-export type TransitionCommitInput<TRenderable> = BaseTransitionCommitInput<TRenderable> & {
-  visible: boolean;
-};
+export type TransitionCommitInput<TRenderable> =
+  BaseTransitionCommitInput<TRenderable> & {
+    visible: boolean;
+  };
 
 export type ResolvedTransitionOptions = {
   payload: TransitionPayload | null;
@@ -98,8 +99,9 @@ export type TransitionCommitContext<TRenderable> = {
   elements: readonly Element[];
 };
 
-export type TransitionCommitResult<TRenderable> =
-  BaseCommitResult<TransitionState<TRenderable>>;
+export type TransitionCommitResult<TRenderable> = BaseCommitResult<
+  TransitionState<TRenderable>
+>;
 
 export type TransitionPrevCommitContext<TRenderable> = BasePrevContext<
   TransitionState<TRenderable> | undefined

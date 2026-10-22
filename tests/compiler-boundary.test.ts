@@ -43,7 +43,9 @@ export default defineComponent(function Card(props: CardProps) {
 `);
 
     expect(aliasCode).toContain('static __laniaPropNames = ["title","count"]');
-    expect(aliasCode).toContain('static observedAttributes = resolveObservedAttributes(');
+    expect(aliasCode).toContain(
+      'static observedAttributes = resolveObservedAttributes('
+    );
     expect(aliasCode).toContain('() => this.title');
     expect(aliasCode).toContain('deps.add(this.__prop_count)');
 
@@ -57,7 +59,9 @@ export default defineComponent(function Card(props: CardProps) {
 });
 `);
 
-    expect(interfaceCode).toContain('static __laniaPropNames = ["title","count"]');
+    expect(interfaceCode).toContain(
+      'static __laniaPropNames = ["title","count"]'
+    );
     expect(interfaceCode).toContain('() => this.count');
   });
 
@@ -92,7 +96,9 @@ export default defineComponent(function Card(props: CardProps) {
       fs.readFileSync(componentFile, 'utf8')
     );
 
-    expect(code).toContain('static __laniaPropNames = ["title","count","onSelect"]');
+    expect(code).toContain(
+      'static __laniaPropNames = ["title","count","onSelect"]'
+    );
     expect(code).toContain('deps.add(this.__prop_count)');
     expect(code).toContain('this.title');
 
@@ -140,7 +146,9 @@ export default defineComponent(function Card(props: { title?: string }) {
   return <div>{value}</div>;
 });
 `)
-    ).toThrow(/Computed property names are not supported when destructuring props/);
+    ).toThrow(
+      /Computed property names are not supported when destructuring props/
+    );
   });
 
   it('keeps component spread props in the runtime props expression', () => {
@@ -215,7 +223,9 @@ export default defineComponent(function Field() {
 
   it('exposes a compile report with slot and updater stats', () => {
     const reports: CompileReport[] = [];
-    const reportPlugin = createCompileReportPlugin((value) => reports.push(value));
+    const reportPlugin = createCompileReportPlugin((value) =>
+      reports.push(value)
+    );
 
     compileFunctionComponentTsx(
       '/virtual/Report.lania.tsx',

@@ -2,17 +2,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  type ChangedProps,
-  ReactiveElement,
-} from '@lania-v/runtime';
+import { type ChangedProps, ReactiveElement } from '@lania-v/runtime';
 import { createSignal } from '@lania-v/runtime';
-import {
-  AttrSlot,
-  ClassSlot,
-  StyleSlot,
-  TextSlot,
-} from '@lania-v/runtime';
+import { AttrSlot, ClassSlot, StyleSlot, TextSlot } from '@lania-v/runtime';
 
 const flushMicrotasks = async (times = 2): Promise<void> => {
   for (let index = 0; index < times; index += 1) {
@@ -105,9 +97,9 @@ describe('ReactiveElement', () => {
     expect(element.shadowRoot?.textContent).toBe('3');
     const host = element.shadowRoot?.querySelector('div');
     expect(host?.getAttribute('data-count')).toBe('3');
-    expect((host as HTMLDivElement | null)?.style.getPropertyValue('width')).toBe(
-      '30px'
-    );
+    expect(
+      (host as HTMLDivElement | null)?.style.getPropertyValue('width')
+    ).toBe('30px');
     expect(element.lifecycle).toEqual([
       'willUpdate',
       'updated',
@@ -141,9 +133,7 @@ describe('ReactiveElement', () => {
 
     const willUpdate = element.changedPropsLog.find(
       (entry) => entry.phase === 'willUpdate' && entry.label
-    ) as
-      | { label?: { previous: unknown; current: unknown } }
-      | undefined;
+    ) as { label?: { previous: unknown; current: unknown } } | undefined;
 
     expect(willUpdate?.label).toEqual({
       previous: null,

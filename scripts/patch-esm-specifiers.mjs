@@ -68,7 +68,10 @@ const rewriteInFile = async (filePath) => {
         continue;
       }
       // Replace only this occurrence (safe because match is exact substring).
-      updated = updated.replace(match[0], match[0].replace(specifier, resolved));
+      updated = updated.replace(
+        match[0],
+        match[0].replace(specifier, resolved)
+      );
     }
   }
 
@@ -110,8 +113,9 @@ const main = async () => {
       touched += 1;
     }
   }
-  console.log(`[patch-esm-specifiers] patched ${touched} file(s) under ${distDir}`);
+  console.log(
+    `[patch-esm-specifiers] patched ${touched} file(s) under ${distDir}`
+  );
 };
 
 await main();
-

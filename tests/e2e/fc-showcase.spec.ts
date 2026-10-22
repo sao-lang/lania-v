@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const openTab = async (page: Page, name: string) => {
-  const tabButton = page.locator('.filters').getByRole('button', { name, exact: true });
+  const tabButton = page
+    .locator('.filters')
+    .getByRole('button', { name, exact: true });
   await tabButton.evaluate((node: HTMLButtonElement) => {
     node.click();
   });
@@ -41,7 +43,9 @@ test.describe('FcShowcase demo', () => {
     await page.getByRole('button', { name: 'page-b' }).click();
     await expect(page.getByPlaceholder('type in Page B')).toBeVisible();
     await page.getByRole('button', { name: 'page-a' }).click();
-    await expect(page.getByPlaceholder('type in Page A')).toHaveValue('persist-me');
+    await expect(page.getByPlaceholder('type in Page A')).toHaveValue(
+      'persist-me'
+    );
   });
 
   test('resets Enhanced state when re-entering the tab', async ({ page }) => {
@@ -56,18 +60,26 @@ test.describe('FcShowcase demo', () => {
 
   test('handles ErrorBoundary reset', async ({ page }) => {
     await openTab(page, 'Suspense');
-    await page.getByRole('button', { name: 'toggle error', exact: true }).click();
-    await expect(page.getByText(/caught:.*manual suspense demo error/)).toBeVisible();
+    await page
+      .getByRole('button', { name: 'toggle error', exact: true })
+      .click();
+    await expect(
+      page.getByText(/caught:.*manual suspense demo error/)
+    ).toBeVisible();
   });
 
   test('resets Suspense state when re-entering the tab', async ({ page }) => {
     await openTab(page, 'Suspense');
     await page.getByRole('button', { name: 'name=lania' }).click();
-    await expect(page.getByText('Lazy component resolved: lania')).toBeVisible();
+    await expect(
+      page.getByText('Lazy component resolved: lania')
+    ).toBeVisible();
 
     await openTab(page, 'Reactivity');
     await openTab(page, 'Suspense');
-    await expect(page.getByText('Lazy component resolved: world')).toBeVisible();
+    await expect(
+      page.getByText('Lazy component resolved: world')
+    ).toBeVisible();
   });
 
   test('runs TransitionGroup list interactions', async ({ page }) => {
@@ -77,9 +89,13 @@ test.describe('FcShowcase demo', () => {
     await expect(page.locator('.list [data-key="b"]')).toBeVisible();
     await expect(page.locator('.list [data-key="c"]')).toBeVisible();
 
-    await page.getByRole('button', { name: 'append item', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'append item', exact: true })
+      .click();
     await page.getByRole('button', { name: 'move first', exact: true }).click();
-    await page.getByRole('button', { name: 'remove first', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'remove first', exact: true })
+      .click();
 
     await expect(page.getByText(/move:.*:move/).first()).toBeVisible();
     await expect(page.getByText(/leave:.*:leave/).first()).toBeVisible();

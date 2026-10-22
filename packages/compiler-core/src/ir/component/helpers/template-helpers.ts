@@ -66,7 +66,9 @@ export const getAttributeExpression = (
   node: ElementNode,
   name: string
 ): string | null => {
-  const attribute = node.attributes.find((candidate) => candidate.name === name);
+  const attribute = node.attributes.find(
+    (candidate) => candidate.name === name
+  );
 
   if (!attribute || attribute.value === null) {
     return null;
@@ -84,7 +86,9 @@ export const getAttributeStringValue = (
   node: ElementNode,
   name: string
 ): string | null => {
-  const attribute = node.attributes.find((candidate) => candidate.name === name);
+  const attribute = node.attributes.find(
+    (candidate) => candidate.name === name
+  );
 
   if (!attribute || attribute.value === null) {
     return null;
@@ -122,7 +126,9 @@ const normalizeJsxText = (text: string): string => {
 };
 
 // 把 JSX 属性初始化器尽量降成静态值；一旦发现动态表达式，就返回 null 表示无法静态化。
-const renderJsxAttributeValue = (value: ts.JsxAttributeValue | undefined): string | true | null => {
+const renderJsxAttributeValue = (
+  value: ts.JsxAttributeValue | undefined
+): string | true | null => {
   if (!value) {
     // 裸属性在 JSX 中等价于布尔 true，例如 `<input disabled />`。
     return true;
@@ -243,21 +249,23 @@ const renderStaticJsxNode = (node: ts.Node): string | null => {
   if (ts.isJsxElement(node)) {
     const tagName = node.openingElement.tagName.getText();
     // 开始标签和自闭合标签共享同一套“属性必须可静态化”的判断标准。
-    const attributes = node.openingElement.attributes.properties.map((property) => {
-      if (!ts.isJsxAttribute(property)) {
-        return null;
+    const attributes = node.openingElement.attributes.properties.map(
+      (property) => {
+        if (!ts.isJsxAttribute(property)) {
+          return null;
+        }
+
+        const value = renderJsxAttributeValue(property.initializer);
+
+        if (value === null) {
+          return null;
+        }
+
+        return value === true
+          ? property.name.getText()
+          : `${property.name.getText()}="${value}"`;
       }
-
-      const value = renderJsxAttributeValue(property.initializer);
-
-      if (value === null) {
-        return null;
-      }
-
-      return value === true
-        ? property.name.getText()
-        : `${property.name.getText()}="${value}"`;
-    });
+    );
 
     if (attributes.some((value) => value === null)) {
       return null;
@@ -288,7 +296,9 @@ const renderStaticJsxNode = (node: ts.Node): string | null => {
 };
 
 // 把字符串表达式包成一段临时 TSX，再借助 TypeScript parser 识别其是否能静态展开。
-export const renderStaticTemplateFromExpression = (expression: string): string | null => {
+export const renderStaticTemplateFromExpression = (
+  expression: string
+): string | null => {
   try {
     // 先把用户表达式包成一段合法 TSX，再借助 TS parser 做结构识别而不是手写字符串分析。
     const source = parseTypeScriptSource(
@@ -350,9 +360,9 @@ export const isListExpression = (expression: string): boolean => {
     // 这里只看“最终根调用是不是 `.map(...)`”，不继续追踪更复杂的链式推导。
     return Boolean(
       initializer &&
-        ts.isCallExpression(initializer) &&
-        ts.isPropertyAccessExpression(initializer.expression) &&
-        initializer.expression.name.text === 'map'
+      ts.isCallExpression(initializer) &&
+      ts.isPropertyAccessExpression(initializer.expression) &&
+      initializer.expression.name.text === 'map'
     );
   } catch {
     return false;
@@ -370,7 +380,9 @@ export const toStaticElementNode = (node: ElementNode): ElementNode => {
 };
 
 // 把静态属性记录重新序列化回 HTML 片段。
-export const renderStaticAttributes = (attributes: Record<string, string | true>): string => {
+export const renderStaticAttributes = (
+  attributes: Record<string, string | true>
+): string => {
   const pairs = Object.entries(attributes).map(([name, value]) => {
     return value === true ? name : `${name}="${value}"`;
   });
@@ -432,10 +444,14 @@ export const resolveWhenBranches = (
 
   // 只提取 `Then` / `Else` 的 children，自身包装标签不会进入最终分支子树。
   const truthyChildren = branchElements
-    .filter((candidate) => getEnhancedWhenBranchKind(candidate.tagName) === 'truthy')
+    .filter(
+      (candidate) => getEnhancedWhenBranchKind(candidate.tagName) === 'truthy'
+    )
     .flatMap((candidate) => candidate.children);
   const fallbackChildren = branchElements
-    .filter((candidate) => getEnhancedWhenBranchKind(candidate.tagName) === 'fallback')
+    .filter(
+      (candidate) => getEnhancedWhenBranchKind(candidate.tagName) === 'fallback'
+    )
     .flatMap((candidate) => candidate.children);
 
   return {

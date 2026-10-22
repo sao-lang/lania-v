@@ -15,7 +15,8 @@ export const __resetTransitionGroupStateForTests = (): void => {
 export const getTransitionGroupState = <TRenderable>(
   stateKey: string
 ): TransitionGroupState<TRenderable> | undefined => {
-  return transitionGroupStates.get(stateKey) as TransitionGroupState<TRenderable> | undefined;
+  return transitionGroupStates.get(stateKey) as
+    TransitionGroupState<TRenderable> | undefined;
 };
 
 export const setTransitionGroupState = <TRenderable>(

@@ -33,13 +33,15 @@ const writeString = (
   }
 };
 
-export const readRememberedAccount = (): string => readString(REMEMBERED_ACCOUNT_KEY);
+export const readRememberedAccount = (): string =>
+  readString(REMEMBERED_ACCOUNT_KEY);
 
 export const writeRememberedAccount = (value: string): void =>
   writeString(REMEMBERED_ACCOUNT_KEY, value, REMEMBERED_OPTIONS);
 
 /** 记录最近一次注册成功的账号，刷新后仍可提示“注册成功，请登录”。 */
-export const readSignedUpAccount = (): string => readString(SIGNED_UP_ACCOUNT_KEY);
+export const readSignedUpAccount = (): string =>
+  readString(SIGNED_UP_ACCOUNT_KEY);
 
 export const writeSignedUpAccount = (value: string): void =>
   writeString(SIGNED_UP_ACCOUNT_KEY, value, SIGNED_UP_OPTIONS);

@@ -10,8 +10,9 @@
         --bg1: #0b1020;
         --text: rgba(255, 255, 255, 0.92);
         --muted: rgba(255, 255, 255, 0.62);
-        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-          "PingFang SC", "Microsoft YaHei", sans-serif;
+        --sans:
+          ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+          Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
       }
 
       html,
@@ -24,9 +25,21 @@
         font-family: var(--sans);
         color: var(--text);
         background:
-          radial-gradient(1200px 720px at 12% -12%, rgba(139, 92, 246, 0.28), transparent 58%),
-          radial-gradient(900px 640px at 104% 16%, rgba(56, 189, 248, 0.2), transparent 56%),
-          radial-gradient(900px 640px at 46% 112%, rgba(16, 185, 129, 0.14), transparent 58%),
+          radial-gradient(
+            1200px 720px at 12% -12%,
+            rgba(139, 92, 246, 0.28),
+            transparent 58%
+          ),
+          radial-gradient(
+            900px 640px at 104% 16%,
+            rgba(56, 189, 248, 0.2),
+            transparent 56%
+          ),
+          radial-gradient(
+            900px 640px at 46% 112%,
+            rgba(16, 185, 129, 0.14),
+            transparent 58%
+          ),
           linear-gradient(180deg, var(--bg0), var(--bg1));
         background-attachment: fixed;
       }
@@ -50,7 +63,8 @@
       }
 
       .app-footnote code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         font-size: 11px;
         padding: 2px 6px;
         border-radius: 6px;

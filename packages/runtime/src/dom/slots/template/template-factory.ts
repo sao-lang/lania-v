@@ -11,7 +11,10 @@
  * - `writeTemplateBindingSlot()` 负责把 evaluate 结果写入 slot；
  * - `mountTemplateBinding()` / `mountHydratedBinding()` 分别处理纯客户端挂载与 hydration 接管。
  */
-import type { MountedStaticTemplate, StaticTemplate } from '../../../render/types';
+import type {
+  MountedStaticTemplate,
+  StaticTemplate,
+} from '../../../render/types';
 import {
   createHydratedTemplate,
   hasHydrationSlot,
@@ -22,7 +25,11 @@ import {
   resolveSlotAnchor,
   resolveTextSlotNode,
 } from '../../../render/dom';
-import { withEventHint, withEventModifiers, type EventModifier } from '../../../component/events';
+import {
+  withEventHint,
+  withEventModifiers,
+  type EventModifier,
+} from '../../../component/events';
 import type { ModelModifier } from '../../directives';
 import {
   AttrSlot,
@@ -42,7 +49,12 @@ import {
   RefSlot,
   createDirectiveSlotForBinding,
 } from '../bindings/directive-slots';
-import type { MountedBindingInstance, MountedFragmentBindingInstance, RetainedSlotLifecycle, TemplateBindingPayload } from './template-types';
+import type {
+  MountedBindingInstance,
+  MountedFragmentBindingInstance,
+  RetainedSlotLifecycle,
+  TemplateBindingPayload,
+} from './template-types';
 
 const createTemplateSlot = (
   mounted: MountedStaticTemplate,
@@ -52,7 +64,10 @@ const createTemplateSlot = (
   // binding.kind 与具体 slot 实现一一对应，这里是模板运行时的分发表。
   switch (binding.kind) {
     case 'text':
-      return new TextSlot(resolveTextSlotNode(mounted, binding.slotIndex, binding.path), index);
+      return new TextSlot(
+        resolveTextSlotNode(mounted, binding.slotIndex, binding.path),
+        index
+      );
     case 'attr':
       return new AttrSlot(
         resolveMountedTemplateNode(mounted, binding.path) as Element,
@@ -61,7 +76,8 @@ const createTemplateSlot = (
       );
     case 'prop':
       return new PropSlot(
-        resolveMountedTemplateNode(mounted, binding.path) as Element | HTMLElement,
+        resolveMountedTemplateNode(mounted, binding.path) as
+          Element | HTMLElement,
         binding.name ?? '',
         index
       );
@@ -86,9 +102,15 @@ const createTemplateSlot = (
         binding.listener
       );
     case 'ref':
-      return new RefSlot(resolveMountedTemplateNode(mounted, binding.path), index);
+      return new RefSlot(
+        resolveMountedTemplateNode(mounted, binding.path),
+        index
+      );
     case 'directive': {
-      const node = resolveMountedTemplateNode(mounted, binding.path) as HTMLElement;
+      const node = resolveMountedTemplateNode(
+        mounted,
+        binding.path
+      ) as HTMLElement;
       if (binding.directiveKind === 'model') {
         // `v-model` 需要专用 slot，负责值回写与事件监听协作。
         return new ModelBindingSlot(
@@ -123,38 +145,61 @@ const createTemplateSlot = (
     case 'if':
       return new IfSlot(
         resolveSlotAnchor(mounted, binding.slotIndex, binding.path),
-        binding.template ?? { html: '', template: document.createElement('template'), clone: () => document.createDocumentFragment() },
+        binding.template ?? {
+          html: '',
+          template: document.createElement('template'),
+          clone: () => document.createDocumentFragment(),
+        },
         index,
         binding.fallbackTemplate
       );
     case 'dynamic':
       return new DynamicSlot(
         resolveSlotAnchor(mounted, binding.slotIndex, binding.path),
-        binding.template ?? { html: '', template: document.createElement('template'), clone: () => document.createDocumentFragment() },
+        binding.template ?? {
+          html: '',
+          template: document.createElement('template'),
+          clone: () => document.createDocumentFragment(),
+        },
         index
       );
     case 'boundary':
       // boundary/teleport/keepalive 这类 slot 都依赖注释锚点维护一段独立区间。
       return new BoundarySlot(
         resolveSlotAnchor(mounted, binding.slotIndex, binding.path),
-        binding.template ?? { html: '', template: document.createElement('template'), clone: () => document.createDocumentFragment() },
+        binding.template ?? {
+          html: '',
+          template: document.createElement('template'),
+          clone: () => document.createDocumentFragment(),
+        },
         index,
         binding.fallbackTemplate
       );
     case 'teleport':
       return new TeleportSlot(
         resolveSlotAnchor(mounted, binding.slotIndex, binding.path),
-        binding.template ?? { html: '', template: document.createElement('template'), clone: () => document.createDocumentFragment() },
+        binding.template ?? {
+          html: '',
+          template: document.createElement('template'),
+          clone: () => document.createDocumentFragment(),
+        },
         index
       );
     case 'keepalive':
       return new KeepAliveSlot(
         resolveSlotAnchor(mounted, binding.slotIndex, binding.path),
-        binding.template ?? { html: '', template: document.createElement('template'), clone: () => document.createDocumentFragment() },
+        binding.template ?? {
+          html: '',
+          template: document.createElement('template'),
+          clone: () => document.createDocumentFragment(),
+        },
         index
       );
     default:
-      return new TextSlot(resolveTextSlotNode(mounted, binding.slotIndex, binding.path), index);
+      return new TextSlot(
+        resolveTextSlotNode(mounted, binding.slotIndex, binding.path),
+        index
+      );
   }
 };
 
@@ -201,8 +246,15 @@ const commitBindingValue = (
       typeof nextValue !== 'function'
         ? null
         : hint
-          ? withEventHint(nextValue as (event: Event) => unknown, hint, modifiers)
-          : withEventModifiers(nextValue as (event: Event) => unknown, modifiers);
+          ? withEventHint(
+              nextValue as (event: Event) => unknown,
+              hint,
+              modifiers
+            )
+          : withEventModifiers(
+              nextValue as (event: Event) => unknown,
+              modifiers
+            );
     slot.write(handler);
     return;
   }
@@ -243,7 +295,11 @@ class MountedBindingInstanceImpl implements MountedBindingInstance {
   ) {}
 
   update(...nextArgs: unknown[]): void {
-    for (let bindingIndex = 0; bindingIndex < this.bindings.length; bindingIndex += 1) {
+    for (
+      let bindingIndex = 0;
+      bindingIndex < this.bindings.length;
+      bindingIndex += 1
+    ) {
       const slot = this.slots[bindingIndex];
       if (!slot) {
         continue;
@@ -252,7 +308,10 @@ class MountedBindingInstanceImpl implements MountedBindingInstance {
       const binding = this.bindings[bindingIndex]!;
       const nextValue = evaluateBinding(binding, nextArgs);
       const previousValue = this.previousValues[bindingIndex];
-      if (previousValue !== UNINITIALIZED && Object.is(previousValue, nextValue)) {
+      if (
+        previousValue !== UNINITIALIZED &&
+        Object.is(previousValue, nextValue)
+      ) {
         continue;
       }
 
@@ -291,22 +350,37 @@ const createMountedBindingInstance = (
   const previousTail = root.lastChild;
   const mounted = mountStaticTemplate(root, template, { hydrate: false });
   const slots = bindings.map((binding, bindingIndex) =>
-    createTemplateSlot(mounted, binding, binding.slotIndex >= 0 ? binding.slotIndex : bindingIndex)
+    createTemplateSlot(
+      mounted,
+      binding,
+      binding.slotIndex >= 0 ? binding.slotIndex : bindingIndex
+    )
   );
-  const previousBindingValues: unknown[] = new Array(bindings.length).fill(UNINITIALIZED);
+  const previousBindingValues: unknown[] = new Array(bindings.length).fill(
+    UNINITIALIZED
+  );
   // 首次挂载后立刻执行一轮写入，让模板克隆结果与初始上下文同步。
-  for (let bindingIndex = 0; bindingIndex < bindings.length; bindingIndex += 1) {
+  for (
+    let bindingIndex = 0;
+    bindingIndex < bindings.length;
+    bindingIndex += 1
+  ) {
     const binding = bindings[bindingIndex]!;
     const slot = slots[bindingIndex];
     if (slot) {
-      previousBindingValues[bindingIndex] = writeTemplateBindingSlot(slot, binding, args);
+      previousBindingValues[bindingIndex] = writeTemplateBindingSlot(
+        slot,
+        binding,
+        args
+      );
     }
   }
 
   // 结构型 slot 或文本槽注入节点时，都会在首次写入阶段追加节点，
   // 因此需要按“本次挂载新增区间”收集；其余纯写入型绑定直接复用模板节点快照。
   const hasInjectedNodes = slots.some((slot) => {
-    const injected = (slot as { injectedNodes?: readonly Node[] }).injectedNodes;
+    const injected = (slot as { injectedNodes?: readonly Node[] })
+      .injectedNodes;
     return injected !== undefined && injected.length > 0;
   });
   let nodes = mounted.nodes;
@@ -334,9 +408,16 @@ export const mountTemplateBinding = (
   ...args: unknown[]
 ): MountedFragmentBindingInstance => {
   const fragment = document.createDocumentFragment();
-  const instance = createMountedBindingInstance(fragment, template, bindings, args);
+  const instance = createMountedBindingInstance(
+    fragment,
+    template,
+    bindings,
+    args
+  );
   // 直接挂到实例上，避免再包一层对象；fragment 仅供调用方整体搬运节点。
-  return Object.assign(instance, { fragment }) as MountedFragmentBindingInstance;
+  return Object.assign(instance, {
+    fragment,
+  }) as MountedFragmentBindingInstance;
 };
 
 /**
@@ -435,7 +516,9 @@ export const mountHydratedBinding = (
       binding.slotIndex >= 0 ? binding.slotIndex : bindingIndex
     )
   );
-  const previousBindingValues: unknown[] = new Array(bindings.length).fill(UNINITIALIZED);
+  const previousBindingValues: unknown[] = new Array(bindings.length).fill(
+    UNINITIALIZED
+  );
 
   bindings.forEach((binding, bindingIndex) => {
     const slot = slots[bindingIndex];
@@ -445,7 +528,11 @@ export const mountHydratedBinding = (
 
     // 先 hydrate 再 write，确保 slot 内部拿到的是服务端已有 DOM，而不是新建节点。
     hydrateTemplateSlot(mounted, binding, slot, ...args);
-    previousBindingValues[bindingIndex] = writeTemplateBindingSlot(slot, binding, args);
+    previousBindingValues[bindingIndex] = writeTemplateBindingSlot(
+      slot,
+      binding,
+      args
+    );
   });
 
   return new MountedBindingInstanceImpl(

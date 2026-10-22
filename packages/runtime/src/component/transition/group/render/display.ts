@@ -24,7 +24,10 @@ export const buildGroupDisplay = <TRenderable>(
   [...leavingSnapshots.values()]
     .sort((left, right) => left.previousIndex - right.previousIndex)
     .forEach((entry) => {
-      const insertAt = Math.max(0, Math.min(entry.previousIndex, display.length));
+      const insertAt = Math.max(
+        0,
+        Math.min(entry.previousIndex, display.length)
+      );
       display.splice(insertAt, 0, entry.snapshot);
     });
   return display;
@@ -103,7 +106,11 @@ export const syncDomHostStaticEntries = <TRenderable>(options: {
   const nextNodeSet = new Set(nextNodes);
   // 只同步 activeAnchor 之前、属于静态展示区间的节点，避免误碰后面的动态 active block。
   const activeNodes: ChildNode[] = [...container.childNodes].filter(
-    (node) => node !== activeAnchor && (node.compareDocumentPosition(activeAnchor) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+    (node) =>
+      node !== activeAnchor &&
+      (node.compareDocumentPosition(activeAnchor) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0
   );
 
   activeNodes.forEach((node) => {
@@ -125,7 +132,8 @@ export const renderSnapshotDisplay = <TRenderable>(options: {
   currentSnapshots: readonly TRenderable[];
   leavingSnapshots: Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>;
 }): TRenderable[] | HTMLElement => {
-  const { stateKey, transitionTag, currentSnapshots, leavingSnapshots } = options;
+  const { stateKey, transitionTag, currentSnapshots, leavingSnapshots } =
+    options;
   const display = buildGroupDisplay(currentSnapshots, leavingSnapshots);
   const current = getTransitionGroupState<TRenderable>(stateKey);
 

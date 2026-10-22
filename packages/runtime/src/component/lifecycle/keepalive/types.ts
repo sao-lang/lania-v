@@ -52,8 +52,9 @@ export interface KeepAliveOptions<TValue = unknown> {
 
 export type KeepAliveNodeHookSource = KeepAliveLifecycleHooks<readonly Node[]>;
 
-export interface KeepAliveBlockSource<TBindings = unknown>
-  extends KeepAliveHookSource {
+export interface KeepAliveBlockSource<
+  TBindings = unknown,
+> extends KeepAliveHookSource {
   __lania_keepalive: 'block';
   payload: unknown;
   bindings?: readonly TBindings[];
@@ -61,10 +62,7 @@ export interface KeepAliveBlockSource<TBindings = unknown>
 
 export type KeepAliveBlockKind = 'contract';
 
-export interface ResolvedKeepAliveBlock<
-  TValue = unknown,
-  TBindings = unknown,
-> {
+export interface ResolvedKeepAliveBlock<TValue = unknown, TBindings = unknown> {
   payload: KeepAliveBlockSource<TBindings>;
   runtimeOptions: KeepAliveOptions<TValue>;
   runtimeSourceKind: KeepAliveBlockKind;
@@ -128,7 +126,9 @@ export interface KeepAliveSourceFactory<TValue> {
 
 export interface KeepAliveNodeFactory<TValue> {
   createInstance(): KeepAliveQueuedInstance<TValue>;
-  createEntry(key: string): KeepAliveInstanceEntry<KeepAliveQueuedInstance<TValue>>;
+  createEntry(
+    key: string
+  ): KeepAliveInstanceEntry<KeepAliveQueuedInstance<TValue>>;
 }
 
 export interface KeepAliveMountedFactory<
@@ -152,10 +152,7 @@ export interface KeepAliveSurfaceDef<
   readValue(): TValue;
   mounted: TMounted;
   initiallyActive?: boolean;
-  extend?(
-    instance: KeepAliveInstance<TValue>,
-    mounted: TMounted
-  ): TInstance;
+  extend?(instance: KeepAliveInstance<TValue>, mounted: TMounted): TInstance;
 }
 
 // RuntimeController 把 bucket 状态、宿主状态与 uncached 分支整合到同一控制面。
@@ -176,7 +173,11 @@ export interface KeepAliveRuntimeController<
   replaceWithUncached(instance: TInstance): readonly Node[];
   clearUncached(): boolean;
   clearActive(): boolean;
-  syncActive(bucket: KeepAliveBucket<TEntry>, key: string, callbacks?: KeepAliveCallbacks<TValue>): void;
+  syncActive(
+    bucket: KeepAliveBucket<TEntry>,
+    key: string,
+    callbacks?: KeepAliveCallbacks<TValue>
+  ): void;
   destroy(): void;
 }
 
@@ -248,9 +249,10 @@ export interface KeepAliveInstance<TValue = unknown> {
   destroy(): void;
 }
 
-export type KeepAliveQueuedInstance<TValue = unknown> = KeepAliveInstance<TValue> & {
-  queueNodes(nodes: readonly Node[]): void;
-};
+export type KeepAliveQueuedInstance<TValue = unknown> =
+  KeepAliveInstance<TValue> & {
+    queueNodes(nodes: readonly Node[]): void;
+  };
 
 export const isQueuedInstance = (
   value: unknown

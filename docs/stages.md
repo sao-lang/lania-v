@@ -46,23 +46,23 @@ TSX
 
 ### 支持面
 
-| Component | 编译主路径 | Runtime JSX | SSR | Hydration | 备注 |
-| --- | --- | --- | --- | --- | --- |
-| `When` | Yes | Compat layer | Yes | Yes | 结构分支语义由编译器 lowering |
-| `Then` / `Else` | Yes | Compat layer | N/A | N/A | 仅作为 `When` 的编译期标记 |
-| `Switch` / `Case` / `Default` | Yes | Compat layer | Yes | Yes | `Switch value` 做取值匹配 |
-| `Match` | Yes | Compat layer | Yes | Yes | 布尔分支，等同 `Case when` |
-| `Each` | Yes | Compat layer | Yes | Yes | lower 到列表/slot IR |
-| `Fragment` | Yes | Compat layer | Yes | Yes | 语法糖，最终被 flatten |
-| `Dynamic` | Yes | Compat layer | Yes | Yes | 动态组件解析进入 IR |
-| `Teleport` | Yes | Compat layer | Yes | Yes | 已接入跨容器 SSR / Hydration |
-| `KeepAlive` | Yes | Compat layer | Yes | Yes | contract-first，仍在持续收紧兼容面 |
-| `Transition` / `TransitionGroup` | Yes | Compat layer | Yes | Yes | 已有专用 `TransitionIR` 与共享 host scaffold |
-| `LazyLoad` | Yes | Compat layer | Yes | Yes | 走统一 boundary payload |
-| `ErrorBoundary` | Yes | Compat layer | Yes | Yes | 主路径已经共享 boundary host |
-| `Suspense` | Yes | Compat layer | Yes | Yes | 支持 fallback、流式 chunk 与恢复 |
-| `Await` / `Virtual` | Yes | Compat layer | Yes | Yes | `Virtual` 支持可变行高与双向滚动 |
-| `Reach` | Yes | Compat layer | N/A | N/A | 触底/进入视口哨兵 |
+| Component                        | 编译主路径 | Runtime JSX  | SSR | Hydration | 备注                                         |
+| -------------------------------- | ---------- | ------------ | --- | --------- | -------------------------------------------- |
+| `When`                           | Yes        | Compat layer | Yes | Yes       | 结构分支语义由编译器 lowering                |
+| `Then` / `Else`                  | Yes        | Compat layer | N/A | N/A       | 仅作为 `When` 的编译期标记                   |
+| `Switch` / `Case` / `Default`    | Yes        | Compat layer | Yes | Yes       | `Switch value` 做取值匹配                    |
+| `Match`                          | Yes        | Compat layer | Yes | Yes       | 布尔分支，等同 `Case when`                   |
+| `Each`                           | Yes        | Compat layer | Yes | Yes       | lower 到列表/slot IR                         |
+| `Fragment`                       | Yes        | Compat layer | Yes | Yes       | 语法糖，最终被 flatten                       |
+| `Dynamic`                        | Yes        | Compat layer | Yes | Yes       | 动态组件解析进入 IR                          |
+| `Teleport`                       | Yes        | Compat layer | Yes | Yes       | 已接入跨容器 SSR / Hydration                 |
+| `KeepAlive`                      | Yes        | Compat layer | Yes | Yes       | contract-first，仍在持续收紧兼容面           |
+| `Transition` / `TransitionGroup` | Yes        | Compat layer | Yes | Yes       | 已有专用 `TransitionIR` 与共享 host scaffold |
+| `LazyLoad`                       | Yes        | Compat layer | Yes | Yes       | 走统一 boundary payload                      |
+| `ErrorBoundary`                  | Yes        | Compat layer | Yes | Yes       | 主路径已经共享 boundary host                 |
+| `Suspense`                       | Yes        | Compat layer | Yes | Yes       | 支持 fallback、流式 chunk 与恢复             |
+| `Await` / `Virtual`              | Yes        | Compat layer | Yes | Yes       | `Virtual` 支持可变行高与双向滚动             |
+| `Reach`                          | Yes        | Compat layer | N/A | N/A       | 触底/进入视口哨兵                            |
 
 ### 当前可信结论
 
@@ -129,11 +129,11 @@ TSX
 
 对应语义：
 
-| Hook | 触发时机 | 入参 | 说明 |
-| --- | --- | --- | --- |
-| `onMount` | 组件首次挂载并完成首屏建立后 | 无 | 用于启动副作用、读取 DOM、注册外部资源 |
-| `onCleanup` | 组件销毁前 | 无 | 用于解绑、释放资源、取消订阅 |
-| `onUpdated` | 每次更新完成后 | `changedProps` | 用于读取新 DOM、同步第三方状态 |
+| Hook        | 触发时机                     | 入参           | 说明                                   |
+| ----------- | ---------------------------- | -------------- | -------------------------------------- |
+| `onMount`   | 组件首次挂载并完成首屏建立后 | 无             | 用于启动副作用、读取 DOM、注册外部资源 |
+| `onCleanup` | 组件销毁前                   | 无             | 用于解绑、释放资源、取消订阅           |
+| `onUpdated` | 每次更新完成后               | `changedProps` | 用于读取新 DOM、同步第三方状态         |
 
 额外约束：
 

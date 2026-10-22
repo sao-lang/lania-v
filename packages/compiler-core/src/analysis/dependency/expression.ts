@@ -27,7 +27,10 @@ export const getDependencyAccessPath = (expression: ts.Node): string[] => {
   while (true) {
     const parent = current.parent;
 
-    if (ts.isPropertyAccessExpression(parent) && parent.expression === current) {
+    if (
+      ts.isPropertyAccessExpression(parent) &&
+      parent.expression === current
+    ) {
       accessPath.push(parent.name.text);
       current = parent;
       continue;
@@ -62,7 +65,10 @@ const extractStorePathRead = (
     return null;
   }
 
-  if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) {
+  if (
+    !ts.isPropertyAccessExpression(node) &&
+    !ts.isElementAccessExpression(node)
+  ) {
     return null;
   }
 
@@ -71,7 +77,10 @@ const extractStorePathRead = (
   let storeName: string | null = null;
 
   // 从访问链尾部反向回溯，直到找到以 `this.<store>` 为根的路径。
-  while (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
+  while (
+    ts.isPropertyAccessExpression(current) ||
+    ts.isElementAccessExpression(current)
+  ) {
     if (ts.isPropertyAccessExpression(current)) {
       if (current.expression.kind === ts.SyntaxKind.ThisKeyword) {
         storeName = current.name.text;
@@ -124,7 +133,8 @@ const isPropertyRead = (node: ts.PropertyAccessExpression): boolean => {
   }
 
   if (
-    (ts.isPrefixUnaryExpression(parent) || ts.isPostfixUnaryExpression(parent)) &&
+    (ts.isPrefixUnaryExpression(parent) ||
+      ts.isPostfixUnaryExpression(parent)) &&
     parent.operand === node &&
     (parent.operator === ts.SyntaxKind.PlusPlusToken ||
       parent.operator === ts.SyntaxKind.MinusMinusToken)
@@ -141,7 +151,8 @@ const isUntrackCallee = (expression: ts.LeftHandSideExpression): boolean => {
   // `untrack(...)` 中的读取不应进入依赖图，因此这里先识别它的调用形式。
   return (
     (ts.isIdentifier(expression) && expression.text === 'untrack') ||
-    (ts.isPropertyAccessExpression(expression) && expression.name.text === 'untrack')
+    (ts.isPropertyAccessExpression(expression) &&
+      expression.name.text === 'untrack')
   );
 };
 
@@ -153,7 +164,10 @@ const getUntrackCallback = (
   }
 
   const callback = node.arguments[0];
-  if (!callback || (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))) {
+  if (
+    !callback ||
+    (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))
+  ) {
     return null;
   }
 
@@ -245,18 +259,23 @@ const collectDependencyCalls = (
         kind: 'this-property-read',
         name: node.name.text,
         text: node.getText(),
-        accessPath: getDependencyAccessPath(node as unknown as ts.CallExpression),
+        accessPath: getDependencyAccessPath(
+          node as unknown as ts.CallExpression
+        ),
       });
     }
 
     const storeRead = extractStorePathRead(node, storeNames);
     if (storeRead) {
-      dependencies.set(`store:${storeRead.storeName}:${storeRead.accessPath.join('.')}`, {
-        kind: 'store-path-read',
-        name: storeRead.storeName,
-        text: node.getText(),
-        accessPath: storeRead.accessPath,
-      });
+      dependencies.set(
+        `store:${storeRead.storeName}:${storeRead.accessPath.join('.')}`,
+        {
+          kind: 'store-path-read',
+          name: storeRead.storeName,
+          text: node.getText(),
+          accessPath: storeRead.accessPath,
+        }
+      );
     }
 
     // 其余节点继续递归下探，形成一次完整 AST 扫描。
@@ -306,11 +325,16 @@ export const parseBlockNode = (body: string): ts.Block => {
   return statement.body;
 };
 
-export const mergeDependencies = (...groups: ExpressionDependency[][]): ExpressionDependency[] => {
+export const mergeDependencies = (
+  ...groups: ExpressionDependency[][]
+): ExpressionDependency[] => {
   const merged = new Map<string, ExpressionDependency>();
   groups.flat().forEach((dependency) => {
     // 以 kind + name + path 作为稳定键，避免不同来源的同一依赖重复入表。
-    merged.set(`${dependency.kind}:${dependency.name}:${dependency.accessPath.join('.')}`, dependency);
+    merged.set(
+      `${dependency.kind}:${dependency.name}:${dependency.accessPath.join('.')}`,
+      dependency
+    );
   });
   return [...merged.values()];
 };
@@ -321,7 +345,11 @@ export const analyzeExpressionDependencies = (
   storeNames?: ReadonlySet<string>
 ): ExpressionDependency[] => {
   // 表达式分析直接走 `parseExpressionNode`，避免 block 语义把局部语句也带进来。
-  return collectDependencyCalls(parseExpressionNode(expression), propertyReadNames, storeNames);
+  return collectDependencyCalls(
+    parseExpressionNode(expression),
+    propertyReadNames,
+    storeNames
+  );
 };
 
 export const analyzeBlockDependencies = (
@@ -330,5 +358,9 @@ export const analyzeBlockDependencies = (
   storeNames?: ReadonlySet<string>
 ): ExpressionDependency[] => {
   // block 分析保留语句级上下文，适合 effect / lifecycle / setup statement 这类场景。
-  return collectDependencyCalls(parseBlockNode(body), propertyReadNames, storeNames);
+  return collectDependencyCalls(
+    parseBlockNode(body),
+    propertyReadNames,
+    storeNames
+  );
 };

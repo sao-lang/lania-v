@@ -30,16 +30,22 @@ import type {
 } from './types';
 
 // 非 hydration 挂载占绝大多数，共享只读空集合可省掉每个模板实例两次分配。
-const EMPTY_HYDRATION_SLOTS: ReadonlyMap<number, HydrationSlotRecord> = new Map();
-const EMPTY_HYDRATION_BOUNDARIES: readonly HydrationBoundaryRecord[] = Object.freeze([]);
+const EMPTY_HYDRATION_SLOTS: ReadonlyMap<number, HydrationSlotRecord> =
+  new Map();
+const EMPTY_HYDRATION_BOUNDARIES: readonly HydrationBoundaryRecord[] =
+  Object.freeze([]);
 
-export const getEmptyHydrationSlots = (): ReadonlyMap<number, HydrationSlotRecord> => {
+export const getEmptyHydrationSlots = (): ReadonlyMap<
+  number,
+  HydrationSlotRecord
+> => {
   return EMPTY_HYDRATION_SLOTS;
 };
 
-export const getEmptyHydrationBoundaries = (): readonly HydrationBoundaryRecord[] => {
-  return EMPTY_HYDRATION_BOUNDARIES;
-};
+export const getEmptyHydrationBoundaries =
+  (): readonly HydrationBoundaryRecord[] => {
+    return EMPTY_HYDRATION_BOUNDARIES;
+  };
 
 // 很多 hydration 判断都需要区分注释节点，因为 slot/boundary marker 都以注释形式存在。
 const isCommentNode = (node: Node): node is Comment => {
@@ -159,7 +165,9 @@ const collectHydrationCommentsFromRoot = (root: Node): Comment[] => {
   return comments;
 };
 
-const collectHydrationCommentsFromNodes = (nodes: readonly Node[]): Comment[] => {
+const collectHydrationCommentsFromNodes = (
+  nodes: readonly Node[]
+): Comment[] => {
   const comments: Comment[] = [];
   const visit = (node: Node): void => {
     if (node.nodeType === Node.COMMENT_NODE) {
@@ -245,7 +253,9 @@ const getLogicalChildNode = (
         const endIndex = children.indexOf(record.end);
 
         if (endIndex === -1) {
-          throw new Error(`Hydration end marker for slot ${record.index} was not found.`);
+          throw new Error(
+            `Hydration end marker for slot ${record.index} was not found.`
+          );
         }
 
         logicalCursor += 1;
@@ -267,7 +277,9 @@ const getLogicalChildNode = (
     cursor += 1;
   }
 
-  throw new Error(`Template logical child at index ${logicalIndex} was not found.`);
+  throw new Error(
+    `Template logical child at index ${logicalIndex} was not found.`
+  );
 };
 
 const ensureHydratedTextNode = (record: HydrationSlotRecord): Text => {
@@ -297,7 +309,10 @@ export const createStaticTemplate = (html: string): StaticTemplate => {
   // 编译器会把动态文本槽位先输出成 `__LANIA_SLOT_N__` 占位文本。
   // 这里提前把占位符拆成真实 Text 节点，避免初始化前占位串暴露到页面，
   // 同时保证后续 path 解析仍能和编译期 DOM 结构一一对应。
-  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(
+    template.content,
+    NodeFilter.SHOW_TEXT
+  );
   const placeholder = /__LANIA_SLOT_\d+__/g;
   const textNodes: Text[] = [];
   let current = walker.nextNode();
@@ -329,7 +344,9 @@ export const createStaticTemplate = (html: string): StaticTemplate => {
       const matchIndex = match.index ?? 0;
 
       if (matchIndex > cursor) {
-        fragment.append(document.createTextNode(text.data.slice(cursor, matchIndex)));
+        fragment.append(
+          document.createTextNode(text.data.slice(cursor, matchIndex))
+        );
       }
 
       fragment.append(document.createTextNode(''));
@@ -360,7 +377,11 @@ export const mountStaticTemplate = (
 ): MountedStaticTemplate => {
   // 只在调用方未显式关闭 hydrate、且 root 已带 SSR 注释 marker 时复用现有 DOM。
   // 这一步不会验证 DOM 是否和模板完全一致；真正的细粒度对齐发生在后续路径/slot 解析阶段。
-  if (options.hydrate !== false && root.childNodes.length > 0 && hasHydrationMarkers(root)) {
+  if (
+    options.hydrate !== false &&
+    root.childNodes.length > 0 &&
+    hasHydrationMarkers(root)
+  ) {
     const nodes = getRootNodes(root);
     const comments = collectHydrationCommentsFromRoot(root);
     return {
@@ -441,11 +462,19 @@ export const resolveMountedTemplateNode = (
 
   // hydration 模式下不能直接按物理 childNodes 下标取节点，因为注释 marker 也占位。
   // 这里始终沿“逻辑路径”下钻，保证编译期 path 在 SSR / CSR 两条路径下都复用同一套坐标。
-  let current = getLogicalChildNode(mounted.nodes, path[0]!, mounted.hydrationSlots);
+  let current = getLogicalChildNode(
+    mounted.nodes,
+    path[0]!,
+    mounted.hydrationSlots
+  );
 
   for (const index of path.slice(1)) {
     // 进入子树后仍要继续按“逻辑子节点”而非真实 childNodes 遍历。
-    current = getLogicalChildNode([...current.childNodes], index, mounted.hydrationSlots);
+    current = getLogicalChildNode(
+      [...current.childNodes],
+      index,
+      mounted.hydrationSlots
+    );
   }
 
   return current;
@@ -554,7 +583,9 @@ export const readHydrationBoundaries = (
     return [...mounted.hydrationBoundaries];
   }
 
-  return mounted.hydrationBoundaries.filter((record) => record.component === component);
+  return mounted.hydrationBoundaries.filter(
+    (record) => record.component === component
+  );
 };
 
 const resolveTeleportTarget = (value: unknown): Element | null => {
@@ -587,7 +618,10 @@ export const readTeleportNodes = (
   }
 
   // teleport 内容实际被安置在目标容器上，需要去目标节点中重新扫描 marker。
-  const records = collectCommentBoundedNodes(resolvedTarget, TELEPORT_CONTAINER_PATTERN);
+  const records = collectCommentBoundedNodes(
+    resolvedTarget,
+    TELEPORT_CONTAINER_PATTERN
+  );
   const match = records.find((record) => Number(record.id) === slotIndex);
 
   if (!match) {

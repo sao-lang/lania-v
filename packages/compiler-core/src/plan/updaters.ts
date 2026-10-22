@@ -58,7 +58,9 @@ const getEntryByUpdater = (
   updaterName: string
 ): DependencyEntryIR | undefined => {
   // slot 分配阶段只知道 updater 名称，这里回查依赖分析结果补齐依赖元信息。
-  return component.dependencyAnalysis.entries.find((entry) => entry.updater === updaterName);
+  return component.dependencyAnalysis.entries.find(
+    (entry) => entry.updater === updaterName
+  );
 };
 
 // computed 以 memo 字段暴露后，读取既可能表现为调用 `this.x()`，
@@ -67,7 +69,10 @@ const isComputedDependency = (
   dependency: DependencyEntryIR['signalDependencies'][number],
   computedNames: ReadonlySet<string>
 ): boolean => {
-  if (dependency.kind !== 'this-property-read' && dependency.kind !== 'this-signal-call') {
+  if (
+    dependency.kind !== 'this-property-read' &&
+    dependency.kind !== 'this-signal-call'
+  ) {
     return false;
   }
 
@@ -95,7 +100,12 @@ const resolveLeafDependencies = (
   const nextChain = new Set(chain).add(name);
 
   return (computedDependencyChain[name] ?? []).flatMap((dependency) =>
-    resolveLeafDependencies(computedDependencyChain, computedNames, dependency, nextChain)
+    resolveLeafDependencies(
+      computedDependencyChain,
+      computedNames,
+      dependency,
+      nextChain
+    )
   );
 };
 
@@ -104,7 +114,9 @@ const createSlotUpdater = (
   slot: AllocatedSlotIR
 ): GeneratedUpdaterIR => {
   const entry = getEntryByUpdater(component, slot.updater);
-  const computedNames = new Set(component.computed.map((computed) => computed.name));
+  const computedNames = new Set(
+    component.computed.map((computed) => computed.name)
+  );
 
   if (slot.type === 'event') {
     // 事件绑定只在挂载期执行，不参与 signal 驱动更新。
@@ -130,7 +142,8 @@ const createSlotUpdater = (
       slotIndices: [slot.slotIndex],
       dependencies: (() => {
         const dependencies = new Set<string>();
-        const computedDependencyChain = component.dependencyAnalysis.computedDependencyChain;
+        const computedDependencyChain =
+          component.dependencyAnalysis.computedDependencyChain;
 
         (entry?.signalDependencies ?? []).forEach((dependency) => {
           if (isComputedDependency(dependency, computedNames)) {
@@ -145,7 +158,9 @@ const createSlotUpdater = (
 
           if (dependency.kind === 'store-path-read') {
             // store 依赖保留为带路径前缀的键，便于后续区分普通 signal。
-            dependencies.add(`store:${dependency.name}:${dependency.accessPath.join('.')}`);
+            dependencies.add(
+              `store:${dependency.name}:${dependency.accessPath.join('.')}`
+            );
             return;
           }
 
@@ -166,7 +181,8 @@ const createSlotUpdater = (
     slotIndices: [slot.slotIndex],
     dependencies: (() => {
       const dependencies = new Set<string>();
-      const computedDependencyChain = component.dependencyAnalysis.computedDependencyChain;
+      const computedDependencyChain =
+        component.dependencyAnalysis.computedDependencyChain;
 
       (entry?.signalDependencies ?? []).forEach((dependency) => {
         if (isComputedDependency(dependency, computedNames)) {
@@ -180,7 +196,9 @@ const createSlotUpdater = (
         }
 
         if (dependency.kind === 'store-path-read') {
-          dependencies.add(`store:${dependency.name}:${dependency.accessPath.join('.')}`);
+          dependencies.add(
+            `store:${dependency.name}:${dependency.accessPath.join('.')}`
+          );
           return;
         }
 
@@ -193,7 +211,9 @@ const createSlotUpdater = (
   };
 };
 
-const createComputedUpdater = (entry: DependencyEntryIR): GeneratedUpdaterIR => {
+const createComputedUpdater = (
+  entry: DependencyEntryIR
+): GeneratedUpdaterIR => {
   return {
     name: entry.updater,
     kind: 'computed',
@@ -233,18 +253,22 @@ export const generateComponentUpdaters = (
 ): UpdaterGenerationIR => {
   // 优化阶段已合并的 slot，不再生成单独 updater。
   const mergedSlotIndices = new Set(
-    component.optimizationPass.expressionMerges.flatMap((group) => group.slotIndices)
+    component.optimizationPass.expressionMerges.flatMap(
+      (group) => group.slotIndices
+    )
   );
   // 多 slot merge 直接转成运行时可消费的 updater 描述，保留优化阶段已有依赖结果。
-  const mergedUpdaters = component.optimizationPass.expressionMerges.map((group) => ({
-    name: group.updaterName,
-    kind: 'multi-slot' as const,
-    source: 'slot' as const,
-    phase: 'update' as const,
-    slotIndices: group.slotIndices,
-    dependencies: group.dependencies,
-    expression: group.expression,
-  }));
+  const mergedUpdaters = component.optimizationPass.expressionMerges.map(
+    (group) => ({
+      name: group.updaterName,
+      kind: 'multi-slot' as const,
+      source: 'slot' as const,
+      phase: 'update' as const,
+      slotIndices: group.slotIndices,
+      dependencies: group.dependencies,
+      expression: group.expression,
+    })
+  );
   // 未被合并的 slot 继续按单 slot 规则生成 updater。
   const slotUpdaters = component.slotAllocation.slots
     .filter((slot) => !mergedSlotIndices.has(slot.slotIndex))

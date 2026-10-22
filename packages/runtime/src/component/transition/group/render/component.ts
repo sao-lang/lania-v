@@ -134,13 +134,7 @@ export const renderGroup = <TRenderable>(options: {
   renderEntries: () => readonly TRenderable[];
   explicitKeys?: readonly PropertyKey[];
 }): RenderedGroup<TRenderable> => {
-  const {
-    payload,
-    host,
-    getElements,
-    renderEntries,
-    explicitKeys,
-  } = options;
+  const { payload, host, getElements, renderEntries, explicitKeys } = options;
   const {
     hostMode,
     stateKey,
@@ -184,7 +178,9 @@ const readGroupPayload = (
   }
 
   const transitionRecord = (payload as { transition?: unknown }).transition;
-  return transitionRecord && typeof transitionRecord === 'object' ? payload : null;
+  return transitionRecord && typeof transitionRecord === 'object'
+    ? payload
+    : null;
 };
 
 const hasTransitionPhase = (
@@ -203,7 +199,8 @@ const readTransitionHook = <THook>(
 
   for (const hookName of payloadHookNames) {
     // 同一语义兼容 `onEnter` / `enter` 之类双命名，优先返回第一个存在的 hook。
-    const candidate = payloadHooks?.[hookName as keyof NonNullable<typeof payloadHooks>];
+    const candidate =
+      payloadHooks?.[hookName as keyof NonNullable<typeof payloadHooks>];
     if (candidate !== undefined) {
       return candidate as THook;
     }
@@ -218,7 +215,9 @@ export const resolveGroupOptions = (options: {
 }): ResolvedGroupOptions => {
   const payload = readGroupPayload(options.payload);
   if (!payload) {
-    throw new Error('TransitionGroup runtime execution requires a shared transition payload.');
+    throw new Error(
+      'TransitionGroup runtime execution requires a shared transition payload.'
+    );
   }
   const transitionName = payload.transition.name;
   const transitionTag = payload.transition.tag;

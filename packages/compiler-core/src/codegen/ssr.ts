@@ -97,22 +97,35 @@ const renderDynamicAttribute = (attribute: DynamicAttributeIR): string => {
 
 const renderElementOpen = (node: ElementIR): string => {
   // `class` / `style` 允许同时出现静态值和动态值，因此需要单独拆开处理。
-  const dynamicClassAttribute = node.dynamicAttributes.find((attribute) => attribute.name === 'class');
-  const dynamicStyleAttribute = node.dynamicAttributes.find((attribute) => attribute.name === 'style');
+  const dynamicClassAttribute = node.dynamicAttributes.find(
+    (attribute) => attribute.name === 'class'
+  );
+  const dynamicStyleAttribute = node.dynamicAttributes.find(
+    (attribute) => attribute.name === 'style'
+  );
   const staticClassValue =
-    typeof node.staticAttributes.class === 'string' ? node.staticAttributes.class : '';
+    typeof node.staticAttributes.class === 'string'
+      ? node.staticAttributes.class
+      : '';
   const staticStyleValue =
-    typeof node.staticAttributes.style === 'string' ? node.staticAttributes.style : '';
+    typeof node.staticAttributes.style === 'string'
+      ? node.staticAttributes.style
+      : '';
   const staticAttributeEntries = Object.entries(node.staticAttributes).filter(
     ([name]) =>
-      !((name === 'class' && dynamicClassAttribute) || (name === 'style' && dynamicStyleAttribute))
+      !(
+        (name === 'class' && dynamicClassAttribute) ||
+        (name === 'style' && dynamicStyleAttribute)
+      )
   );
   const parts = [
     // 静态属性先内联进起始标签，动态 class/style 再单独通过 helper 合并，
     // 避免静态值和运行时值互相覆盖。
-    quote(`<${node.tagName}${staticAttributeEntries
-      .map(([name, value]) => renderStaticAttribute(name, value))
-      .join('')}`),
+    quote(
+      `<${node.tagName}${staticAttributeEntries
+        .map(([name, value]) => renderStaticAttribute(name, value))
+        .join('')}`
+    ),
     dynamicClassAttribute
       ? `ssrSerializeAttribute("class", [${quote(staticClassValue)}, ${evaluateExpression(
           dynamicClassAttribute.expression
@@ -124,7 +137,9 @@ const renderElementOpen = (node: ElementIR): string => {
         )}])`
       : null,
     ...node.dynamicAttributes
-      .filter((attribute) => attribute.name !== 'class' && attribute.name !== 'style')
+      .filter(
+        (attribute) => attribute.name !== 'class' && attribute.name !== 'style'
+      )
       .map((attribute) => renderDynamicAttribute(attribute)),
     // 起始标签的 `>` 也按字面量参与拼接，保证 open tag 整体是连续表达式。
     quote('>'),
@@ -140,21 +155,32 @@ const renderElementClose = (node: ElementIR): string => {
 
 // `html={expr}` 会完全接管子节点渲染，因此这里先提取出来供后续分支判断。
 const getHtmlDirectiveExpression = (node: ElementIR): string | null => {
-  const directive = node.directives.find((candidate) => candidate.kind === 'html');
+  const directive = node.directives.find(
+    (candidate) => candidate.kind === 'html'
+  );
   return directive?.expression ?? null;
 };
 
 // Boundary/Transition 的 payload 本质上也是表达式，只是语义上交给不同 helper 消费。
-const renderBoundaryPayload = (node: BoundaryIR, contextVar: string): string => {
+const renderBoundaryPayload = (
+  node: BoundaryIR,
+  contextVar: string
+): string => {
   return evaluateExpression(node.payloadExpression, contextVar);
 };
 
-const renderTransitionPayload = (node: TransitionIR, contextVar: string): string => {
+const renderTransitionPayload = (
+  node: TransitionIR,
+  contextVar: string
+): string => {
   return evaluateExpression(node.payloadExpression, contextVar);
 };
 
 // 同步 SSR 的单节点生成器。每个分支都返回“一段 JS 表达式源码”，而不是直接返回 HTML。
-const renderTemplateNode = (node: TemplateIRNode, contextVar: string): string => {
+const renderTemplateNode = (
+  node: TemplateIRNode,
+  contextVar: string
+): string => {
   switch (node.type) {
     case 'TextIR':
       // 纯文本在 SSR 中最简单，直接作为字面量拼进输出。
@@ -185,9 +211,14 @@ const renderTemplateNode = (node: TemplateIRNode, contextVar: string): string =>
       if (
         node.enhancedComponentName &&
         isTransitionPayloadComponentName(node.enhancedComponentName) &&
-        doesTransitionPayloadComponentUseSsrWrapperTag(node.enhancedComponentName)
+        doesTransitionPayloadComponentUseSsrWrapperTag(
+          node.enhancedComponentName
+        )
       ) {
-        const childExpression = renderTemplateNodes(node.children ?? [], contextVar);
+        const childExpression = renderTemplateNodes(
+          node.children ?? [],
+          contextVar
+        );
         if (!node.ssrWrapperTagExpression) {
           return `ssrRenderBlockSlot(${node.slotIndex}, ${childExpression}, "dynamic")`;
         }
@@ -200,7 +231,10 @@ const renderTemplateNode = (node: TemplateIRNode, contextVar: string): string =>
       return `ssrRenderBlockSlot(${node.slotIndex}, ${quote(node.templateHtml)}, "dynamic")`;
     case 'KeepAliveIR': {
       // KeepAlive 的 SSR 只需要把子树内容包成对应 block，真正缓存策略由运行时决定。
-      const childExpression = renderTemplateNodes(node.children ?? [], contextVar);
+      const childExpression = renderTemplateNodes(
+        node.children ?? [],
+        contextVar
+      );
       return `ssrRenderBlockSlot(${node.slotIndex}, ${childExpression}, "keepalive")`;
     }
     case 'TeleportIR':
@@ -233,12 +267,16 @@ const renderTemplateNode = (node: TemplateIRNode, contextVar: string): string =>
     }
     case 'ElementIR': {
       const childExpression = getHtmlDirectiveExpression(node)
-        // `html` 指令会覆盖常规 children，直接把表达式结果原样注入为 innerHTML。
-        ? `ssrRenderHtmlSlot(-1, ${evaluateExpression(getHtmlDirectiveExpression(node)!, contextVar)})`
+        ? // `html` 指令会覆盖常规 children，直接把表达式结果原样注入为 innerHTML。
+          `ssrRenderHtmlSlot(-1, ${evaluateExpression(getHtmlDirectiveExpression(node)!, contextVar)})`
         : renderTemplateNodes(node.children, contextVar);
 
       // 普通元素最终总是落成：开标签 + 子内容 + 闭标签。
-      return [renderElementOpen(node), childExpression, renderElementClose(node)].join(' + ');
+      return [
+        renderElementOpen(node),
+        childExpression,
+        renderElementClose(node),
+      ].join(' + ');
     }
     default:
       // 未识别节点在 SSR 中安全退化为空串，避免生成无效源码。
@@ -247,7 +285,10 @@ const renderTemplateNode = (node: TemplateIRNode, contextVar: string): string =>
 };
 
 // 同步版本的多节点拼接器，职责只是把单节点生成结果按顺序串起来。
-const renderTemplateNodes = (nodes: readonly TemplateIRNode[], contextVar: string): string => {
+const renderTemplateNodes = (
+  nodes: readonly TemplateIRNode[],
+  contextVar: string
+): string => {
   if (nodes.length === 0) {
     return quote('');
   }
@@ -256,7 +297,10 @@ const renderTemplateNodes = (nodes: readonly TemplateIRNode[], contextVar: strin
 };
 
 // 异步/流式 SSR 的单节点生成器。整体结构和同步版保持一致，只在“取值”环节补 `await`。
-const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): string => {
+const renderTemplateNodeAsync = (
+  node: TemplateIRNode,
+  contextVar: string
+): string => {
   switch (node.type) {
     case 'TextIR':
       return quote(node.value);
@@ -291,9 +335,14 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
       if (
         node.enhancedComponentName &&
         isTransitionPayloadComponentName(node.enhancedComponentName) &&
-        doesTransitionPayloadComponentUseSsrWrapperTag(node.enhancedComponentName)
+        doesTransitionPayloadComponentUseSsrWrapperTag(
+          node.enhancedComponentName
+        )
       ) {
-        const childExpression = renderTemplateNodesAsync(node.children ?? [], contextVar);
+        const childExpression = renderTemplateNodesAsync(
+          node.children ?? [],
+          contextVar
+        );
         if (!node.ssrWrapperTagExpression) {
           return `ssrRenderBlockSlot(${node.slotIndex}, ${childExpression}, "dynamic")`;
         }
@@ -304,7 +353,10 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
       }
       return `ssrRenderBlockSlot(${node.slotIndex}, ${quote(node.templateHtml)}, "dynamic")`;
     case 'KeepAliveIR': {
-      const childExpression = renderTemplateNodesAsync(node.children ?? [], contextVar);
+      const childExpression = renderTemplateNodesAsync(
+        node.children ?? [],
+        contextVar
+      );
       return `ssrRenderBlockSlot(${node.slotIndex}, ${childExpression}, "keepalive")`;
     }
     case 'TeleportIR':
@@ -314,7 +366,10 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
         contextVar
       )}), ${quote(node.templateHtml)}, ${contextVar})`;
     case 'BoundaryIR': {
-      const childExpression = renderTemplateNodesAsync(node.children, contextVar);
+      const childExpression = renderTemplateNodesAsync(
+        node.children,
+        contextVar
+      );
 
       if (isSuspenseBoundaryComponentName(node.componentName)) {
         // Suspense 的子树本来就允许异步，因此这里直接传 async thunk 给 runtime。
@@ -328,7 +383,10 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
       )}, ${childExpression}, ${renderBoundaryPayload(node, contextVar)})`;
     }
     case 'TransitionIR': {
-      const childExpression = renderTemplateNodesAsync(node.children, contextVar);
+      const childExpression = renderTemplateNodesAsync(
+        node.children,
+        contextVar
+      );
       return `ssrRenderEnhancedBoundary(${quote(`t${node.transitionIndex}`)}, ${quote(
         node.componentName
       )}, ${childExpression}, ${renderTransitionPayload(node, contextVar)})`;
@@ -338,7 +396,11 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
         ? `ssrRenderHtmlSlot(-1, await ssrResolveValue(${evaluateExpression(getHtmlDirectiveExpression(node)!, contextVar)}))`
         : renderTemplateNodesAsync(node.children, contextVar);
 
-      return [renderElementOpen(node), childExpression, renderElementClose(node)].join(' + ');
+      return [
+        renderElementOpen(node),
+        childExpression,
+        renderElementClose(node),
+      ].join(' + ');
     }
     default:
       return quote('');
@@ -346,18 +408,25 @@ const renderTemplateNodeAsync = (node: TemplateIRNode, contextVar: string): stri
 };
 
 // 异步版本的多节点拼接器；节点顺序仍保持模板原顺序，不做并发重排。
-const renderTemplateNodesAsync = (nodes: readonly TemplateIRNode[], contextVar: string): string => {
+const renderTemplateNodesAsync = (
+  nodes: readonly TemplateIRNode[],
+  contextVar: string
+): string => {
   if (nodes.length === 0) {
     return quote('');
   }
 
-  return nodes.map((node) => renderTemplateNodeAsync(node, contextVar)).join(' + ');
+  return nodes
+    .map((node) => renderTemplateNodeAsync(node, contextVar))
+    .join(' + ');
 };
 
 // 收集 SSR 表达式执行上下文中还需要额外挂进去的名称。
 // 这些名称通常来自列表/条件等阶段 hoist 出去的模板 helper，如果不并入 ctx，
 // 运行时 `ssrEvaluate()` 在求值表达式时就拿不到它们。
-const collectSSRExpressionScopeNames = (nodes: readonly TemplateIRNode[]): string[] => {
+const collectSSRExpressionScopeNames = (
+  nodes: readonly TemplateIRNode[]
+): string[] => {
   const names = new Set<string>();
   const visit = (node: TemplateIRNode): void => {
     switch (node.type) {
@@ -396,16 +465,24 @@ const collectSSRExpressionScopeNames = (nodes: readonly TemplateIRNode[]): strin
 
 export const generateSSRCode = (component: ComponentIR): SSRCodegenResult => {
   // 先计算表达式求值所需的额外作用域名称，再统一构造上下文变量。
-  const expressionScopeNames = collectSSRExpressionScopeNames(component.template.roots);
+  const expressionScopeNames = collectSSRExpressionScopeNames(
+    component.template.roots
+  );
   const contextVar = '__lania_ssr_ctx';
   const contextInitializer =
     expressionScopeNames.length > 0
-      // hoist 出来的模板 helper 名称也要并入上下文，确保表达式求值时可见。
-      ? `const ${contextVar} = { ...ctx, ${expressionScopeNames.join(', ')} };`
+      ? // hoist 出来的模板 helper 名称也要并入上下文，确保表达式求值时可见。
+        `const ${contextVar} = { ...ctx, ${expressionScopeNames.join(', ')} };`
       : `const ${contextVar} = ctx;`;
   // 同步 render 与异步 renderStream 共用同一棵模板 IR，只是生成器不同。
-  const returnExpression = renderTemplateNodes(component.template.roots, contextVar);
-  const streamReturnExpression = renderTemplateNodesAsync(component.template.roots, contextVar);
+  const returnExpression = renderTemplateNodes(
+    component.template.roots,
+    contextVar
+  );
+  const streamReturnExpression = renderTemplateNodesAsync(
+    component.template.roots,
+    contextVar
+  );
   const method = [
     'static render(ctx: Record<string, unknown> = {}): string {',
     indent(contextInitializer),

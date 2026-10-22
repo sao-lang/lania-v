@@ -30,7 +30,9 @@ import type { TemplateIRNode } from './types';
  */
 
 // 收集普通文本插值绑定。只有 `ExpressionIR` 会直接产出 TextSlot 计划。
-export const collectRenderTextBindings = (nodes: TemplateIRNode[]): RenderTextBindingPlan[] => {
+export const collectRenderTextBindings = (
+  nodes: TemplateIRNode[]
+): RenderTextBindingPlan[] => {
   const bindings: RenderTextBindingPlan[] = [];
 
   nodes.forEach((node) => {
@@ -59,7 +61,9 @@ export const collectRenderTextBindings = (nodes: TemplateIRNode[]): RenderTextBi
 };
 
 // 收集 `ListIR` 绑定计划，包括 item/fallback/keyed item 模板等额外信息。
-export const collectRenderListBindings = (nodes: TemplateIRNode[]): RenderListBindingPlan[] => {
+export const collectRenderListBindings = (
+  nodes: TemplateIRNode[]
+): RenderListBindingPlan[] => {
   const bindings: RenderListBindingPlan[] = [];
 
   nodes.forEach((node) => {
@@ -292,7 +296,9 @@ export const collectRenderTransitionBindings = (
       // 这些节点自身不是 TransitionIR，但内部 children 里仍可能嵌套出 transition 绑定。
       bindings.push(...collectRenderTransitionBindings(node.children ?? []));
       if (node.type === 'IfIR') {
-        bindings.push(...collectRenderTransitionBindings(node.fallbackChildren ?? []));
+        bindings.push(
+          ...collectRenderTransitionBindings(node.fallbackChildren ?? [])
+        );
       }
     }
   });
@@ -337,7 +343,9 @@ export const collectRenderBoundaryBindings = (
       // 同理，Boundary 也可能嵌套在其他 block 节点的 children/fallback 子树里。
       bindings.push(...collectRenderBoundaryBindings(node.children ?? []));
       if (node.type === 'IfIR') {
-        bindings.push(...collectRenderBoundaryBindings(node.fallbackChildren ?? []));
+        bindings.push(
+          ...collectRenderBoundaryBindings(node.fallbackChildren ?? [])
+        );
       }
     }
   });

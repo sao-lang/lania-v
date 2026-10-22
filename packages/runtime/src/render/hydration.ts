@@ -24,10 +24,7 @@ export const SSR_ISLAND_ATTRIBUTE_NAME = 'data-lania-island-name';
 export const SSR_HYDRATED_ATTRIBUTE = 'data-lania-hydrated';
 
 export type IslandHydrationPriority =
-  | 'eager'
-  | 'idle'
-  | 'visible'
-  | 'interaction';
+  'eager' | 'idle' | 'visible' | 'interaction';
 
 export interface SSRIslandOptions extends DeclarativeShadowComponentOptions {
   /** 水合优先级，默认 `eager`。 */
@@ -94,7 +91,9 @@ export const serializeIslandProps = (
   return serialized ?? '{}';
 };
 
-export const parseIslandProps = (value: string | null): Record<string, unknown> => {
+export const parseIslandProps = (
+  value: string | null
+): Record<string, unknown> => {
   if (!value) {
     return {};
   }
@@ -206,7 +205,8 @@ export const ssrRenderIslandSlot = (
     props && typeof props === 'object'
       ? (props as Record<string, unknown>)
       : {};
-  const tagName = getComponentTagName(renderable) ?? `lania-island-${slotIndex}`;
+  const tagName =
+    getComponentTagName(renderable) ?? `lania-island-${slotIndex}`;
   const componentName =
     (renderable as { displayName?: string }).displayName ??
     (renderable as { name?: string }).name ??
@@ -223,7 +223,9 @@ export const ssrRenderIslandSlot = (
   return ssrRenderBlockSlot(slotIndex, html, 'island');
 };
 
-/** 收集容器里所有尚未水合的 island。 */export const collectIslands = (root: ParentNode): IslandRecord[] => {
+/** 收集容器里所有尚未水合的 island。 */ export const collectIslands = (
+  root: ParentNode
+): IslandRecord[] => {
   const elements = Array.from(
     root.querySelectorAll<HTMLElement>(`[${SSR_ISLAND_ATTRIBUTE}]`)
   ).filter((element) => !element.hasAttribute(SSR_HYDRATED_ATTRIBUTE));
@@ -240,7 +242,10 @@ export const ssrRenderIslandSlot = (
 
 type IslandComponentTarget =
   | CustomElementConstructor
-  | (() => CustomElementConstructor | void | Promise<CustomElementConstructor | void>);
+  | (() =>
+      | CustomElementConstructor
+      | void
+      | Promise<CustomElementConstructor | void>);
 
 export interface HydrateIslandsOptions {
   /** 搜索范围，默认整个 document。 */
@@ -265,8 +270,9 @@ interface IslandElementLike extends HTMLElement {
 /** 把序列化的 props 写回元素并触发组件挂载。 */
 export const hydrateIslandElement = (record: IslandRecord): boolean => {
   const element = record.element as IslandElementLike;
-  const declaredProps = (element.constructor as { __laniaPropNames?: readonly string[] })
-    .__laniaPropNames;
+  const declaredProps = (
+    element.constructor as { __laniaPropNames?: readonly string[] }
+  ).__laniaPropNames;
 
   for (const [key, value] of Object.entries(record.props)) {
     // 只回填组件真正声明的 prop；`children` 这类结构字段由 SSR 内容本身承载。
@@ -289,15 +295,13 @@ export const hydrateIslandElement = (record: IslandRecord): boolean => {
   return true;
 };
 
-const scheduleByPriority = (
-  record: IslandRecord,
-  run: () => void
-): void => {
+const scheduleByPriority = (record: IslandRecord, run: () => void): void => {
   const { element, priority } = record;
 
   if (priority === 'idle') {
-    const idle = (globalThis as { requestIdleCallback?: (cb: () => void) => number })
-      .requestIdleCallback;
+    const idle = (
+      globalThis as { requestIdleCallback?: (cb: () => void) => number }
+    ).requestIdleCallback;
 
     if (typeof idle === 'function') {
       idle(run);
@@ -327,7 +331,9 @@ const scheduleByPriority = (
   if (priority === 'interaction') {
     const events = ['pointerdown', 'focusin', 'click'] as const;
     const trigger = (): void => {
-      events.forEach((event) => element.removeEventListener(event, trigger, true));
+      events.forEach((event) =>
+        element.removeEventListener(event, trigger, true)
+      );
       run();
     };
 
@@ -360,7 +366,10 @@ const resolveIslandConstructor = async (
     return;
   }
 
-  if (typeof target === 'function' && !(target.prototype instanceof HTMLElement)) {
+  if (
+    typeof target === 'function' &&
+    !(target.prototype instanceof HTMLElement)
+  ) {
     await (target as () => unknown)();
   }
 

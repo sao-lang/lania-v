@@ -47,20 +47,24 @@ defineComponent<T extends FunctionComponent<any, any>>(
 ```
 
 ```ts
-type FunctionComponent<Props = Record<string, unknown>, Result = unknown> =
-  (props: Props) => Result;
+type FunctionComponent<Props = Record<string, unknown>, Result = unknown> = (
+  props: Props
+) => Result;
 ```
 
 ```tsx
-export default defineComponent(function FancyInput(props: FancyInputProps) {
-  return <div>{props.count}</div>;
-}, {
-  props: {
-    count: { type: Number, reflect: true, default: 0 },
-    onSelect: { attribute: false },
+export default defineComponent(
+  function FancyInput(props: FancyInputProps) {
+    return <div>{props.count}</div>;
   },
-  emits: ['select'],
-});
+  {
+    props: {
+      count: { type: Number, reflect: true, default: 0 },
+      onSelect: { attribute: false },
+    },
+    emits: ['select'],
+  }
+);
 ```
 
 #### 第二个参数发生了什么
@@ -93,12 +97,12 @@ static tagName
   → 以 xml 开头时补 x-
 ```
 
-| 名称 | 标签 |
-| --- | --- |
-| `Counter` | `x-counter` |
-| `TodoList` | `todo-list` |
-| `Card` + `displayName = 'my-card'` | `my-card` |
-| `XMLView` | `x-xml-view` |
+| 名称                               | 标签         |
+| ---------------------------------- | ------------ |
+| `Counter`                          | `x-counter`  |
+| `TodoList`                         | `todo-list`  |
+| `Card` + `displayName = 'my-card'` | `my-card`    |
+| `XMLView`                          | `x-xml-view` |
 
 #### 重复注册
 
@@ -112,8 +116,9 @@ static tagName
 ### `ComponentElementConstructor`
 
 ```ts
-interface ComponentElementConstructor<TElement extends HTMLElement = HTMLElement>
-  extends CustomElementConstructor {
+interface ComponentElementConstructor<
+  TElement extends HTMLElement = HTMLElement,
+> extends CustomElementConstructor {
   new (): TElement;
   tagName?: string;
   displayName?: string;
@@ -124,14 +129,14 @@ interface ComponentElementConstructor<TElement extends HTMLElement = HTMLElement
 }
 ```
 
-| 字段 | 作用 |
-| --- | --- |
-| `tagName` | 显式标签名 |
-| `displayName` | 用于推导标签名与调试 |
-| `styles` | 静态样式，挂载时注入 |
-| `handlerKeys` | 编译期声明的 `onXxx` 名单 |
+| 字段          | 作用                                         |
+| ------------- | -------------------------------------------- |
+| `tagName`     | 显式标签名                                   |
+| `displayName` | 用于推导标签名与调试                         |
+| `styles`      | 静态样式，挂载时注入                         |
+| `handlerKeys` | 编译期声明的 `onXxx` 名单                    |
 | `propOptions` | prop 的 attribute / reflect / converter 规则 |
-| `emits` | 事件声明，开发态校验 |
+| `emits`       | 事件声明，开发态校验                         |
 
 ### `getComponentTagName()`
 
@@ -178,17 +183,17 @@ root.unmount();
 
 #### 接受的值
 
-| 值 | 行为 |
-| --- | --- |
-| `Node` | `appendChild` |
-| 字符串 / 数字 | 转成文本节点 |
-| 数组 | 递归展开 |
-| `null` / `undefined` / `false` | 忽略 |
-| 函数 | 抛 `TypeError` |
+| 值                             | 行为           |
+| ------------------------------ | -------------- |
+| `Node`                         | `appendChild`  |
+| 字符串 / 数字                  | 转成文本节点   |
+| 数组                           | 递归展开       |
+| `null` / `undefined` / `false` | 忽略           |
+| 函数                           | 抛 `TypeError` |
 
 ```tsx
-root.render(<Counter />);          // JSX 结果
-root.render(Counter({}));          // 直接调用组件
+root.render(<Counter />); // JSX 结果
+root.render(Counter({})); // 直接调用组件
 root.render('plain text');
 root.render([<Counter />, <p>done</p>]);
 ```
@@ -405,7 +410,7 @@ const slots = bindSlots();
 slots.renderDefault('empty', item);
 
 // 父组件
-<Child children={(item: Item) => <Row item={item} />} />
+<Child children={(item: Item) => <Row item={item} />} />;
 ```
 
 额外参数会按位置传给函数型 slot。`get()` / `has()` 不会调用函数。
@@ -504,10 +509,7 @@ export default defineComponent(function Panel() {
 ### `ChangedProps`
 
 ```ts
-type ChangedProps = Map<
-  string,
-  { previous: unknown; current: unknown }
->;
+type ChangedProps = Map<string, { previous: unknown; current: unknown }>;
 ```
 
 同一轮内多次写入同一个 key：
@@ -519,17 +521,17 @@ type ChangedProps = Map<
 
 手写 `ReactiveElement` 时可以覆写：
 
-| 方法 | 时机 |
-| --- | --- |
-| `connectedCallback()` | 连接到 DOM |
-| `disconnectedCallback()` | 从 DOM 断开 |
-| `attributeChangedCallback(name, old, next)` | observed attribute 变化 |
-| `adoptedCallback()` | 文档迁移 |
-| `errorCallback(error)` | 错误回调 |
-| `shouldUpdate(changedProps)` | 更新前，返回 `false` 跳过 |
-| `willUpdate(changedProps)` | 更新前 |
-| `updated(changedProps)` | 更新后 |
-| `firstUpdated(changedProps)` | 首次更新后 |
+| 方法                                        | 时机                      |
+| ------------------------------------------- | ------------------------- |
+| `connectedCallback()`                       | 连接到 DOM                |
+| `disconnectedCallback()`                    | 从 DOM 断开               |
+| `attributeChangedCallback(name, old, next)` | observed attribute 变化   |
+| `adoptedCallback()`                         | 文档迁移                  |
+| `errorCallback(error)`                      | 错误回调                  |
+| `shouldUpdate(changedProps)`                | 更新前，返回 `false` 跳过 |
+| `willUpdate(changedProps)`                  | 更新前                    |
+| `updated(changedProps)`                     | 更新后                    |
+| `firstUpdated(changedProps)`                | 首次更新后                |
 
 ```ts
 class MyElement extends ReactiveElement {
@@ -751,13 +753,13 @@ this._setFormValue(this.account());
 
 值归一化：
 
-| 值 | 上报 |
-| --- | --- |
-| `null` / `undefined` | 不上报 |
-| `string` | 原样 |
-| `boolean` | `true` → `'on'`，`false` → 不上报 |
-| `File` / `FormData` | 原样 |
-| 其它 | `String(value)` |
+| 值                   | 上报                              |
+| -------------------- | --------------------------------- |
+| `null` / `undefined` | 不上报                            |
+| `string`             | 原样                              |
+| `boolean`            | `true` → `'on'`，`false` → 不上报 |
+| `File` / `FormData`  | 原样                              |
+| 其它                 | `String(value)`                   |
 
 ### `useFormValidity()`
 
@@ -798,7 +800,12 @@ protected _setFormValidity(result: unknown): void
 
 ```ts
 interface PropOption {
-  type?: StringConstructor | NumberConstructor | BooleanConstructor | ObjectConstructor | ArrayConstructor;
+  type?:
+    | StringConstructor
+    | NumberConstructor
+    | BooleanConstructor
+    | ObjectConstructor
+    | ArrayConstructor;
   attribute?: string | false;
   reflect?: boolean;
   default?: unknown;
@@ -814,12 +821,12 @@ interface PropOption {
 
 决定 attribute 字符串如何回读：
 
-| 类型 | 行为 |
-| --- | --- |
-| `String` | 原样 |
-| `Number` | `Number(value)` |
-| `Boolean` | `value !== null && value !== 'false'` |
-| `Object` / `Array` | `JSON.parse(value)`，解析失败会抛错 |
+| 类型               | 行为                                  |
+| ------------------ | ------------------------------------- |
+| `String`           | 原样                                  |
+| `Number`           | `Number(value)`                       |
+| `Boolean`          | `value !== null && value !== 'false'` |
+| `Object` / `Array` | `JSON.parse(value)`，解析失败会抛错   |
 
 更复杂的结构请用 `converter`。
 
@@ -901,12 +908,12 @@ parseEventBindingName(sourceName: string): ParsedEventBindingName | null
 
 支持的形态：
 
-| 写法 | 结果 |
-| --- | --- |
-| `onClick` | DOM `click` |
-| `onKeyDown` | DOM `keydown`（事件名转小写） |
-| `onToggle` | 组件事件 `toggle` |
-| `on:close` | 组件事件 `close`（`directive-extended`） |
+| 写法           | 结果                                         |
+| -------------- | -------------------------------------------- |
+| `onClick`      | DOM `click`                                  |
+| `onKeyDown`    | DOM `keydown`（事件名转小写）                |
+| `onToggle`     | 组件事件 `toggle`                            |
+| `on:close`     | 组件事件 `close`（`directive-extended`）     |
 | `onClick.stop` | DOM `click` + `stop`（`directive-extended`） |
 
 ### 修饰符
@@ -930,19 +937,19 @@ type EventModifier =
   | (string & {});
 ```
 
-| 修饰符 | 行为 |
-| --- | --- |
-| `stop` | `event.stopPropagation()` |
-| `prevent` | `event.preventDefault()` |
-| `prevent:self` | `event.target === event.currentTarget` 时才 `preventDefault()` |
-| `prevent:immediate` | `preventDefault()` + `stopImmediatePropagation()` |
-| `self` | `event.target === event.currentTarget` 时才继续 |
-| `immediate` | `event.stopImmediatePropagation()` |
-| `enter` | 键盘 `Enter` 时才继续（仅键盘事件） |
-| `passive` | 提示性标记，真正生效需走 `listener` |
-| `button:left` / `button:middle` / `button:right` | 鼠标键匹配时才继续 |
-| `key:<name>` | `event.key` 匹配时才继续（仅键盘事件） |
-| `system:ctrl` / `shift` / `alt` / `meta` | 对应系统键按下时才继续 |
+| 修饰符                                           | 行为                                                           |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| `stop`                                           | `event.stopPropagation()`                                      |
+| `prevent`                                        | `event.preventDefault()`                                       |
+| `prevent:self`                                   | `event.target === event.currentTarget` 时才 `preventDefault()` |
+| `prevent:immediate`                              | `preventDefault()` + `stopImmediatePropagation()`              |
+| `self`                                           | `event.target === event.currentTarget` 时才继续                |
+| `immediate`                                      | `event.stopImmediatePropagation()`                             |
+| `enter`                                          | 键盘 `Enter` 时才继续（仅键盘事件）                            |
+| `passive`                                        | 提示性标记，真正生效需走 `listener`                            |
+| `button:left` / `button:middle` / `button:right` | 鼠标键匹配时才继续                                             |
+| `key:<name>`                                     | `event.key` 匹配时才继续（仅键盘事件）                         |
+| `system:ctrl` / `shift` / `alt` / `meta`         | 对应系统键按下时才继续                                         |
 
 规则：
 
@@ -958,7 +965,7 @@ type EventModifier =
 ### `withEventModifiers()`
 
 ```ts
-withEventModifiers(handler, modifiers)
+withEventModifiers(handler, modifiers);
 ```
 
 ```ts
@@ -1043,12 +1050,12 @@ registerFunctionComponentRenderResult(result: unknown, cleanups: Set<() => void>
 runRenderableCleanups(value: unknown, fired?: Set<() => void>): void
 ```
 
-| API | 用途 |
-| --- | --- |
-| `getComponentCreationProps()` | 构造期读取待写入 props |
-| `createComponentPropsSnapshot()` | 为实例创建带 getter 的 props 快照 |
-| `attachFunctionComponentBindingMetadata()` | 标记 handler key |
-| `registerFunctionComponentRenderResult()` | 把 cleanup 绑定到渲染节点 |
-| `runRenderableCleanups()` | 卸载时执行 cleanup |
+| API                                        | 用途                              |
+| ------------------------------------------ | --------------------------------- |
+| `getComponentCreationProps()`              | 构造期读取待写入 props            |
+| `createComponentPropsSnapshot()`           | 为实例创建带 getter 的 props 快照 |
+| `attachFunctionComponentBindingMetadata()` | 标记 handler key                  |
+| `registerFunctionComponentRenderResult()`  | 把 cleanup 绑定到渲染节点         |
+| `runRenderableCleanups()`                  | 卸载时执行 cleanup                |
 
 这些函数由编译产物调用，业务代码通常不需要直接使用。

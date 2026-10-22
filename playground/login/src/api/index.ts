@@ -22,4 +22,10 @@ export {
   logout,
   register,
 } from './auth-api';
-export { type ListUsersParams, type ListUsersResult, type UserView, getUser, listUsers } from './user-api';
+export {
+  type ListUsersParams,
+  type ListUsersResult,
+  type UserView,
+  getUser,
+  listUsers,
+} from './user-api';

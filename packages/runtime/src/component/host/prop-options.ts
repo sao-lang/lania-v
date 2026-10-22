@@ -88,8 +88,9 @@ export const resolvePropInitialValue = (
   name: string,
   fallback: unknown
 ): unknown => {
-  const propOptions = (component.constructor as { propOptions?: PropOptionsMap })
-    .propOptions;
+  const propOptions = (
+    component.constructor as { propOptions?: PropOptionsMap }
+  ).propOptions;
   const option = propOptions?.[name];
 
   if (option === undefined) {
@@ -116,8 +117,9 @@ const resolvePropNames = (
   component: object,
   fallbackSource?: PropOptionsMap
 ): readonly string[] => {
-  const declared = (component.constructor as { __laniaPropNames?: readonly string[] })
-    .__laniaPropNames;
+  const declared = (
+    component.constructor as { __laniaPropNames?: readonly string[] }
+  ).__laniaPropNames;
 
   if (declared) {
     return declared;
@@ -127,8 +129,9 @@ const resolvePropNames = (
 };
 
 export const reflectInitialProps = (component: Element): void => {
-  const propOptions = (component.constructor as { propOptions?: PropOptionsMap })
-    .propOptions;
+  const propOptions = (
+    component.constructor as { propOptions?: PropOptionsMap }
+  ).propOptions;
 
   if (!propOptions) {
     return;
@@ -278,8 +281,9 @@ export const applyPropAttributes = (
   attributeName: string,
   value: string | null
 ): void => {
-  const propOptions = (component.constructor as { propOptions?: PropOptionsMap })
-    .propOptions;
+  const propOptions = (
+    component.constructor as { propOptions?: PropOptionsMap }
+  ).propOptions;
 
   for (const name of resolvePropNames(component, propOptions)) {
     const option = propOptions?.[name];

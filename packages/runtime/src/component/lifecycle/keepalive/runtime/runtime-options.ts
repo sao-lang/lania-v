@@ -41,8 +41,8 @@ export const isKeepAliveCacheable = (
 ): key is string => {
   return Boolean(
     key &&
-      matchesKeyPattern(include, key) &&
-      !(exclude ? matchesKeyPattern(exclude, key) : false)
+    matchesKeyPattern(include, key) &&
+    !(exclude ? matchesKeyPattern(exclude, key) : false)
   );
 };
 
@@ -51,7 +51,9 @@ export const resolveKeepAliveKey = (keySource: unknown): string | null => {
 };
 
 export const resolveKeepAliveLimit = (value: unknown): number => {
-  return typeof value === 'number' ? value : Number(value ?? Number.POSITIVE_INFINITY);
+  return typeof value === 'number'
+    ? value
+    : Number(value ?? Number.POSITIVE_INFINITY);
 };
 
 const isRuntimeRecord = (value: unknown): value is Record<string, unknown> => {
@@ -65,7 +67,9 @@ const readLifecycleHook = <
   key: TKey
 ): KeepAliveOptions<unknown>[TKey] => {
   const value = record[key];
-  return typeof value === 'function' ? (value as KeepAliveOptions<unknown>[TKey]) : undefined;
+  return typeof value === 'function'
+    ? (value as KeepAliveOptions<unknown>[TKey])
+    : undefined;
 };
 
 const readRuntimeValue = (
@@ -84,9 +88,9 @@ const readRuntimeValue = (
 };
 
 // 从共享 payload 中拆出 cache 配置和生命周期 metadata，供后续合并。
-export const readRuntimeContract = (
-  source: { payload?: unknown }
-): {
+export const readRuntimeContract = (source: {
+  payload?: unknown;
+}): {
   cache: KeepAliveRuntimeSource | null;
   metadata: KeepAliveRuntimeSource | null;
 } => {
@@ -97,7 +101,9 @@ export const readRuntimeContract = (
     };
   }
 
-  const metadata = isRuntimeRecord(source.payload.metadata) ? source.payload.metadata : null;
+  const metadata = isRuntimeRecord(source.payload.metadata)
+    ? source.payload.metadata
+    : null;
 
   return {
     cache: {
@@ -127,15 +133,14 @@ export const resolveOptionsFromContract = <TValue>(options: {
   runtimeOptions: KeepAliveOptions<TValue>;
   runtimeSourceKind: KeepAliveBlockKind;
 } => {
-  const {
-    contractCache,
-    contractHooks,
-    defaultScope = 'default',
-  } = options;
-  const hasContractRuntimeSource = contractCache !== null || contractHooks !== null;
+  const { contractCache, contractHooks, defaultScope = 'default' } = options;
+  const hasContractRuntimeSource =
+    contractCache !== null || contractHooks !== null;
 
   if (!hasContractRuntimeSource) {
-    throw new Error('KeepAlive runtime execution requires a shared cache payload.');
+    throw new Error(
+      'KeepAlive runtime execution requires a shared cache payload.'
+    );
   }
 
   return {
@@ -158,16 +163,14 @@ export const resolveOptionsFromPayload = <TValue>(options: {
   runtimeOptions: KeepAliveOptions<TValue>;
   runtimeSourceKind: KeepAliveBlockKind;
 } => {
-  const {
-    payload,
-    contractHookAdapter,
-    defaultScope,
-  } = options;
+  const { payload, contractHookAdapter, defaultScope } = options;
   const { cache, metadata } = readRuntimeContract({ payload });
   return resolveOptionsFromContract<TValue>({
     contractCache: cache,
     // payload 中的 metadata hook 允许在这里做一次入口适配，再并入通用 contract 解析流程。
-    contractHooks: contractHookAdapter ? contractHookAdapter(metadata) : metadata,
+    contractHooks: contractHookAdapter
+      ? contractHookAdapter(metadata)
+      : metadata,
     defaultScope,
   });
 };
@@ -203,26 +206,30 @@ export const resolveOptionsWithScope = <TValue>(
   defaultScope: string,
   ...sources: Array<KeepAliveRuntimeSource | null | undefined>
 ): KeepAliveOptions<TValue> => {
-  const normalizedSources = sources as ReadonlyArray<KeepAliveRuntimeSource | null | undefined>;
+  const normalizedSources = sources as ReadonlyArray<
+    KeepAliveRuntimeSource | null | undefined
+  >;
 
   return {
     scope: String(readRuntimeValue(normalizedSources, 'scope') ?? defaultScope),
     key: resolveKeepAliveKey(readRuntimeValue(normalizedSources, 'key')),
-    include: readRuntimeValue(normalizedSources, 'include') as KeepAliveKeyPattern,
-    exclude: readRuntimeValue(normalizedSources, 'exclude') as KeepAliveKeyPattern,
+    include: readRuntimeValue(
+      normalizedSources,
+      'include'
+    ) as KeepAliveKeyPattern,
+    exclude: readRuntimeValue(
+      normalizedSources,
+      'exclude'
+    ) as KeepAliveKeyPattern,
     max: resolveKeepAliveLimit(readRuntimeValue(normalizedSources, 'max')),
     onActivate: readRuntimeValue(normalizedSources, 'onActivate') as
-      | ((value: TValue, key: string, reused: boolean) => void)
-      | undefined,
+      ((value: TValue, key: string, reused: boolean) => void) | undefined,
     onDeactivate: readRuntimeValue(normalizedSources, 'onDeactivate') as
-      | ((value: TValue, key: string) => void)
-      | undefined,
+      ((value: TValue, key: string) => void) | undefined,
     onCache: readRuntimeValue(normalizedSources, 'onCache') as
-      | ((value: TValue, key: string) => void)
-      | undefined,
+      ((value: TValue, key: string) => void) | undefined,
     onEvict: readRuntimeValue(normalizedSources, 'onEvict') as
-      | ((value: TValue, key: string) => void)
-      | undefined,
+      ((value: TValue, key: string) => void) | undefined,
   };
 };
 
@@ -243,15 +250,12 @@ export const resolveBlockPayload = <TValue, TBindings>(
   if (!isCachePayload(blockPayload.payload)) {
     return null;
   }
-  const resolved = resolveOptionsFromBlock<TValue, TBindings>(
-    blockPayload,
-    {
-      // block/slot 路径刻意使用独立默认 scope，避免与直接 JSX 执行共享同一隐式缓存空间。
-      // Slot/block consumers should not share the same implicit default scope with
-      // direct `jsx-runtime` execution. This avoids cross-path cache interference.
-      defaultScope: 'slot:default',
-    }
-  );
+  const resolved = resolveOptionsFromBlock<TValue, TBindings>(blockPayload, {
+    // block/slot 路径刻意使用独立默认 scope，避免与直接 JSX 执行共享同一隐式缓存空间。
+    // Slot/block consumers should not share the same implicit default scope with
+    // direct `jsx-runtime` execution. This avoids cross-path cache interference.
+    defaultScope: 'slot:default',
+  });
 
   return {
     payload: blockPayload,

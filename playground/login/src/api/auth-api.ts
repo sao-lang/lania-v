@@ -1,5 +1,10 @@
 import { request } from './http';
-import { type AuthSession, clearSession, getSession, setSession } from './auth-session';
+import {
+  type AuthSession,
+  clearSession,
+  getSession,
+  setSession,
+} from './auth-session';
 import { get, post } from './http-verbs';
 
 /** 后端 /auth/* 返回的账号视图。 */
@@ -70,7 +75,9 @@ export type ForgotPasswordPayload = {
 };
 
 /** 忘记密码：后端校验账号存在后重置密码（重置会让该账号旧会话失效）。 */
-export const forgotPassword = (payload: ForgotPasswordPayload): Promise<string> =>
+export const forgotPassword = (
+  payload: ForgotPasswordPayload
+): Promise<string> =>
   request<{ account: AccountView; message: string }>(() =>
     post('/auth/forgot-password', payload)
   ).then((result) => result.message);
@@ -81,7 +88,9 @@ export type ChangePasswordPayload = {
 };
 
 /** 修改密码：需要登录态，原密码错误时后端返回 400。 */
-export const changePassword = (payload: ChangePasswordPayload): Promise<string> =>
+export const changePassword = (
+  payload: ChangePasswordPayload
+): Promise<string> =>
   request<{ account: AccountView; message: string }>(() =>
     post('/auth/change-password', payload)
   ).then((result) => result.message);

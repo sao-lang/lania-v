@@ -129,11 +129,11 @@ const theme = useContext(ThemeContext, element);
 
 ## 值类型
 
-| 传入 | 行为 |
-| --- | --- |
-| Signal / Memo | 直接使用，consumer 会随值更新 |
-| `() => T` | 初始化时求值一次，再包装为 Signal |
-| 普通值 | 包装为 Signal |
+| 传入          | 行为                              |
+| ------------- | --------------------------------- |
+| Signal / Memo | 直接使用，consumer 会随值更新     |
+| `() => T`     | 初始化时求值一次，再包装为 Signal |
+| 普通值        | 包装为 Signal                     |
 
 ::: warning 函数不等于响应式
 `provideContext(Context, () => value)` 只会在初始化时调用一次。需要后续更新时请传 Signal

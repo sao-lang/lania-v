@@ -16,18 +16,16 @@
 ```tsx
 import { bindSlots, defineComponent } from '@lania-v/runtime';
 
-export default defineComponent(
-  function Panel(props: { children?: unknown }) {
-    const slots = bindSlots();
+export default defineComponent(function Panel(props: { children?: unknown }) {
+  const slots = bindSlots();
 
-    return (
-      <section>
-        <header>{slots.render('header', <h2>默认标题</h2>) as any}</header>
-        <main>{slots.renderDefault(<p>没有内容</p>) as any}</main>
-      </section>
-    );
-  }
-);
+  return (
+    <section>
+      <header>{slots.render('header', <h2>默认标题</h2>) as any}</header>
+      <main>{slots.renderDefault(<p>没有内容</p>) as any}</main>
+    </section>
+  );
+});
 ```
 
 父组件显式传入 `children` 对象：
@@ -53,11 +51,11 @@ light DOM / childBindings 渲染，**不会**写入 `props.children`，因此
 `bindSlots(props?)` 优先读取当前 runtime scope 的 `slotContent`；编译组件里编译器会把
 `bindSlots()` 改写成 `bindSlots(this.props)`，从 `props.children` 读取。
 
-| `children` 形态 | 默认槽 | 具名槽 | 函数型（作用域） |
-| --- | --- | --- | --- |
-| 普通值 / 节点 / 数组 | 整个值 | 无 | 否 |
+| `children` 形态                     | 默认槽    | 具名槽    | 函数型（作用域）     |
+| ----------------------------------- | --------- | --------- | -------------------- |
+| 普通值 / 节点 / 数组                | 整个值    | 无        | 否                   |
 | 普通对象 `{ default, header, ... }` | `default` | 按 key 取 | 值为函数时按函数处理 |
-| 函数 | 函数本身 | 无 | 是 |
+| 函数                                | 函数本身  | 无        | 是                   |
 
 ## API 语义
 
@@ -70,12 +68,12 @@ interface SlotBindings {
 }
 ```
 
-| 方法 | 说明 |
-| --- | --- |
-| `render` | 解析顺序见下；函数型槽会带 `args` 调用 |
-| `renderDefault` | `children.default ?? fallback` |
-| `get(name)` | `children[name] ?? children.default`；不调用函数 |
-| `has(name)` | 只检查具名槽本身，不被 `default` 兜底 |
+| 方法            | 说明                                             |
+| --------------- | ------------------------------------------------ |
+| `render`        | 解析顺序见下；函数型槽会带 `args` 调用           |
+| `renderDefault` | `children.default ?? fallback`                   |
+| `get(name)`     | `children[name] ?? children.default`；不调用函数 |
+| `has(name)`     | 只检查具名槽本身，不被 `default` 兜底            |
 
 `render(name, fallback, ...args)` 的解析顺序：
 `children[name] ?? children.default ?? fallback`。
@@ -136,11 +134,11 @@ return <div>{slots.renderDefault('empty', item) as any}</div>;
 
 ## 编译组件与运行时 JSX
 
-| 场景 | 推荐写法 |
-| --- | --- |
-| `.lania.tsx` 编译组件 | `bindSlots()` + 显式 `children={...}` |
-| 运行时 JSX（`jsx(Child, { children })`） | `bindSlots()` 或 `<Slot>` |
-| 需要浏览器原生投影 | Shadow DOM + 子节点上的 `slot="name"` |
+| 场景                                     | 推荐写法                              |
+| ---------------------------------------- | ------------------------------------- |
+| `.lania.tsx` 编译组件                    | `bindSlots()` + 显式 `children={...}` |
+| 运行时 JSX（`jsx(Child, { children })`） | `bindSlots()` 或 `<Slot>`             |
+| 需要浏览器原生投影                       | Shadow DOM + 子节点上的 `slot="name"` |
 
 `<Slot>` 读取的是当前 runtime scope 的 `slotContent`，因此它是**运行时 JSX 路径**的占位组件。
 `.lania.tsx` 编译组件内没有这份 scope，请使用 `bindSlots()`。
@@ -154,10 +152,10 @@ return <div>{slots.renderDefault('empty', item) as any}</div>;
 
 因此，子节点上的 `slot="header"` 与 `children` 对象协议是两条不同的路径：
 
-| 写法 | 读取方式 | `has('header')` |
-| --- | --- | --- |
-| `children` 对象 | `bindSlots()` 逻辑读取 | `true` |
-| 子节点 `slot="header"` | 浏览器原生投影 | `false` |
+| 写法                   | 读取方式               | `has('header')` |
+| ---------------------- | ---------------------- | --------------- |
+| `children` 对象        | `bindSlots()` 逻辑读取 | `true`          |
+| 子节点 `slot="header"` | 浏览器原生投影         | `false`         |
 
 ## 常见问题
 

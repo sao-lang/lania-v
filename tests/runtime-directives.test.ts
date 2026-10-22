@@ -25,13 +25,17 @@ describe('runtime directives', () => {
   it('warns in dev mode when a named use directive is missing', () => {
     clearDirectiveRegistry();
     setDevEnvironmentOverride(true);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
     const node = document.createElement('div');
     const slot = new UseDirectiveSlot(node, 0);
 
     slot.write({ name: 'missing', value: { content: 'x' } });
 
-    expect(warnSpy).toHaveBeenCalledWith('[lania-v] Directive "missing" is not registered.');
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[lania-v] Directive "missing" is not registered.'
+    );
     warnSpy.mockRestore();
     setDevEnvironmentOverride(null);
     clearDirectiveRegistry();
@@ -56,7 +60,11 @@ describe('runtime directives', () => {
     slot.destroy();
 
     expect(mounted).toHaveBeenCalledWith(node, { content: 'first' });
-    expect(updated).toHaveBeenCalledWith(node, { content: 'second' }, { content: 'first' });
+    expect(updated).toHaveBeenCalledWith(
+      node,
+      { content: 'second' },
+      { content: 'first' }
+    );
     expect(unmounted).toHaveBeenCalledWith(node);
     clearDirectiveRegistry();
   });
@@ -93,7 +101,9 @@ describe('runtime directives', () => {
   it('warns in dev mode when an inline use directive definition has an invalid shape', () => {
     clearDirectiveRegistry();
     setDevEnvironmentOverride(true);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
     const node = document.createElement('div');
     const slot = new UseDirectiveSlot(node, 0);
 
@@ -139,20 +149,31 @@ describe('runtime directives', () => {
       expect(emptyTarget.value).toBe('   ');
 
       const trimmed = createSignal<string | undefined>('seed');
-      createModelEventHandler(trimmed, ['trim', 'empty'])({ target: input } as Event);
+      createModelEventHandler(trimmed, ['trim', 'empty'])({
+        target: input,
+      } as Event);
       expect(trimmed.value).toBeUndefined();
 
       const checkboxState = createSignal<boolean | string>('');
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = true;
-      createModelEventHandler(checkboxState, ['boolean'], 'checked')({ target: checkbox } as Event);
+      createModelEventHandler(
+        checkboxState,
+        ['boolean'],
+        'checked'
+      )({ target: checkbox } as Event);
       expect(checkboxState.value).toBe(true);
 
       const debounced = createSignal('');
-      const debouncedHandler = createModelEventHandler(debounced, ['debounce'], 'value', {
-        debounceMs: 30,
-      });
+      const debouncedHandler = createModelEventHandler(
+        debounced,
+        ['debounce'],
+        'value',
+        {
+          debounceMs: 30,
+        }
+      );
       input.value = 'first';
       debouncedHandler({ target: input } as Event);
       input.value = 'second';
@@ -171,7 +192,10 @@ describe('runtime directives', () => {
     try {
       const target = createSignal('');
       const input = document.createElement('input');
-      const slot = new ModelBindingSlot(input, 'value', 0, ['debounce', 'debounceMs:120']);
+      const slot = new ModelBindingSlot(input, 'value', 0, [
+        'debounce',
+        'debounceMs:120',
+      ]);
 
       slot.write({ source: { get: () => '', set: target.set } });
       input.value = 'typed';
@@ -243,7 +267,9 @@ describe('runtime directives', () => {
 
   it('ignores raw string html directive values and warns in dev mode', () => {
     setDevEnvironmentOverride(true);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
     const node = document.createElement('div');
     const slot = new DirectiveBindingSlot(node, 'html', 0);
 
@@ -285,7 +311,11 @@ describe('runtime directives', () => {
     const div = document.createElement('div');
     const slot = new AttrSlot(div, 'class', 0);
 
-    slot.write(['card', { active: true, hidden: false }, ['nested', 'ready now']]);
+    slot.write([
+      'card',
+      { active: true, hidden: false },
+      ['nested', 'ready now'],
+    ]);
     expect(div.getAttribute('class')).toBe('card active nested ready now');
 
     slot.write({
@@ -310,7 +340,11 @@ describe('runtime directives', () => {
 
   it('serializes class attributes with Vue-style normalization in SSR helpers', () => {
     expect(
-      ssrSerializeAttribute('class', ['panel', { active: true, hidden: false }, ['wide']])
+      ssrSerializeAttribute('class', [
+        'panel',
+        { active: true, hidden: false },
+        ['wide'],
+      ])
     ).toBe(' class="panel active wide"');
   });
 

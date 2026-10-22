@@ -24,21 +24,23 @@ export const ENHANCED_CONTRACT_VERSION = '0.1-draft' as const;
 
 // 顶层 payload 分类，对应不同增强组件最终下沉到的运行时块类型。
 export type EnhancedBlockPayloadKind =
-  | 'structural'
-  | 'teleport'
-  | 'cache'
-  | 'transition'
-  | 'boundary';
+  'structural' | 'teleport' | 'cache' | 'transition' | 'boundary';
 
 // `passthrough` 只表示语法辅助节点，不会形成可执行块，因此这里排除掉。
-export type EnhancedExecutableIrKind = Exclude<EnhancedComponentIrKind, 'passthrough'>;
+export type EnhancedExecutableIrKind = Exclude<
+  EnhancedComponentIrKind,
+  'passthrough'
+>;
 
 // 下面这些类型别名把“payload 分类”和“合法组件名”一一对齐，方便后续泛型约束。
-export type StructuralPayloadComponentName = 'When' | 'Switch' | 'Each' | 'Dynamic';
+export type StructuralPayloadComponentName =
+  'When' | 'Switch' | 'Each' | 'Dynamic';
 export type TeleportPayloadComponentName = 'Teleport';
 export type CachePayloadComponentName = 'KeepAlive';
-export type TransitionPayloadComponentName = StructuralChildrenOnlyEnhancedComponentName;
-export type BoundaryPayloadComponentName = 'Suspense' | 'ErrorBoundary' | 'LazyLoad';
+export type TransitionPayloadComponentName =
+  StructuralChildrenOnlyEnhancedComponentName;
+export type BoundaryPayloadComponentName =
+  'Suspense' | 'ErrorBoundary' | 'LazyLoad';
 
 // 标记描述符用于 SSR 与 hydration 阶段对块边界、锚点位置进行重新定位。
 export type EnhancedMarkerKind =
@@ -51,7 +53,8 @@ export type EnhancedMarkerKind =
   | 'transition-anchor';
 
 export type HydrationRecoveryMode = 'resume' | 'replay' | 'remount';
-export type BoundaryState = 'idle' | 'pending' | 'resolved' | 'rejected' | 'inactive';
+export type BoundaryState =
+  'idle' | 'pending' | 'resolved' | 'rejected' | 'inactive';
 // 生命周期操作用于描述结构块在宿主调度中的关键步骤。
 export type StructuralLifecycleOp =
   | 'mount'
@@ -102,12 +105,11 @@ interface BaseEnhancedBlockPayload<
 }
 
 // 下面几组 payload 类型分别对应结构块、Teleport、缓存块、过渡块和边界块五类执行模型。
-export interface StructuralBlockPayload
-  extends BaseEnhancedBlockPayload<
-    'structural',
-    StructuralPayloadComponentName,
-    'IfIR' | 'ListIR' | 'DynamicIR'
-  > {
+export interface StructuralBlockPayload extends BaseEnhancedBlockPayload<
+  'structural',
+  StructuralPayloadComponentName,
+  'IfIR' | 'ListIR' | 'DynamicIR'
+> {
   // 结构型组件通过 slotIndex/template/lifecycle 组合描述其块实例与模板关系。
   readonly slotIndex: number;
   readonly template: EnhancedTemplateContract;
@@ -115,8 +117,11 @@ export interface StructuralBlockPayload
   readonly lifecycle: readonly StructuralLifecycleOp[];
 }
 
-export interface TeleportPayload
-  extends BaseEnhancedBlockPayload<'teleport', TeleportPayloadComponentName, 'TeleportIR'> {
+export interface TeleportPayload extends BaseEnhancedBlockPayload<
+  'teleport',
+  TeleportPayloadComponentName,
+  'TeleportIR'
+> {
   // Teleport 额外记录目标挂载策略，便于运行时决定如何解析 `to`。
   readonly slotIndex: number;
   readonly template: EnhancedTemplateContract;
@@ -126,8 +131,11 @@ export interface TeleportPayload
   };
 }
 
-export interface CachePayload
-  extends BaseEnhancedBlockPayload<'cache', CachePayloadComponentName, 'KeepAliveIR'> {
+export interface CachePayload extends BaseEnhancedBlockPayload<
+  'cache',
+  CachePayloadComponentName,
+  'KeepAliveIR'
+> {
   // 缓存域配置直接决定 KeepAlive 风格组件的复用与淘汰策略。
   readonly slotIndex: number;
   readonly template: EnhancedTemplateContract;
@@ -140,12 +148,11 @@ export interface CachePayload
   };
 }
 
-export interface TransitionPayload
-  extends BaseEnhancedBlockPayload<
-    'transition',
-    TransitionPayloadComponentName,
-    'TransitionIR'
-  > {
+export interface TransitionPayload extends BaseEnhancedBlockPayload<
+  'transition',
+  TransitionPayloadComponentName,
+  'TransitionIR'
+> {
   // 过渡块把模板信息与动画阶段配置一起下发给运行时。
   readonly transitionIndex: number;
   readonly template?: EnhancedTemplateContract;
@@ -178,8 +185,11 @@ export interface TransitionPayloadComponentConfig {
   readonly tagPropName?: 'tag';
 }
 
-export interface BoundaryPayload
-  extends BaseEnhancedBlockPayload<'boundary', BoundaryPayloadComponentName, 'BoundaryIR'> {
+export interface BoundaryPayload extends BaseEnhancedBlockPayload<
+  'boundary',
+  BoundaryPayloadComponentName,
+  'BoundaryIR'
+> {
   // 边界型组件除了模板外，还需要初始状态来驱动运行时状态机。
   readonly boundaryIndex: number;
   readonly initialState: BoundaryState;
@@ -206,7 +216,10 @@ const TRANSITION_PAYLOAD_COMPONENT_CONFIG = Object.freeze({
     phases: ['appear', 'enter', 'move', 'leave'],
     tagPropName: 'tag',
   },
-} satisfies Record<TransitionPayloadComponentName, TransitionPayloadComponentConfig>);
+} satisfies Record<
+  TransitionPayloadComponentName,
+  TransitionPayloadComponentConfig
+>);
 
 export const getEnhancedBlockPayloadKind = (
   componentName: EnhancedComponentName
@@ -327,7 +340,9 @@ export const isEnhancedMarkerDescriptor = (
   );
 };
 
-export const isEnhancedBlockPayload = (value: unknown): value is EnhancedBlockPayload => {
+export const isEnhancedBlockPayload = (
+  value: unknown
+): value is EnhancedBlockPayload => {
   if (!isRecord(value)) {
     return false;
   }
@@ -354,7 +369,9 @@ export const isBoundaryPayload = (value: unknown): value is BoundaryPayload => {
   return isEnhancedBlockPayload(value) && value.payloadKind === 'boundary';
 };
 
-export const isTransitionPayload = (value: unknown): value is TransitionPayload => {
+export const isTransitionPayload = (
+  value: unknown
+): value is TransitionPayload => {
   // 细分守卫全部建立在公共协议头成立之后，再按 payloadKind 继续缩窄。
   return isEnhancedBlockPayload(value) && value.payloadKind === 'transition';
 };
@@ -363,7 +380,9 @@ export const isCachePayload = (value: unknown): value is CachePayload => {
   return isEnhancedBlockPayload(value) && value.payloadKind === 'cache';
 };
 
-export const isStructuralBlockPayload = (value: unknown): value is StructuralBlockPayload => {
+export const isStructuralBlockPayload = (
+  value: unknown
+): value is StructuralBlockPayload => {
   return isEnhancedBlockPayload(value) && value.payloadKind === 'structural';
 };
 

@@ -24,8 +24,7 @@ export interface DeclarativeShadowRootOptions {
   delegatesFocus?: boolean;
 }
 
-export interface DeclarativeShadowComponentOptions
-  extends DeclarativeShadowRootOptions {
+export interface DeclarativeShadowComponentOptions extends DeclarativeShadowRootOptions {
   /** 自定义元素标签名，例如 `my-card`。 */
   tagName: string;
   /** 宿主元素属性；字符串会原样写入，对象按键值序列化。 */
@@ -148,7 +147,8 @@ export const renderLightComponent = (
   const tagName = normalizeTagName(options.tagName);
   const attributes = renderAttributes(options.attributes);
   // light 模式下样式与内容同处文档树，样式天然是全局作用域。
-  const inlineStyles = options.inlineStyles === false ? '' : renderStyles(options.styles);
+  const inlineStyles =
+    options.inlineStyles === false ? '' : renderStyles(options.styles);
 
   return `<${tagName}${attributes}>${inlineStyles}${html}${
     options.lightDom ?? ''
@@ -213,7 +213,11 @@ export async function* renderComponentToStream(
   const renderMode = options.renderMode ?? component.renderMode ?? 'shadow';
 
   if (renderMode === 'light') {
-    for await (const chunk of renderComponentLightStream(component, props, options)) {
+    for await (const chunk of renderComponentLightStream(
+      component,
+      props,
+      options
+    )) {
       yield chunk;
     }
     return;
@@ -285,7 +289,8 @@ export const readDeclarativeShadowTemplate = (
 ): HTMLTemplateElement | null => {
   const template = Array.from(element.children).find(
     (child): child is HTMLTemplateElement =>
-      child instanceof HTMLTemplateElement && child.hasAttribute('shadowrootmode')
+      child instanceof HTMLTemplateElement &&
+      child.hasAttribute('shadowrootmode')
   );
 
   return template ?? null;

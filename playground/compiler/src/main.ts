@@ -69,7 +69,11 @@ if (root) {
   irBlock.textContent = JSON.stringify(result.ir, null, 2);
   depsBlock.textContent = JSON.stringify(result.ir.dependencyAnalysis, null, 2);
   slotsBlock.textContent = JSON.stringify(result.ir.slotAllocation, null, 2);
-  updatersBlock.textContent = JSON.stringify(result.ir.updaterGeneration, null, 2);
+  updatersBlock.textContent = JSON.stringify(
+    result.ir.updaterGeneration,
+    null,
+    2
+  );
   classCodeBlock.textContent = result.classCode.code;
   bindingsBlock.textContent = JSON.stringify(result.textBindings, null, 2);
   renderBlock.textContent = result.renderCode.code;

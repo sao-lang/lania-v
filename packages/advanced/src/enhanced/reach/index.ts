@@ -32,7 +32,9 @@ const isElementLike = (value: unknown): value is Element =>
   typeof (value as Element).addEventListener === 'function';
 
 /** 该元素自身是否是滚动容器（有纵向/横向溢出）。 */
-const isScrollableBox = (value: Element): value is Element & {
+const isScrollableBox = (
+  value: Element
+): value is Element & {
   scrollHeight: number;
   scrollTop: number;
   clientHeight: number;
@@ -102,7 +104,6 @@ export const createReachController = (props: ReachProps): ReachController => {
 
     fired = true;
 
-
     try {
       props.onReach?.();
     } catch (error) {
@@ -135,7 +136,6 @@ export const createReachController = (props: ReachProps): ReachController => {
    * 尚未完成的布局，容易误判；滚动位置是同步且可靠的。
    */
   const checkByScroll = (): void => {
-
     if (destroyed) {
       return;
     }
@@ -237,7 +237,6 @@ export const createReachController = (props: ReachProps): ReachController => {
       observer = null;
     },
     check: checkByScroll,
-
   };
 };
 

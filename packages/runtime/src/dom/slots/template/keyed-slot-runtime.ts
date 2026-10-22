@@ -4,7 +4,11 @@
  * 这些工具围绕带开始/结束注释锚点的 block 工作，供 `ForSlot` 在 diff 时复用。
  */
 import { collectKeyedBlockNodes } from '../core';
-import { mountHydratedBinding, mountTemplateBinding, mountTemplateBindingInto } from './template-factory';
+import {
+  mountHydratedBinding,
+  mountTemplateBinding,
+  mountTemplateBindingInto,
+} from './template-factory';
 import type {
   KeyedBlock,
   KeyedSlotInstance,
@@ -15,7 +19,9 @@ import type {
 
 // MountedBindingInstance 已经满足 KeyedSlotInstance 的结构（多一个 fragment），
 // 直接复用同一个对象，避免每条 item 再包一层闭包壳。
-const toKeyedSlotInstance = (instance: MountedBindingInstance): KeyedSlotInstance => instance;
+const toKeyedSlotInstance = (
+  instance: MountedBindingInstance
+): KeyedSlotInstance => instance;
 
 // 正常挂载路径直接创建 binding 实例并把 fragment 插入到给定锚点前。
 export const createKeyedSlotInstance = (
@@ -25,7 +31,12 @@ export const createKeyedSlotInstance = (
   item: unknown,
   index: number
 ): KeyedSlotInstance => {
-  const instance = mountTemplateBinding(payload.template, payload.bindings, item, index);
+  const instance = mountTemplateBinding(
+    payload.template,
+    payload.bindings,
+    item,
+    index
+  );
   parent.insertBefore(instance.fragment, anchor);
   return toKeyedSlotInstance(instance);
 };
@@ -41,7 +52,13 @@ export const createKeyedSlotInstanceInto = (
   index: number
 ): KeyedSlotInstance => {
   return toKeyedSlotInstance(
-    mountTemplateBindingInto(container, payload.template, payload.bindings, item, index)
+    mountTemplateBindingInto(
+      container,
+      payload.template,
+      payload.bindings,
+      item,
+      index
+    )
   );
 };
 
@@ -64,7 +81,9 @@ export const createHydratedKeyed = (
 };
 
 // SSR 回填时通过注释对扫描出一组组 hydrated keyed block。
-export const collectHydratedKeyedBlocks = (nodes: readonly Node[]): KeyedBlock[] => {
+export const collectHydratedKeyedBlocks = (
+  nodes: readonly Node[]
+): KeyedBlock[] => {
   const blocks: KeyedBlock[] = [];
   let pendingStart: Comment | null = null;
 
@@ -163,7 +182,10 @@ export const moveKeyedBlockBefore = (
       resolvedBeforeNode = null;
     }
 
-    if (element.parentNode === parent && element.nextSibling === resolvedBeforeNode) {
+    if (
+      element.parentNode === parent &&
+      element.nextSibling === resolvedBeforeNode
+    ) {
       return;
     }
 
@@ -191,8 +213,12 @@ export const moveKeyedBlockBefore = (
     } else {
       const startToBefore = start.compareDocumentPosition(resolvedBeforeNode);
       const beforeToEnd = resolvedBeforeNode.compareDocumentPosition(end);
-      const isAfterStart = Boolean(startToBefore & Node.DOCUMENT_POSITION_FOLLOWING);
-      const isBeforeEnd = Boolean(beforeToEnd & Node.DOCUMENT_POSITION_FOLLOWING);
+      const isAfterStart = Boolean(
+        startToBefore & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+      const isBeforeEnd = Boolean(
+        beforeToEnd & Node.DOCUMENT_POSITION_FOLLOWING
+      );
       if (isAfterStart && isBeforeEnd) {
         resolvedBeforeNode = null;
       }
@@ -214,6 +240,8 @@ export const moveKeyedBlockBefore = (
     current = next;
   }
   const safeBeforeNode =
-    resolvedBeforeNode && resolvedBeforeNode.parentNode === parent ? resolvedBeforeNode : null;
+    resolvedBeforeNode && resolvedBeforeNode.parentNode === parent
+      ? resolvedBeforeNode
+      : null;
   parent.insertBefore(fragment, safeBeforeNode);
 };

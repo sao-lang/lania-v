@@ -39,18 +39,18 @@ TSX / FC -> Component IR -> renderPlan -> Updater -> Slot -> DOM
 
 ## 2. 模块地图
 
-| 模块 | 主要职责 | 上游输入 | 下游输出 |
-| --- | --- | --- | --- |
-| `packages/shared` | 共享协议、增强组件注册表、跨包常量 | 编译器和运行时共同约定 | 供 runtime / compiler / 集成层复用的契约 |
-| `packages/compiler-core` | AST、IR、依赖分析、renderPlan、slot/updater 规划、codegen | 来自 `compiler-tsx` 的统一组件声明 | 编译产物、render code、SSR code、诊断结果 |
-| `packages/compiler-tsx` | `.lania.tsx` 解析、绑定分析、函数组件编译入口、模块封装 | TSX 源码 | `compiler-core` 可消费的程序结构与最终 module code |
-| `packages/vite-plugin` | 将 `.lania.tsx` 编译接入 Vite transform / HMR | 源文件、编译器插件配置 | 给 Vite 的 JS + sourcemap + 编译错误 |
-| `packages/runtime` | 响应式、调度、slot、组件宿主、增强组件、SSR/Hydration | 编译产物、运行时 API 调用 | DOM、事件、副作用、SSR/Hydration 行为 |
-| `playground/todo` | 默认开发入口与功能验收 | runtime + compiler + vite-plugin | 人工验证场景与 E2E 载体 |
-| `playground/compiler` | 编译链路可视化 | `compiler-tsx` 编译结果 | AST / IR / dependency / render code 展示 |
-| `playground/benchmark` | 横向性能基准 | runtime + vite-plugin + 多框架实现 | benchmark 结果 |
-| `tests` | 单元、集成、E2E、benchmark 自动化验证 | 全部核心模块 | 回归信号、验收证据 |
-| `docs` | 主线、API、工程流程说明 | 当前实现与测试结论 | 团队统一认知与维护基线 |
+| 模块                     | 主要职责                                                  | 上游输入                           | 下游输出                                           |
+| ------------------------ | --------------------------------------------------------- | ---------------------------------- | -------------------------------------------------- |
+| `packages/shared`        | 共享协议、增强组件注册表、跨包常量                        | 编译器和运行时共同约定             | 供 runtime / compiler / 集成层复用的契约           |
+| `packages/compiler-core` | AST、IR、依赖分析、renderPlan、slot/updater 规划、codegen | 来自 `compiler-tsx` 的统一组件声明 | 编译产物、render code、SSR code、诊断结果          |
+| `packages/compiler-tsx`  | `.lania.tsx` 解析、绑定分析、函数组件编译入口、模块封装   | TSX 源码                           | `compiler-core` 可消费的程序结构与最终 module code |
+| `packages/vite-plugin`   | 将 `.lania.tsx` 编译接入 Vite transform / HMR             | 源文件、编译器插件配置             | 给 Vite 的 JS + sourcemap + 编译错误               |
+| `packages/runtime`       | 响应式、调度、slot、组件宿主、增强组件、SSR/Hydration     | 编译产物、运行时 API 调用          | DOM、事件、副作用、SSR/Hydration 行为              |
+| `playground/todo`        | 默认开发入口与功能验收                                    | runtime + compiler + vite-plugin   | 人工验证场景与 E2E 载体                            |
+| `playground/compiler`    | 编译链路可视化                                            | `compiler-tsx` 编译结果            | AST / IR / dependency / render code 展示           |
+| `playground/benchmark`   | 横向性能基准                                              | runtime + vite-plugin + 多框架实现 | benchmark 结果                                     |
+| `tests`                  | 单元、集成、E2E、benchmark 自动化验证                     | 全部核心模块                       | 回归信号、验收证据                                 |
+| `docs`                   | 主线、API、工程流程说明                                   | 当前实现与测试结论                 | 团队统一认知与维护基线                             |
 
 ## 3. 各模块的功能与边界
 

@@ -75,7 +75,8 @@ export const analyzeComponentDependencies = (
       // 新的原子状态由 `@lania/store` 的 `createAtom` 提供，编译器把它当信号处理。
       return (
         (ts.isIdentifier(callee) && callee.text === 'createStore') ||
-        (ts.isPropertyAccessExpression(callee) && callee.name.text === 'createStore')
+        (ts.isPropertyAccessExpression(callee) &&
+          callee.name.text === 'createStore')
       );
     } catch {
       return false;
@@ -107,14 +108,24 @@ export const analyzeComponentDependencies = (
   const storePathReads = createPathRecord();
   const propNames = new Set(component.props.map((prop) => prop.name));
   const signalNames = new Set(component.signals.map((signal) => signal.name));
-  const computedNames = new Set(component.computed.map((computed) => computed.name));
+  const computedNames = new Set(
+    component.computed.map((computed) => computed.name)
+  );
   const propertyReadNames = new Set([...propNames, ...computedNames]);
   // 模板里允许把 signal 直接当可读值使用，因此模板分析集合会比 block 分析再多一层 signal 名。
-  const templatePropertyReadNames = new Set([...propNames, ...computedNames, ...signalNames]);
+  const templatePropertyReadNames = new Set([
+    ...propNames,
+    ...computedNames,
+    ...signalNames,
+  ]);
   const storeNames = collectStoreBindingNames();
   // 模板表达式允许直接读 signal / prop / computed；effect 块则更偏向成员读取场景。
   const analyzeExpression = (expression: string) =>
-    analyzeExpressionDependencies(expression, templatePropertyReadNames, storeNames);
+    analyzeExpressionDependencies(
+      expression,
+      templatePropertyReadNames,
+      storeNames
+    );
   const analyzeBlock = (body: string) =>
     analyzeBlockDependencies(body, propertyReadNames, storeNames);
 
@@ -156,9 +167,17 @@ export const analyzeComponentDependencies = (
           // 条件 updater 既依赖条件本身，也依赖 true/fallback 分支内部的动态读取。
           signalDependencies: mergeDependencies(
             analyzeExpression(node.expression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : [],
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : [],
             node.fallbackChildren
-              ? collectTemplateSignalDependencies(node.fallbackChildren, analyzeExpression)
+              ? collectTemplateSignalDependencies(
+                  node.fallbackChildren,
+                  analyzeExpression
+                )
               : []
           ),
           slotIndex: node.slotIndex,
@@ -174,7 +193,12 @@ export const analyzeComponentDependencies = (
           updater: `updateTeleportSlot${node.slotIndex}`,
           signalDependencies: mergeDependencies(
             analyzeExpression(node.targetExpression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           ),
           slotIndex: node.slotIndex,
           path: node.path,
@@ -191,7 +215,12 @@ export const analyzeComponentDependencies = (
           updater: `updateDynamicSlot${node.slotIndex}`,
           signalDependencies: mergeDependencies(
             analyzeExpression(expression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           ),
           slotIndex: node.slotIndex,
           path: node.path,
@@ -206,7 +235,12 @@ export const analyzeComponentDependencies = (
           updater: `updateKeepAliveSlot${node.slotIndex}`,
           signalDependencies: mergeDependencies(
             analyzeExpression(node.payloadExpression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           ),
           slotIndex: node.slotIndex,
           path: node.path,
@@ -222,7 +256,12 @@ export const analyzeComponentDependencies = (
           updater: `updateBoundarySlot${node.slotIndex}`,
           signalDependencies: mergeDependencies(
             analyzeExpression(node.payloadExpression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           ),
           slotIndex: node.slotIndex,
           path: node.path,
@@ -237,7 +276,12 @@ export const analyzeComponentDependencies = (
           updater: `updateTransitionSlot${node.slotIndex}`,
           signalDependencies: mergeDependencies(
             analyzeExpression(node.payloadExpression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           ),
           slotIndex: node.slotIndex,
           path: node.path,
@@ -333,7 +377,11 @@ export const analyzeComponentDependencies = (
           );
         }
         if (entry.source === 'effect') {
-          pushRecordSetValue(effectDependencyChain, entry.updater.slice('runEffect_'.length), storeKey);
+          pushRecordSetValue(
+            effectDependencyChain,
+            entry.updater.slice('runEffect_'.length),
+            storeKey
+          );
         }
         return;
       }
@@ -346,15 +394,27 @@ export const analyzeComponentDependencies = (
       pushPathValue(deepPathReads, dependency.name, dependency.accessPath);
 
       if (entry.slotIndex !== undefined) {
-        pushRecordNumberValue(signalToSlotMap, dependency.name, entry.slotIndex);
+        pushRecordNumberValue(
+          signalToSlotMap,
+          dependency.name,
+          entry.slotIndex
+        );
       }
 
       if (entry.source === 'computed') {
-        pushRecordSetValue(computedDependencyChain, entry.updater.slice('updateComputed_'.length), dependency.name);
+        pushRecordSetValue(
+          computedDependencyChain,
+          entry.updater.slice('updateComputed_'.length),
+          dependency.name
+        );
       }
 
       if (entry.source === 'effect') {
-        pushRecordSetValue(effectDependencyChain, entry.updater.slice('runEffect_'.length), dependency.name);
+        pushRecordSetValue(
+          effectDependencyChain,
+          entry.updater.slice('runEffect_'.length),
+          dependency.name
+        );
       }
     });
   });

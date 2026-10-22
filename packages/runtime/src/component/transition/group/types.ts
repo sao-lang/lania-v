@@ -14,10 +14,7 @@ import {
   type DomHostRemovedBlockHandoff,
 } from '../../host/function-component';
 import type { TransitionGroupHostMode } from './runtime/host-mode';
-import {
-  type TransitionLeaveEntry,
-  type GroupHookContext,
-} from '../registry';
+import { type TransitionLeaveEntry, type GroupHookContext } from '../registry';
 import { type TransitionDispatchHook } from '../host';
 import {
   type BaseTransitionCommitKind,
@@ -61,12 +58,13 @@ export type GroupDomHostState<TRenderable> = {
 };
 
 // 统一状态同时覆盖 snapshot 与 dom-host 两种模式，某些字段在不同模式下可能为空。
-export type TransitionGroupState<TRenderable> = GroupDomHostState<TRenderable> & {
-  keys: PropertyKey[];
-  snapshots: TRenderable[];
-  owner: DomHostOwner | null;
-  activeBlocks: Map<PropertyKey, DomHostBlockRecord>;
-};
+export type TransitionGroupState<TRenderable> =
+  GroupDomHostState<TRenderable> & {
+    keys: PropertyKey[];
+    snapshots: TRenderable[];
+    owner: DomHostOwner | null;
+    activeBlocks: Map<PropertyKey, DomHostBlockRecord>;
+  };
 
 export type GroupCommitInput<TRenderable> = BaseTransitionCommitInput<
   readonly TRenderable[]
@@ -113,7 +111,9 @@ export type RenderedGroup<TRenderable> = {
 };
 
 export type GroupRuntimeCore<TRenderable> = {
-  commit(input: GroupCommitInput<TRenderable>): TRenderable[] | HTMLElement | null;
+  commit(
+    input: GroupCommitInput<TRenderable>
+  ): TRenderable[] | HTMLElement | null;
   renderEntries(renderEntries: () => readonly TRenderable[]): TRenderable[];
   resolveCommitIntent(keys: readonly PropertyKey[]): GroupCommitIntent;
   resolveKeys(
@@ -137,14 +137,14 @@ export type GroupDomHostRuntime<TRenderable> = BaseHostFlowRuntime<
   [readonly PropertyKey[]],
   GroupCommitInput<TRenderable>,
   TRenderable[] | HTMLElement,
-    DomHostCommitContext<TRenderable>,
-    HTMLElement,
-    GroupCommitResult<TRenderable>,
-    GroupPrevCommitContext<TRenderable>,
-    GroupPrevCommitResult<TRenderable>,
-    HTMLElement | null,
-    GroupDebugSummary
-  > &
+  DomHostCommitContext<TRenderable>,
+  HTMLElement,
+  GroupCommitResult<TRenderable>,
+  GroupPrevCommitContext<TRenderable>,
+  GroupPrevCommitResult<TRenderable>,
+  HTMLElement | null,
+  GroupDebugSummary
+> &
   GroupRuntimeCore<TRenderable> & {
     createContext(options: {
       keys: readonly PropertyKey[];
@@ -229,7 +229,9 @@ export type GroupPhaseHooks = {
 };
 
 // phaseEnabled 允许组件层按需关闭某些阶段，而不必改动 hook 注册本身。
-export type GroupPhaseEnabled = Partial<Record<'appear' | 'enter' | 'move', boolean>>;
+export type GroupPhaseEnabled = Partial<
+  Record<'appear' | 'enter' | 'move', boolean>
+>;
 
 // 组件层最终解析出的选项会统一收敛成这一结构。
 export type ResolvedGroupOptions = {

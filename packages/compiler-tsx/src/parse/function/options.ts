@@ -33,7 +33,9 @@ const throwOptionError = (
   node: ts.Node,
   message: string
 ): never => {
-  const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+  const position = sourceFile.getLineAndCharacterOfPosition(
+    node.getStart(sourceFile)
+  );
   throw new Error(
     `${message} (${sourceFile.fileName}:${position.line + 1}:${position.character + 1})`
   );

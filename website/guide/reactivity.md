@@ -11,8 +11,8 @@ import { createSignal } from '@lania-v/runtime';
 
 const count = createSignal(0);
 
-count.value;      // 0
-count.set(1);     // 1
+count.value; // 0
+count.set(1); // 1
 count.set((value) => value + 1); // 2
 ```
 
@@ -23,8 +23,8 @@ count.set((value) => value + 1); // 2
 ```ts
 const user = createSignal({ name: 'Ada', profile: { city: 'Paris' } });
 
-createEffect(() => console.log(user.value.name));          // 只订阅 ['name']
-createEffect(() => console.log(user.value.profile.city));  // 只订阅 ['profile', 'city']
+createEffect(() => console.log(user.value.name)); // 只订阅 ['name']
+createEffect(() => console.log(user.value.profile.city)); // 只订阅 ['profile', 'city']
 
 user.set('profile.city', 'Lyon'); // 只有第二个 effect 重跑
 ```
@@ -46,7 +46,7 @@ count.set((value) => value * 2);
 const handler = createSignal<() => void>(() => {});
 
 handler.setValue(() => console.log('new handler')); // 存储函数本身
-handler.set(() => console.log('updater'));          // 用旧值计算新值
+handler.set(() => console.log('updater')); // 用旧值计算新值
 ```
 
 ### `peek()`
@@ -90,7 +90,7 @@ const stop = createEffect(() => {
 });
 
 count.set(1); // 异步调度后执行 effect
-stop();       // 解除订阅
+stop(); // 解除订阅
 ```
 
 Effect 可以返回清理函数：
@@ -117,26 +117,37 @@ const stop = watch(count, (current, previous) => {
   console.log(`count: ${previous} -> ${current}`);
 });
 
-const stopMany = watch([first, last], ([nextFirst, nextLast], [prevFirst, prevLast]) => {
-  console.log('name changed');
-});
+const stopMany = watch(
+  [first, last],
+  ([nextFirst, nextLast], [prevFirst, prevLast]) => {
+    console.log('name changed');
+  }
+);
 ```
 
 `watch()` 不会立即执行首次回调。需要首屏执行时，开启 `immediate`：
 
 ```ts
-watch(count, (current, previous) => {
-  // 首次立即执行，此时 previous 是 undefined
-  console.log(previous ?? '(initial)', current);
-}, { immediate: true });
+watch(
+  count,
+  (current, previous) => {
+    // 首次立即执行，此时 previous 是 undefined
+    console.log(previous ?? '(initial)', current);
+  },
+  { immediate: true }
+);
 ```
 
 传入对象时，`deep: true` 会按值比较新旧快照，内容没变就不触发回调，`previous` 是上一次快照的深拷贝：
 
 ```ts
-watch(form, (current, previous) => {
-  console.log(previous, current);
-}, { deep: true });
+watch(
+  form,
+  (current, previous) => {
+    console.log(previous, current);
+  },
+  { deep: true }
+);
 ```
 
 `watch(source, callback, options, scheduler)` 的第三参是选项，第四参才是调度器。
@@ -152,7 +163,7 @@ watch(form, (current, previous) => {
 const count = createSignal(0);
 const publicCount = readonly(count);
 
-publicCount.value;      // 0
+publicCount.value; // 0
 publicCount.peek(); // 0
 // publicCount.set(1) // 类型错误
 ```
@@ -198,13 +209,13 @@ import {
 
 ### 优先级
 
-| 优先级 | 用途 |
-| --- | --- |
+| 优先级      | 用途               |
+| ----------- | ------------------ |
 | `immediate` | 需要立刻执行的任务 |
-| `high` | 生命周期更新 |
-| `normal` | 普通 Signal 更新 |
-| `low` | effect、过渡更新 |
-| `idle` | 空闲任务 |
+| `high`      | 生命周期更新       |
+| `normal`    | 普通 Signal 更新   |
+| `low`       | effect、过渡更新   |
+| `idle`      | 空闲任务           |
 
 ### `batch()`
 

@@ -23,10 +23,10 @@ interface WhenProps {
 
 `mode` 控制条件切换时的节点策略：
 
-| 模式 | 行为 |
-| --- | --- |
-| `remount`（默认） | 分支切换时销毁并重建 |
-| `retain` | 分支隐藏时保留节点，再次显示时复用 |
+| 模式              | 行为                               |
+| ----------------- | ---------------------------------- |
+| `remount`（默认） | 分支切换时销毁并重建               |
+| `retain`          | 分支隐藏时保留节点，再次显示时复用 |
 
 需要重置内部状态（例如表单、滚动位置、子组件状态）时使用 `remount`：
 
@@ -79,11 +79,7 @@ interface WhenProps {
 ## `Each`
 
 ```tsx
-<Each
-  items={todos()}
-  key={(item) => item.id}
-  fallback={<p>No todos</p>}
->
+<Each items={todos()} key={(item) => item.id} fallback={<p>No todos</p>}>
   {(item, index) => (
     <div>
       <span>{index + 1}.</span>
@@ -101,8 +97,7 @@ interface EachProps<T> {
   key?: (item: T, index: number) => PropertyKey;
   fallback?: EnhancedRenderable;
   children:
-    | ((item: T, index: number) => EnhancedRenderable)
-    | EnhancedRenderable;
+    ((item: T, index: number) => EnhancedRenderable) | EnhancedRenderable;
 }
 ```
 
@@ -236,12 +231,12 @@ SSR 阶段会输出 teleport 容器 marker，客户端 hydration 时重新接管
 
 增强组件不是普通组件，编译器会为它们做结构校验：
 
-| 写法 | 结果 |
-| --- | --- |
-| `<Then>` 不在 `<When>` 下 | 编译错误 |
-| `<Else>` 不在 `<When>` 下 | 编译错误 |
-| `<Case>` / `<Default>` 不在 `<Switch>` 下 | 编译错误 |
-| 在增强组件上使用任意未知 prop | 取决于组件，通常会被忽略或参与 metadata |
+| 写法                                      | 结果                                    |
+| ----------------------------------------- | --------------------------------------- |
+| `<Then>` 不在 `<When>` 下                 | 编译错误                                |
+| `<Else>` 不在 `<When>` 下                 | 编译错误                                |
+| `<Case>` / `<Default>` 不在 `<Switch>` 下 | 编译错误                                |
+| 在增强组件上使用任意未知 prop             | 取决于组件，通常会被忽略或参与 metadata |
 
 增强组件注册表位于 `@lania-v/shared`，编译器和运行时共享同一份定义：
 

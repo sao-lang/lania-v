@@ -14,7 +14,8 @@ declare namespace JSX {
     key?: unknown;
   }
   interface IntrinsicElements
-    extends RuntimeNativeIntrinsicElements,
+    extends
+      RuntimeNativeIntrinsicElements,
       RuntimeEnhancedIntrinsicElements,
       Record<string, RuntimeIntrinsicElementProps> {}
 }

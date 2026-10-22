@@ -283,9 +283,7 @@ export interface VirtualHost extends HTMLElement {
 }
 
 export type VirtualSizeInput =
-  | number
-  | readonly number[]
-  | ((index: number) => number);
+  number | readonly number[] | ((index: number) => number);
 
 export interface ReachProps extends EnhancedComponentProps {
   /** 触发回调。 */

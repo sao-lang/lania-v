@@ -21,7 +21,10 @@ const flush = async (): Promise<void> => {
   }
 };
 
-const loadComponent = (source: string, options: { hotReload?: boolean } = {}): any => {
+const loadComponent = (
+  source: string,
+  options: { hotReload?: boolean } = {}
+): any => {
   const moduleCode = compileFunctionComponentTsxToModule(
     '/virtual/HmrCard.lania.tsx',
     source,
@@ -120,7 +123,9 @@ describe('component HMR state preservation', () => {
     });
     await flush();
 
-    const button = element.shadowRoot?.querySelector('button') as HTMLButtonElement;
+    const button = element.shadowRoot?.querySelector(
+      'button'
+    ) as HTMLButtonElement;
     button.click();
     button.click();
     await flush();
@@ -162,7 +167,9 @@ describe('component HMR state preservation', () => {
     expect(registered).toBe(v2);
     expect(customElements.get(tagName)).toBe(v1);
     await flush();
-    expect(element.shadowRoot?.querySelector('.label')?.textContent).toBe('second');
+    expect(element.shadowRoot?.querySelector('.label')?.textContent).toBe(
+      'second'
+    );
 
     element.remove();
   });
@@ -196,7 +203,9 @@ describe('component HMR state preservation', () => {
   it('re-runs setup in dev builds so newly added state exists after HMR', async () => {
     installComponentHmr();
 
-    const v1 = loadComponent(cardWithoutExtraStateSource(), { hotReload: true });
+    const v1 = loadComponent(cardWithoutExtraStateSource(), {
+      hotReload: true,
+    });
     runtime.defineComponent(v1);
     const element = runtime.mountComponent(document.body, v1, { props: {} });
     await flush();
@@ -211,7 +220,9 @@ describe('component HMR state preservation', () => {
     await flush();
 
     // 新增的 setup 状态被补建（构造器没重跑，但 dev 产物把 setup 收进了 __laniaSetup）
-    expect(element.shadowRoot?.querySelector('.note')?.textContent).toBe('fresh');
+    expect(element.shadowRoot?.querySelector('.note')?.textContent).toBe(
+      'fresh'
+    );
     // 旧 signal 的值按字段名保留
     expect(element.shadowRoot?.querySelector('output')?.textContent).toBe('2');
 
@@ -224,15 +235,15 @@ describe('component HMR state preservation', () => {
 
   it('keeps setup as class fields when hotReload is off', () => {
     const prod = loadComponent(cardWithoutExtraStateSource('HmrProdCard'));
-    expect(typeof (prod.prototype as { __laniaSetup?: unknown }).__laniaSetup).toBe(
-      'undefined'
-    );
+    expect(
+      typeof (prod.prototype as { __laniaSetup?: unknown }).__laniaSetup
+    ).toBe('undefined');
 
     const dev = loadComponent(cardWithoutExtraStateSource('HmrDevCard'), {
       hotReload: true,
     });
-    expect(typeof (dev.prototype as { __laniaSetup?: unknown }).__laniaSetup).toBe(
-      'function'
-    );
+    expect(
+      typeof (dev.prototype as { __laniaSetup?: unknown }).__laniaSetup
+    ).toBe('function');
   });
 });

@@ -129,7 +129,9 @@ describe('runtime debug hooks', () => {
       customElements.define('x-debug-lifecycle', DebugLifecycleElement);
     }
 
-    const element = document.createElement('x-debug-lifecycle') as DebugLifecycleElement;
+    const element = document.createElement(
+      'x-debug-lifecycle'
+    ) as DebugLifecycleElement;
     document.body.appendChild(element);
     await flushMicrotasks();
     warning('debug warning');
@@ -148,7 +150,9 @@ describe('runtime debug hooks', () => {
 
 describe('runtime dev mode helpers', () => {
   it('warns only in dev mode and always throws asserts', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
 
     setDevEnvironmentOverride(true);
     expect(warning('dev warning')).toBe(true);

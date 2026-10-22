@@ -24,10 +24,7 @@ import {
   createPlaceholderKeys,
 } from '../state/state';
 import { bindPrevCommitRuntime } from './commit-runtime';
-import {
-  type BaseCommitApplier,
-  type BasePrevApplier,
-} from '../../runtime';
+import { type BasePrevApplier } from '../../runtime';
 import type {
   GroupCommitInput,
   GroupRuntimeCore,
@@ -82,10 +79,8 @@ export const createGroupRuntimeScaffold = <
   TVisibleResult,
   TPreviousResult
 > => {
-  const {
-    resolveKeys,
-    resolveRenderedEntries = (entries) => [...entries],
-  } = options;
+  const { resolveKeys, resolveRenderedEntries = (entries) => [...entries] } =
+    options;
 
   const runtime: GroupScaffoldRuntime<
     TRenderable,
@@ -144,7 +139,9 @@ export const createGroupRuntimeScaffold = <
       return resolveRenderedEntries(renderEntries());
     },
     createContext() {
-      throw new Error('Group runtime scaffold requires bindGroupHostRuntime() to provide createContext().');
+      throw new Error(
+        'Group runtime scaffold requires bindGroupHostRuntime() to provide createContext().'
+      );
     },
   };
 
@@ -177,7 +174,9 @@ export const bindGroupHostRuntime = <
   ): TransitionGroupState<TRenderable>;
   dispatchVisibleCommitPhases(context: TVisibleContext): void;
   prepareVisibleCommit?(context: TVisibleContext): void;
-  commitInitial?(input: GroupCommitInput<TRenderable>): TRenderable[] | HTMLElement;
+  commitInitial?(
+    input: GroupCommitInput<TRenderable>
+  ): TRenderable[] | HTMLElement;
 }): void => {
   const {
     stateKey,
@@ -203,9 +202,9 @@ export const bindGroupHostRuntime = <
   });
   bindCommitStateRuntime({
     runtime: runtime as unknown as {
-      publishVisibleCommitState?(
-        context: { publishStateInput: GroupCommitPublishInput<TRenderable> }
-      ): GroupCommitResult<TRenderable>;
+      publishVisibleCommitState?(context: {
+        publishStateInput: GroupCommitPublishInput<TRenderable>;
+      }): GroupCommitResult<TRenderable>;
     },
     publishState,
   });
@@ -230,7 +229,9 @@ export const bindGroupHostRuntime = <
       TPreviousResult
     > & {
       commitHidden?(): TPreviousResult | null;
-      commitPreviousContext(context: GroupPrevCommitContext<TRenderable>): TPreviousResult;
+      commitPreviousContext(
+        context: GroupPrevCommitContext<TRenderable>
+      ): TPreviousResult;
     },
   });
 };

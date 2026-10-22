@@ -135,7 +135,23 @@ export const runComponentCompilerPipeline = (
     const runtimeRenderableSlotIndices = new Set(
       component.slotAllocation.slots
         .filter((slot) =>
-          ['text', 'component', 'for', 'if', 'dynamic', 'boundary', 'transition', 'keepalive', 'teleport', 'attribute', 'property', 'style', 'class', 'ref', 'directive'].includes(slot.type)
+          [
+            'text',
+            'component',
+            'for',
+            'if',
+            'dynamic',
+            'boundary',
+            'transition',
+            'keepalive',
+            'teleport',
+            'attribute',
+            'property',
+            'style',
+            'class',
+            'ref',
+            'directive',
+          ].includes(slot.type)
         )
         .map((slot) => slot.slotIndex)
     );
@@ -143,7 +159,9 @@ export const runComponentCompilerPipeline = (
       .filter((updater) =>
         updater.slotIndices.length === 0
           ? updater.kind === 'effect'
-          : updater.slotIndices.every((slotIndex) => runtimeRenderableSlotIndices.has(slotIndex))
+          : updater.slotIndices.every((slotIndex) =>
+              runtimeRenderableSlotIndices.has(slotIndex)
+            )
       )
       .flatMap((updater): RenderRuntimeUpdaterPlan[] => {
         const kind = toRenderRuntimeUpdaterKind(updater.kind);
@@ -158,15 +176,18 @@ export const runComponentCompilerPipeline = (
 
         // render 阶段只保留“能在挂载期执行”的 updater。
         // 事件绑定会走独立分配与安装流程，因此不进入 runtimeUpdaters。
-        return [{
-          name: updater.name,
-          kind,
-          slotIndices: updater.slotIndices,
-          dependencies: updater.dependencies,
-          expression: updater.expression,
-          priority:
-            component.dependencyAnalysis.crossComponentAnalysis.updaterPriorities[updater.name],
-        }];
+        return [
+          {
+            name: updater.name,
+            kind,
+            slotIndices: updater.slotIndices,
+            dependencies: updater.dependencies,
+            expression: updater.expression,
+            priority:
+              component.dependencyAnalysis.crossComponentAnalysis
+                .updaterPriorities[updater.name],
+          },
+        ];
       });
 
     const artifact = {

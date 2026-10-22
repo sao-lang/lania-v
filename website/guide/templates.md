@@ -108,7 +108,7 @@ const content = html`<strong>${title()}</strong>`;
 `html` 返回带品牌标记的 `HtmlResult`。运行时只接受由 `html\`...\`` 创建的值：
 
 ```tsx
-<div html="<b>unsafe</b>" />; // 不会写入，开发态告警
+<div html="<b>unsafe</b>" /> // 不会写入，开发态告警
 ```
 
 注意：
@@ -128,14 +128,14 @@ const content = html`<strong>${title()}</strong>`;
 
 事件名解析规则：
 
-| 写法 | 目标 | 适用模式 |
-| --- | --- | --- |
-| `onClick` | DOM `click` | 全部模式 |
-| `onKeyDown` | DOM `keydown` | 全部模式 |
-| `onToggle`（组件标签上） | 组件事件 `toggle` | 全部模式 |
-| `on:close`（组件标签上） | 组件事件 `close` | 仅 `directive-extended` |
-| `onClick.stop` | DOM `click` + `stop` 修饰符 | 全部模式 |
-| `click.stop` | 小写事件名 + 修饰符 | 仅 `directive-extended` |
+| 写法                     | 目标                        | 适用模式                |
+| ------------------------ | --------------------------- | ----------------------- |
+| `onClick`                | DOM `click`                 | 全部模式                |
+| `onKeyDown`              | DOM `keydown`               | 全部模式                |
+| `onToggle`（组件标签上） | 组件事件 `toggle`           | 全部模式                |
+| `on:close`（组件标签上） | 组件事件 `close`            | 仅 `directive-extended` |
+| `onClick.stop`           | DOM `click` + `stop` 修饰符 | 全部模式                |
+| `click.stop`             | 小写事件名 + 修饰符         | 仅 `directive-extended` |
 
 ::: warning 组件标签上的 `onXxx` 是事件，不是普通 prop
 编译器会把组件标签上的 `onXxx` 一律当作组件事件（子组件通过 `emit()` 派发）。
@@ -172,20 +172,20 @@ const content = html`<strong>${title()}</strong>`;
 />
 ```
 
-| 修饰符 | 行为 |
-| --- | --- |
-| `stop` | `event.stopPropagation()` |
-| `prevent` | `event.preventDefault()` |
-| `prevent.self` | 仅当 `event.target === event.currentTarget` 时 `preventDefault()` |
-| `prevent.immediate` | `preventDefault()` + `stopImmediatePropagation()` |
-| `self` | 仅当 `event.target === event.currentTarget` 时执行 |
-| `enter` | 仅键盘 `Enter` 时执行，只对键盘事件有效 |
-| `immediate` | `event.stopImmediatePropagation()`，同一节点后续监听不再执行 |
-| `passive` | 提示性标记；真正生效需写入 `listener: { passive: true }` |
-| `left` / `middle` / `right` | 仅对应鼠标键触发时执行 |
-| `key:escape` | 仅当 `event.key` 匹配时执行 |
-| `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下时执行 |
-| `debounce` / `throttle` | 把处理器包进定时器，见下方“提示性修饰符” |
+| 修饰符                                   | 行为                                                              |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| `stop`                                   | `event.stopPropagation()`                                         |
+| `prevent`                                | `event.preventDefault()`                                          |
+| `prevent.self`                           | 仅当 `event.target === event.currentTarget` 时 `preventDefault()` |
+| `prevent.immediate`                      | `preventDefault()` + `stopImmediatePropagation()`                 |
+| `self`                                   | 仅当 `event.target === event.currentTarget` 时执行                |
+| `enter`                                  | 仅键盘 `Enter` 时执行，只对键盘事件有效                           |
+| `immediate`                              | `event.stopImmediatePropagation()`，同一节点后续监听不再执行      |
+| `passive`                                | 提示性标记；真正生效需写入 `listener: { passive: true }`          |
+| `left` / `middle` / `right`              | 仅对应鼠标键触发时执行                                            |
+| `key:escape`                             | 仅当 `event.key` 匹配时执行                                       |
+| `system:ctrl` / `shift` / `alt` / `meta` | 仅对应系统键按下时执行                                            |
+| `debounce` / `throttle`                  | 把处理器包进定时器，见下方“提示性修饰符”                          |
 
 补充规则：
 
@@ -329,7 +329,7 @@ inputRef?.focus();
 import { queueRefWrite, setRef } from '@lania-v/runtime';
 
 queueRefWrite(inputRef, element); // 合并到微任务
-setRef(inputRef, element);        // 立即写入
+setRef(inputRef, element); // 立即写入
 ```
 
 组件 ref 会拿到 `createExpose()` 暴露的对象，详见 [组件](/guide/components#createexpose)。
@@ -370,10 +370,10 @@ registerDirective('watermark', {
 
 指令生命周期：
 
-| 阶段 | 触发时机 |
-| --- | --- |
-| `mounted` | 首次写入 |
-| `updated` | 同一个 Slot 后续写入 |
+| 阶段        | 触发时机             |
+| ----------- | -------------------- |
+| `mounted`   | 首次写入             |
+| `updated`   | 同一个 Slot 后续写入 |
 | `unmounted` | 节点销毁或 Slot 释放 |
 
 `directive-extended` 模式还兼容 `use:watermark={...}`。
@@ -415,13 +415,13 @@ import Card from './Card.lania.tsx';
 
 以下写法会被编译器拒绝或需要改写：
 
-| 写法 | 说明 |
-| --- | --- |
-| `html` 与 children 同时出现 | 冲突 |
-| `use` / `model` / 对象事件不是对象字面量 | 需要可静态分析的形状 |
-| 对象字面量中的 spread / 计算属性名 | 暂不支持 |
-| 在 `defineComponent` 内直接调用 `onMount` 等生命周期 | 必须是编译链处理 |
-| 非相对路径导入的 props 类型 | 当前不支持类型展开 |
+| 写法                                                 | 说明                 |
+| ---------------------------------------------------- | -------------------- |
+| `html` 与 children 同时出现                          | 冲突                 |
+| `use` / `model` / 对象事件不是对象字面量             | 需要可静态分析的形状 |
+| 对象字面量中的 spread / 计算属性名                   | 暂不支持             |
+| 在 `defineComponent` 内直接调用 `onMount` 等生命周期 | 必须是编译链处理     |
+| 非相对路径导入的 props 类型                          | 当前不支持类型展开   |
 
 ## 下一步
 

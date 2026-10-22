@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { generateClassComponentCode, generateRenderCode } from '@lania-v/compiler-core';
+import {
+  generateClassComponentCode,
+  generateRenderCode,
+} from '@lania-v/compiler-core';
 import { generateRenderCode as generateRenderCodeInternal } from '../packages/compiler-core/src/codegen/render';
 
 describe('compiler render codegen', () => {
   it('generates a _renderAndMount method with hoisted static template and text slots', () => {
     const result = generateRenderCode({
       className: 'CounterElement',
-      staticHtml: '<section><h1>Static title</h1><p>Count: <span>0</span></p></section>',
+      staticHtml:
+        '<section><h1>Static title</h1><p>Count: <span>0</span></p></section>',
       textBindings: [
         {
           slotIndex: 0,
@@ -19,7 +23,7 @@ describe('compiler render codegen', () => {
 
     expect(result.hoistName).toBe('__CounterElement_staticTemplate');
     expect(result.code).toContain(
-      "const __CounterElement_staticTemplate = createStaticTemplate("
+      'const __CounterElement_staticTemplate = createStaticTemplate('
     );
     expect(result.method).toContain('protected _renderAndMount(): void {');
     expect(result.method).toContain(
@@ -32,7 +36,9 @@ describe('compiler render codegen', () => {
       'const slot0 = this.registerSlot(new TextSlot(slot0Node, 0));'
     );
     expect(result.method).toContain('this._slots[0] = slot0.node;');
-    expect(result.method).toContain('const restoreHydrationSignalUpdaters = () => {');
+    expect(result.method).toContain(
+      'const restoreHydrationSignalUpdaters = () => {'
+    );
     expect(result.method).toContain('applyInitialBindings();');
   });
 
@@ -214,8 +220,12 @@ describe('compiler render codegen', () => {
       },
     });
 
-    expect(result.code).toContain('class CounterElement extends ReactiveElement {');
-    expect(result.code).toContain('static render(ctx: Record<string, unknown> = {}): string {');
+    expect(result.code).toContain(
+      'class CounterElement extends ReactiveElement {'
+    );
+    expect(result.code).toContain(
+      'static render(ctx: Record<string, unknown> = {}): string {'
+    );
     expect(result.code).toContain('protected _renderAndMount(): void {');
     expect(result.code).toContain('protected updateSlot0(): void {');
     expect(result.code).toContain('void (this.count());');
@@ -231,7 +241,8 @@ describe('compiler render codegen', () => {
   it('generates DynamicSlot and TeleportSlot bindings for enhanced component render plans', () => {
     const result = generateRenderCode({
       className: 'EnhancedRenderElement',
-      staticHtml: '<section><!--__LANIA_SLOT_0__--><!--__LANIA_SLOT_1__--></section>',
+      staticHtml:
+        '<section><!--__LANIA_SLOT_0__--><!--__LANIA_SLOT_1__--></section>',
       textBindings: [],
       dynamicBindings: [
         {
@@ -315,7 +326,9 @@ describe('compiler render codegen', () => {
     expect(result.code).toContain('__lania_boundary: "block"');
     expect(result.code).toContain('"payloadKind":"boundary"');
     expect(result.code).toContain('"component":"Suspense"');
-    expect(result.code).toContain('slot0.hydrate(readHydrationSlotNodes(mounted, 0), { __lania_boundary: "block"');
+    expect(result.code).toContain(
+      'slot0.hydrate(readHydrationSlotNodes(mounted, 0), { __lania_boundary: "block"'
+    );
   });
 
   it('passes boundary bindings through class component codegen', () => {

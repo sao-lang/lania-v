@@ -56,7 +56,10 @@ import {
   type MountedBindingInstance,
   type TemplateBindingPayload,
 } from './template/template-types';
-import type { HydrationBoundaryRecord, StaticTemplate } from '../../render/types';
+import type {
+  HydrationBoundaryRecord,
+  StaticTemplate,
+} from '../../render/types';
 import { parseBoundaryMarker } from '../../render/markers';
 import {
   getEmptyHydrationBoundaries,
@@ -304,7 +307,12 @@ export class BoundarySlot implements Slot<unknown> {
   }
 
   private renderNodes(nodes: readonly Node[]): void {
-    renderBoundarySlotRange(this.host, this.node, this.ensureCurrentNodes(), nodes);
+    renderBoundarySlotRange(
+      this.host,
+      this.node,
+      this.ensureCurrentNodes(),
+      nodes
+    );
   }
 
   private mountWithHydrationFallback(
@@ -327,7 +335,9 @@ export class BoundarySlot implements Slot<unknown> {
     }
   }
 
-  private ensureChildInstance(bindings: readonly TemplateBindingPayload[]): MountedBindingInstance {
+  private ensureChildInstance(
+    bindings: readonly TemplateBindingPayload[]
+  ): MountedBindingInstance {
     if (!this.childInstance) {
       const hydratedNodes = this.readHydratedNodes('child');
       // child/fallback 首次实例化时尽量消费 SSR 节点；一旦 activeBranch 确立，就不再重复读取 hydrated 内容。
@@ -393,7 +403,10 @@ export class BoundarySlot implements Slot<unknown> {
     }
 
     if (!this.hydratedBoundary) {
-      return readRangeContentNodes(this.host, this.ensureCurrentNodes()).slice();
+      return readRangeContentNodes(
+        this.host,
+        this.ensureCurrentNodes()
+      ).slice();
     }
 
     if (this.hydratedBoundary.branch !== branch) {
@@ -424,10 +437,13 @@ export class BoundarySlot implements Slot<unknown> {
     const expectedBoundaryIndex = readBoundaryPayloadIndex(block?.payload);
     const record =
       expectedBoundaryIndex === null
-        ? candidates[0] ?? null
-        : candidates.find((candidate) => candidate.payload?.boundaryIndex === expectedBoundaryIndex) ??
+        ? (candidates[0] ?? null)
+        : (candidates.find(
+            (candidate) =>
+              candidate.payload?.boundaryIndex === expectedBoundaryIndex
+          ) ??
           candidates[0] ??
-          null;
+          null);
 
     return record
       ? {
@@ -456,7 +472,9 @@ export class BoundarySlot implements Slot<unknown> {
   private renderLazyFallback(sentinel: HTMLSpanElement): void {
     // LazyLoad 的 fallback 需要把 sentinel 一并插入，供可见性/激活逻辑后续继续观察。
     const instance = this.ensureFallbackInstance();
-    this.renderNodes(instance ? [sentinel, ...readMountedNodes(instance)] : [sentinel]);
+    this.renderNodes(
+      instance ? [sentinel, ...readMountedNodes(instance)] : [sentinel]
+    );
     this.activeBranch = 'fallback';
   }
 
@@ -494,9 +512,10 @@ export class BoundarySlot implements Slot<unknown> {
         this.renderNodes(readMountedNodes(instance));
       }
 
-      const currentElements = readRangeContentNodes(this.host, this.ensureCurrentNodes()).filter(
-        (node) => !(node instanceof Comment)
-      );
+      const currentElements = readRangeContentNodes(
+        this.host,
+        this.ensureCurrentNodes()
+      ).filter((node) => !(node instanceof Comment));
       const { result } = renderGroup<Node>({
         payload,
         host,
@@ -509,7 +528,12 @@ export class BoundarySlot implements Slot<unknown> {
       );
       const parent = anchorNode.parentNode;
       if (parent) {
-        reconcileNodesBeforeAnchor(parent, anchorNode, currentElements, nextElements);
+        reconcileNodesBeforeAnchor(
+          parent,
+          anchorNode,
+          currentElements,
+          nextElements
+        );
       }
       this.activeBranch = 'child';
       return;
@@ -542,7 +566,10 @@ export class BoundarySlot implements Slot<unknown> {
     // 结构型子 slot 的 `currentNodes` 只反映当前真实内容；
     // 锚点必须随内容一起搬进 boundary range，否则下一次 update 会把它当成空分支。
     const anchorNode = structuralSlot.node ?? this.node;
-    if (this.activeBranch === null || anchorNode.parentNode !== this.node.parentNode) {
+    if (
+      this.activeBranch === null ||
+      anchorNode.parentNode !== this.node.parentNode
+    ) {
       this.renderNodes(readMountedNodes(instance));
     }
 
@@ -550,10 +577,13 @@ export class BoundarySlot implements Slot<unknown> {
     // 过渡运行时需要把它当作“提交快照”保存，所以这里必须先复制一份，否则离场快照会在下一次
     // 子 slot 更新时被清掉，leave hook 拿不到任何元素。
     const activeNodes = [...(structuralSlot.currentNodes ?? [])];
-    const visible = activeNodes.some((node) => node.nodeType !== Node.COMMENT_NODE);
-    const currentElements = readRangeContentNodes(this.host, this.ensureCurrentNodes()).filter(
-      (node) => !(node instanceof Comment)
+    const visible = activeNodes.some(
+      (node) => node.nodeType !== Node.COMMENT_NODE
     );
+    const currentElements = readRangeContentNodes(
+      this.host,
+      this.ensureCurrentNodes()
+    ).filter((node) => !(node instanceof Comment));
     const { result } = renderTransition<Node[]>({
       payload,
       visible,
@@ -566,7 +596,12 @@ export class BoundarySlot implements Slot<unknown> {
     );
     const parent = anchorNode.parentNode;
     if (parent) {
-      reconcileNodesBeforeAnchor(parent, anchorNode, currentElements, nextElements);
+      reconcileNodesBeforeAnchor(
+        parent,
+        anchorNode,
+        currentElements,
+        nextElements
+      );
       this.syncTransitionRangeNodes();
     }
     this.activeBranch = visible ? 'child' : 'fallback';
@@ -641,10 +676,12 @@ export class BoundarySlot implements Slot<unknown> {
           if (fallbackValue !== undefined) {
             const resolved =
               typeof fallbackValue === 'function'
-                ? (fallbackValue as (cause: unknown, reset: () => void) => unknown)(
-                    error,
-                    reset
-                  )
+                ? (
+                    fallbackValue as (
+                      cause: unknown,
+                      reset: () => void
+                    ) => unknown
+                  )(error, reset)
                 : fallbackValue;
             this.renderNodes(collectRenderableNodes(resolved as never));
             this.activeBranch = 'fallback';
@@ -694,7 +731,8 @@ export class IfSlot implements Slot<boolean> {
   ) {}
 
   private resolveLegacyInstance(
-    templateOrFactory: StaticTemplate | (() => Node | Node[] | DocumentFragment),
+    templateOrFactory:
+      StaticTemplate | (() => Node | Node[] | DocumentFragment),
     branchBindings: readonly TemplateBindingPayload[]
   ): MountedBindingInstance | null {
     // 兼容旧路径：分支模板既可能是静态模板，也可能是直接返回节点的工厂函数。
@@ -709,7 +747,9 @@ export class IfSlot implements Slot<boolean> {
       );
     }
 
-    const rendered = (templateOrFactory as () => Node | Node[] | DocumentFragment)();
+    const rendered = (
+      templateOrFactory as () => Node | Node[] | DocumentFragment
+    )();
     const nodes =
       rendered instanceof DocumentFragment
         ? [...rendered.childNodes]
@@ -754,8 +794,10 @@ export class IfSlot implements Slot<boolean> {
 
     this.startAnchor ??= document.createComment('');
     const currentNodes = this.currentNodes;
-    const firstNode = currentNodes && currentNodes.length > 0 ? currentNodes[0] : null;
-    const reference = firstNode && firstNode.parentNode === parent ? firstNode : this.node;
+    const firstNode =
+      currentNodes && currentNodes.length > 0 ? currentNodes[0] : null;
+    const reference =
+      firstNode && firstNode.parentNode === parent ? firstNode : this.node;
     parent.insertBefore(this.startAnchor, reference);
   }
 
@@ -783,8 +825,13 @@ export class IfSlot implements Slot<boolean> {
     }
     // hydration 期间优先相信“SSR 当前已经挂在页面上的 DOM 事实”。
     // 对没有 fallback 的 `<When>`，直接根据节点是否存在来推断分支，避免首帧 runtime 值暂时滞后导致误删。
-    const activeBranch: 'truthy' | 'falsy' =
-      !this.falsyTemplate ? (nodes.length > 0 ? 'truthy' : 'falsy') : value ? 'truthy' : 'falsy';
+    const activeBranch: 'truthy' | 'falsy' = !this.falsyTemplate
+      ? nodes.length > 0
+        ? 'truthy'
+        : 'falsy'
+      : value
+        ? 'truthy'
+        : 'falsy';
     this.activeBranch = activeBranch;
 
     // 先把 hydrated 节点登记进当前分支实例，后续 write 才能继续接管并正确移除这批 SSR 节点。
@@ -808,12 +855,17 @@ export class IfSlot implements Slot<boolean> {
     }
   }
 
-  private getInstance(branch: 'truthy' | 'falsy'): MountedBindingInstance | null {
+  private getInstance(
+    branch: 'truthy' | 'falsy'
+  ): MountedBindingInstance | null {
     // 两个分支实例分开缓存，便于 `retain` 模式下切回时直接复用。
     return branch === 'truthy' ? this.truthyInstance : this.falsyInstance;
   }
 
-  private setInstance(branch: 'truthy' | 'falsy', instance: MountedBindingInstance | null): void {
+  private setInstance(
+    branch: 'truthy' | 'falsy',
+    instance: MountedBindingInstance | null
+  ): void {
     if (branch === 'truthy') {
       this.truthyInstance = instance;
       return;
@@ -859,11 +911,14 @@ export class IfSlot implements Slot<boolean> {
 
     let instance = this.getInstance(nextBranch);
     if (!instance) {
-      const template = nextBranch === 'truthy' ? this.truthyTemplate : this.falsyTemplate;
-      const branchBindings = nextBranch === 'truthy' ? truthyBindings : falsyBindings;
+      const template =
+        nextBranch === 'truthy' ? this.truthyTemplate : this.falsyTemplate;
+      const branchBindings =
+        nextBranch === 'truthy' ? truthyBindings : falsyBindings;
       instance = template
         ? this.resolveLegacyInstance(
-            template as StaticTemplate | (() => Node | Node[] | DocumentFragment),
+            template as
+              StaticTemplate | (() => Node | Node[] | DocumentFragment),
             branchBindings
           )
         : null;
@@ -890,7 +945,12 @@ export class IfSlot implements Slot<boolean> {
     if (nextBranch === 'falsy' && !this.falsyTemplate && this.currentNodes) {
       this.syncCurrentNodesFromDom();
     }
-    if (nextBranch === 'falsy' && !this.falsyTemplate && this.currentNodes && this.currentNodes.length > 0) {
+    if (
+      nextBranch === 'falsy' &&
+      !this.falsyTemplate &&
+      this.currentNodes &&
+      this.currentNodes.length > 0
+    ) {
       removeNodes(this.currentNodes);
       this.currentNodes.length = 0;
     }
@@ -976,11 +1036,13 @@ export class TeleportSlot implements Slot<unknown> {
     }
 
     const bindings = isBlockPayload
-      ? (((value as Record<string, unknown>).bindings as TemplateBindingPayload[] | undefined) ?? [])
+      ? (((value as Record<string, unknown>).bindings as
+          TemplateBindingPayload[] | undefined) ?? [])
       : [];
     if (!this.currentBindingInstance) {
       // 首次写入优先尝试接管仍挂在 DOM 上的 hydrated 节点，否则退化为重新挂载模板。
-      const hydratedNodes = this.mountedNodes?.filter((node) => node.parentNode !== null) ?? [];
+      const hydratedNodes =
+        this.mountedNodes?.filter((node) => node.parentNode !== null) ?? [];
       this.currentBindingInstance =
         hydratedNodes.length > 0
           ? mountHydratedBinding(hydratedNodes, this.template, bindings)

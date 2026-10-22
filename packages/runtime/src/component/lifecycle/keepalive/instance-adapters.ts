@@ -53,7 +53,9 @@ export const createInstanceAdapter = <TValue>(options: {
     },
     isMounted() {
       // 未提供自定义 mounted 判定时，退回到“是否仍挂在文档树中”的朴素检查。
-      return isMounted ? isMounted() : readNodes().some((node) => node.parentNode !== null);
+      return isMounted
+        ? isMounted()
+        : readNodes().some((node) => node.parentNode !== null);
     },
     update,
     activate() {
@@ -73,7 +75,11 @@ export const createInstanceAdapter = <TValue>(options: {
 
 // 钩子适配器负责把缓存条目值映射成调用方期待的值类型。
 export const createHookAdapter = <TSourceValue, TTargetValue>(options: {
-  source: KeepAliveHookSource | KeepAliveLifecycleHooks<TSourceValue> | null | undefined;
+  source:
+    | KeepAliveHookSource
+    | KeepAliveLifecycleHooks<TSourceValue>
+    | null
+    | undefined;
   mapValue(value: TTargetValue): TSourceValue;
 }): KeepAliveLifecycleHooks<TTargetValue> => {
   const { source, mapValue } = options;
@@ -94,16 +100,13 @@ export const createHookAdapter = <TSourceValue, TTargetValue>(options: {
           onActivate(mapValue(value), key, reused)
       : undefined,
     onDeactivate: onDeactivate
-      ? (value: TTargetValue, key: string) =>
-          onDeactivate(mapValue(value), key)
+      ? (value: TTargetValue, key: string) => onDeactivate(mapValue(value), key)
       : undefined,
     onCache: onCache
-      ? (value: TTargetValue, key: string) =>
-          onCache(mapValue(value), key)
+      ? (value: TTargetValue, key: string) => onCache(mapValue(value), key)
       : undefined,
     onEvict: onEvict
-      ? (value: TTargetValue, key: string) =>
-          onEvict(mapValue(value), key)
+      ? (value: TTargetValue, key: string) => onEvict(mapValue(value), key)
       : undefined,
   };
 };
@@ -164,7 +167,9 @@ export const createSurfaceInstance = <
     initiallyActive,
   });
 
-  return options.extend ? options.extend(instance, mounted) : (instance as TInstance);
+  return options.extend
+    ? options.extend(instance, mounted)
+    : (instance as TInstance);
 };
 
 export const createMountedInstance = <TValue>(options: {
@@ -257,9 +262,9 @@ export const createQueueableInstance = <TValue>(options: {
     extend(instance, mounted) {
       // queued surface 在基础实例协议上额外挂出 queueNodes，供激活前暂存节点。
       return Object.assign(instance, {
-      queueNodes(nodes: readonly Node[]) {
-        mounted.queueNodes(nodes);
-      },
+        queueNodes(nodes: readonly Node[]) {
+          mounted.queueNodes(nodes);
+        },
       });
     },
   });

@@ -17,12 +17,12 @@
 
 `lania-v` 选择在**编译期**把前两个问题回答掉：
 
-| 问题 | 回答者 | 产物 |
-| --- | --- | --- |
-| 哪个表达式依赖哪个 Signal？ | 编译器依赖分析 | `dependencyAnalysis` |
-| 表达式写进哪个 DOM 位置？ | Slot 分配 | `slotAllocation` |
-| 什么时候执行、一次写几个位置？ | Updater 规划 | `updaterGeneration` |
-| 运行时怎么更新？ | Scheduler + Slot | DOM 写入 |
+| 问题                           | 回答者           | 产物                 |
+| ------------------------------ | ---------------- | -------------------- |
+| 哪个表达式依赖哪个 Signal？    | 编译器依赖分析   | `dependencyAnalysis` |
+| 表达式写进哪个 DOM 位置？      | Slot 分配        | `slotAllocation`     |
+| 什么时候执行、一次写几个位置？ | Updater 规划     | `updaterGeneration`  |
+| 运行时怎么更新？               | Scheduler + Slot | DOM 写入             |
 
 于是运行时只剩一条链路：
 
@@ -47,13 +47,13 @@ Integration    Vite Plugin / HMR / Devtools / SSR
 
 这些职责被拆到不同的包中：
 
-| 包 | 职责 |
-| --- | --- |
-| `@lania-v/shared` | 编译器与运行时共享的协议、增强组件注册表、版本常量 |
+| 包                       | 职责                                                               |
+| ------------------------ | ------------------------------------------------------------------ |
+| `@lania-v/shared`        | 编译器与运行时共享的协议、增强组件注册表、版本常量                 |
 | `@lania-v/compiler-core` | 协议无关的编译核心：AST、IR、依赖分析、Slot/Updater 规划、代码生成 |
-| `@lania-v/compiler-tsx` | `.lania.tsx` 的解析、函数组件分析与模块输出 |
-| `@lania-v/runtime` | Signal、Scheduler、Slot、Updater、组件宿主、增强组件、SSR |
-| `@lania-v/vite-plugin` | Vite 接入：文件过滤、编译调用、错误桥接、HMR |
+| `@lania-v/compiler-tsx`  | `.lania.tsx` 的解析、函数组件分析与模块输出                        |
+| `@lania-v/runtime`       | Signal、Scheduler、Slot、Updater、组件宿主、增强组件、SSR          |
+| `@lania-v/vite-plugin`   | Vite 接入：文件过滤、编译调用、错误桥接、HMR                       |
 
 ## 关键设计选择
 
@@ -89,27 +89,27 @@ Updater 只写入自己负责的 Slot。Slot 内部再做一次等值判断，�
 
 `When`、`Each`、`Switch`、`Teleport`、`KeepAlive`、`Transition`、`Suspense` 等标签并不是普通的函数组件。编译器会识别它们，并下沉为对应的 IR：
 
-| 标签 | IR |
-| --- | --- |
-| `When` / `Switch` | `IfIR` |
-| `Each` | `ListIR` |
-| `Dynamic` / `Slot` / `Await` / `Virtual` | `DynamicIR` |
-| `Teleport` | `TeleportIR` |
-| `KeepAlive` | `KeepAliveIR` |
-| `Transition` / `TransitionGroup` | `TransitionIR` |
-| `Suspense` / `ErrorBoundary` / `LazyLoad` | `BoundaryIR` |
+| 标签                                              | IR                        |
+| ------------------------------------------------- | ------------------------- |
+| `When` / `Switch`                                 | `IfIR`                    |
+| `Each`                                            | `ListIR`                  |
+| `Dynamic` / `Slot` / `Await` / `Virtual`          | `DynamicIR`               |
+| `Teleport`                                        | `TeleportIR`              |
+| `KeepAlive`                                       | `KeepAliveIR`             |
+| `Transition` / `TransitionGroup`                  | `TransitionIR`            |
+| `Suspense` / `ErrorBoundary` / `LazyLoad`         | `BoundaryIR`              |
 | `Then` / `Else` / `Case` / `Default` / `Fragment` | `passthrough`（语法节点） |
 
 ## 和常见框架的差异
 
-| 维度 | lania-v | React | Vue 3 | Solid |
-| --- | --- | --- | --- | --- |
-| 更新模型 | 编译期依赖 + Slot 精确写入 | VDOM Diff / Fiber | 响应式 + VDOM Diff | 响应式 + 编译期绑定 |
-| 组件形态 | Custom Element | 函数组件 | SFC / 组件对象 | 函数组件 |
-| 模板来源 | TSX | JSX | Template | JSX |
-| 运行时不执行组件函数做 Diff | 是 | 否 | 否 | 是 |
-| 原生 Web Components | 一等公民 | 需包装 | 需包装 | 需包装 |
-| 编译产物 | Component IR + renderPlan | 无 | 编译模板 | 编译 JSX |
+| 维度                        | lania-v                    | React             | Vue 3              | Solid               |
+| --------------------------- | -------------------------- | ----------------- | ------------------ | ------------------- |
+| 更新模型                    | 编译期依赖 + Slot 精确写入 | VDOM Diff / Fiber | 响应式 + VDOM Diff | 响应式 + 编译期绑定 |
+| 组件形态                    | Custom Element             | 函数组件          | SFC / 组件对象     | 函数组件            |
+| 模板来源                    | TSX                        | JSX               | Template           | JSX                 |
+| 运行时不执行组件函数做 Diff | 是                         | 否                | 否                 | 是                  |
+| 原生 Web Components         | 一等公民                   | 需包装            | 需包装             | 需包装              |
+| 编译产物                    | Component IR + renderPlan  | 无                | 编译模板           | 编译 JSX            |
 
 `lania-v` 与 Solid 的相似点是都依赖细粒度响应式；不同点在于组件最终落在 Custom Element 上，并且把结构语义（条件、列表、增强组件）显式建模进 `renderPlan`。
 

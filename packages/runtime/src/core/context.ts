@@ -7,7 +7,11 @@
  * - 适用于 Custom Element 与函数组件混用的场景（只要能 dispatchEvent）。
  */
 
-import { createSignal, readonly, type ReadonlySignal } from '@lania-v/reactivity';
+import {
+  createSignal,
+  readonly,
+  type ReadonlySignal,
+} from '@lania-v/reactivity';
 
 export interface Context<T> {
   readonly id: symbol;
@@ -26,10 +30,16 @@ interface ContextRequestDetail<T> {
 const CONTEXT_REQUEST_EVENT = 'lania:context-request';
 
 const isSignalLike = <T>(value: unknown): value is ReadonlySignal<T> => {
-  return typeof value === 'function' && value !== null && 'updaters' in (value as object);
+  return (
+    typeof value === 'function' &&
+    value !== null &&
+    'updaters' in (value as object)
+  );
 };
 
-const toReadonlySignal = <T>(value: ContextValueProvider<T>): ReadonlySignal<T> => {
+const toReadonlySignal = <T>(
+  value: ContextValueProvider<T>
+): ReadonlySignal<T> => {
   if (isSignalLike<T>(value)) {
     return value;
   }
@@ -113,17 +123,20 @@ export const consumeContext = <T>(
 ): ReadonlySignal<T> => {
   let resolvedValue = context.defaultValue;
 
-  const event = new CustomEvent<ContextRequestDetail<T>>(CONTEXT_REQUEST_EVENT, {
-    bubbles: true,
-    composed: true,
-    cancelable: true,
-    detail: {
-      context,
-      resolve(value) {
-        resolvedValue = value;
+  const event = new CustomEvent<ContextRequestDetail<T>>(
+    CONTEXT_REQUEST_EVENT,
+    {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: {
+        context,
+        resolve(value) {
+          resolvedValue = value;
+        },
       },
-    },
-  });
+    }
+  );
 
   host.dispatchEvent(event);
   return resolvedValue;

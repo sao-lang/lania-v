@@ -226,18 +226,23 @@ interface EventModifierLowering {
  * 事件表达式本身也可能携带 `withEventHint(fn, 'debounce')` 包装。
  * 这里把它拆成“原始处理器 + 提示名”，保证模板 slot 与动态组件两条路径行为一致。
  */
-const prepareEventSource = (source: string): { source: string; hints: string[] } => {
+const prepareEventSource = (
+  source: string
+): { source: string; hints: string[] } => {
   const hints: string[] = [];
   const hintPattern = /\bwithEventHint\(\s*([\s\S]*?),\s*'([^']+)'\s*\)/g;
 
-  const prepared = source.replace(hintPattern, (match, handler: string, hint: string) => {
-    if (!EVENT_HINT_MODIFIERS.has(hint) || hints.includes(hint)) {
-      return match;
-    }
+  const prepared = source.replace(
+    hintPattern,
+    (match, handler: string, hint: string) => {
+      if (!EVENT_HINT_MODIFIERS.has(hint) || hints.includes(hint)) {
+        return match;
+      }
 
-    hints.push(hint);
-    return handler.trim();
-  });
+      hints.push(hint);
+      return handler.trim();
+    }
+  );
 
   return { source: hints.length > 0 ? prepared : source, hints };
 };
@@ -274,7 +279,8 @@ const lowerEventModifiers = (
 
   modifiers.forEach((modifier) => {
     const lowerModifier = modifier.toLowerCase();
-    const isPreventScope = previousWasPrevent && PREVENT_SCOPES.has(lowerModifier);
+    const isPreventScope =
+      previousWasPrevent && PREVENT_SCOPES.has(lowerModifier);
     previousWasPrevent = lowerModifier === 'prevent';
 
     // `once` / `capture` / `passive` 既可以写在修饰符里，也可以写成 listener 选项。
@@ -329,11 +335,18 @@ const lowerEventModifiers = (
   });
 
   const usesKeyboardModifiers = normalized.some(
-    (modifier) => modifier === 'enter' || modifier.startsWith('key:') || modifier.startsWith('system:')
+    (modifier) =>
+      modifier === 'enter' ||
+      modifier.startsWith('key:') ||
+      modifier.startsWith('system:')
   );
 
   if (usesKeyboardModifiers && !KEYBOARD_EVENT_NAMES.has(eventName)) {
-    throw createTemplateParseError(tagName, `on${eventName}`, 'keyboard modifiers are only valid on keyboard events.');
+    throw createTemplateParseError(
+      tagName,
+      `on${eventName}`,
+      'keyboard modifiers are only valid on keyboard events.'
+    );
   }
 
   return {
@@ -371,7 +384,10 @@ const collectAttrObjectDirectives = (
   const directives: DirectiveNode[] = [];
 
   for (const property of expression.properties) {
-    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+    if (
+      !ts.isPropertyAssignment(property) &&
+      !ts.isShorthandPropertyAssignment(property)
+    ) {
       return null;
     }
 
@@ -417,7 +433,10 @@ const collectOnObjectDirectives = (
   const directives: DirectiveNode[] = [];
 
   for (const property of expression.properties) {
-    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+    if (
+      !ts.isPropertyAssignment(property) &&
+      !ts.isShorthandPropertyAssignment(property)
+    ) {
       return null;
     }
 
@@ -460,7 +479,10 @@ const collectStyleObjectDirectives = (
   const directives: DirectiveNode[] = [];
 
   for (const property of expression.properties) {
-    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+    if (
+      !ts.isPropertyAssignment(property) &&
+      !ts.isShorthandPropertyAssignment(property)
+    ) {
       return null;
     }
 
@@ -509,7 +531,10 @@ const collectUseObjectDirectives = (
   const directives: DirectiveNode[] = [];
 
   for (const property of expression.properties) {
-    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) {
+    if (
+      !ts.isPropertyAssignment(property) &&
+      !ts.isShorthandPropertyAssignment(property)
+    ) {
       return null;
     }
 
@@ -542,7 +567,9 @@ const collectUseObjectDirectives = (
   return directives;
 };
 
-const getStaticObjectPropertyName = (propertyName: ts.PropertyName): string | null => {
+const getStaticObjectPropertyName = (
+  propertyName: ts.PropertyName
+): string | null => {
   // 只接受能静态确定名字的 key；computed key 会在更上层的 shape 校验里被拦截。
   if (ts.isIdentifier(propertyName) || ts.isStringLiteral(propertyName)) {
     return propertyName.text;
@@ -597,11 +624,14 @@ const isTrueLikeLiteral = (expression: ts.Expression | null): boolean => {
   return expression?.kind === ts.SyntaxKind.TrueKeyword;
 };
 
-const readStaticStringLiteral = (expression: ts.Expression | null): string | null => {
+const readStaticStringLiteral = (
+  expression: ts.Expression | null
+): string | null => {
   // 某些配置位要求在编译期静态可知，因此同时接受普通字符串和无插值模板串。
   if (
     expression &&
-    (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression))
+    (ts.isStringLiteral(expression) ||
+      ts.isNoSubstitutionTemplateLiteral(expression))
   ) {
     return expression.text;
   }
@@ -609,7 +639,9 @@ const readStaticStringLiteral = (expression: ts.Expression | null): string | nul
   return null;
 };
 
-const readStringArrayLiteral = (expression: ts.Expression | null): string[] | null => {
+const readStringArrayLiteral = (
+  expression: ts.Expression | null
+): string[] | null => {
   if (!expression || !ts.isArrayLiteralExpression(expression)) {
     return null;
   }
@@ -617,7 +649,10 @@ const readStringArrayLiteral = (expression: ts.Expression | null): string[] | nu
   const values: string[] = [];
   for (const entry of expression.elements) {
     // 这里只接受静态字符串数组，方便把键盘修饰符等信息稳定写入模板元数据。
-    if (!ts.isStringLiteral(entry) && !ts.isNoSubstitutionTemplateLiteral(entry)) {
+    if (
+      !ts.isStringLiteral(entry) &&
+      !ts.isNoSubstitutionTemplateLiteral(entry)
+    ) {
       return null;
     }
     values.push(entry.text);
@@ -626,7 +661,11 @@ const readStringArrayLiteral = (expression: ts.Expression | null): string[] | nu
   return values;
 };
 
-const createTemplateParseError = (tagName: string, bindingName: string, detail: string): Error => {
+const createTemplateParseError = (
+  tagName: string,
+  bindingName: string,
+  detail: string
+): Error => {
   // 统一错误格式，方便上层把模板绑定错误稳定映射回组件上下文。
   return new Error(`<${tagName}> ${bindingName}: ${detail}`);
 };
@@ -675,13 +714,19 @@ const assertHtmlDirectiveChildExclusion = (
   directives: readonly DirectiveNode[],
   children: readonly TemplateChildNode[]
 ): void => {
-  const htmlDirective = directives.find((directive) => directive.kind === 'html');
+  const htmlDirective = directives.find(
+    (directive) => directive.kind === 'html'
+  );
   if (!htmlDirective) {
     return;
   }
 
   if (children.length > 0) {
-    throw createTemplateParseError(tagName, 'html', '`html` cannot be used together with child nodes.');
+    throw createTemplateParseError(
+      tagName,
+      'html',
+      '`html` cannot be used together with child nodes.'
+    );
   }
 };
 
@@ -701,7 +746,11 @@ const collectEventObjectBinding = (
   );
 
   if (!handlerExpression) {
-    throw createTemplateParseError(tagName, `on${eventName}`, 'event object must include `handler`.');
+    throw createTemplateParseError(
+      tagName,
+      `on${eventName}`,
+      'event object must include `handler`.'
+    );
   }
 
   const modifiers: string[] = [];
@@ -711,13 +760,27 @@ const collectEventObjectBinding = (
 
   if (modifiersExpression) {
     if (!ts.isObjectLiteralExpression(modifiersExpression)) {
-      throw createTemplateParseError(tagName, `on${eventName}`, '`modifiers` must be an object literal.');
+      throw createTemplateParseError(
+        tagName,
+        `on${eventName}`,
+        '`modifiers` must be an object literal.'
+      );
     }
 
-    assertStaticObjectLiteralShape(modifiersExpression, tagName, `on${eventName}`);
+    assertStaticObjectLiteralShape(
+      modifiersExpression,
+      tagName,
+      `on${eventName}`
+    );
 
     const pushBooleanModifier = (name: 'stop' | 'prevent' | 'self'): void => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+      if (
+        isTrueLikeLiteral(
+          readObjectPropertyExpression(
+            getObjectLiteralProperty(modifiersExpression, name)
+          )
+        )
+      ) {
         modifiers.push(name);
       }
     };
@@ -727,11 +790,19 @@ const collectEventObjectBinding = (
     pushBooleanModifier('self');
 
     // 提示性修饰符在对象写法里也支持，与后缀写法等价。
-    (['debounce', 'throttle', 'immediate', 'passive'] as const).forEach((name) => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
-        modifiers.push(name);
+    (['debounce', 'throttle', 'immediate', 'passive'] as const).forEach(
+      (name) => {
+        if (
+          isTrueLikeLiteral(
+            readObjectPropertyExpression(
+              getObjectLiteralProperty(modifiersExpression, name)
+            )
+          )
+        ) {
+          modifiers.push(name);
+        }
       }
-    });
+    );
 
     // 对象写法的布尔项也必须走与后缀写法相同的降级通道，
     // 否则 `enter` / `system` / `button` 这类修饰符在 IR 里会丢失键位语义。
@@ -742,14 +813,26 @@ const collectEventObjectBinding = (
         ['passive', 'passive'],
       ] as const
     ).forEach(([name, modifier]) => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+      if (
+        isTrueLikeLiteral(
+          readObjectPropertyExpression(
+            getObjectLiteralProperty(modifiersExpression, name)
+          )
+        )
+      ) {
         modifiers.push(modifier);
       }
     });
 
     // 鼠标键与 prevent 作用域都支持直接写成布尔项，与后缀写法一一对应。
     (['left', 'middle', 'right'] as const).forEach((name) => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+      if (
+        isTrueLikeLiteral(
+          readObjectPropertyExpression(
+            getObjectLiteralProperty(modifiersExpression, name)
+          )
+        )
+      ) {
         modifiers.push(`button:${name}`);
       }
     });
@@ -760,19 +843,31 @@ const collectEventObjectBinding = (
         ['preventImmediate', 'prevent.immediate'],
       ] as const
     ).forEach(([name, modifier]) => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+      if (
+        isTrueLikeLiteral(
+          readObjectPropertyExpression(
+            getObjectLiteralProperty(modifiersExpression, name)
+          )
+        )
+      ) {
         modifiers.push(...modifier.split('.'));
       }
     });
 
     const keys = readStringArrayLiteral(
-      readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, 'keys'))
+      readObjectPropertyExpression(
+        getObjectLiteralProperty(modifiersExpression, 'keys')
+      )
     );
     if (keys) {
       // 键盘键统一在编译期降成 `key:*` 修饰符，运行时无需再解析数组字面量。
       modifiers.push(...keys.map((key) => `key:${key.toLowerCase()}`));
     } else if (getObjectLiteralProperty(modifiersExpression, 'keys')) {
-      throw createTemplateParseError(tagName, `on${eventName}`, '`modifiers.keys` must be a string literal array.');
+      throw createTemplateParseError(
+        tagName,
+        `on${eventName}`,
+        '`modifiers.keys` must be a string literal array.'
+      );
     }
 
     const systemExpression = readObjectPropertyExpression(
@@ -780,13 +875,27 @@ const collectEventObjectBinding = (
     );
     if (systemExpression) {
       if (!ts.isObjectLiteralExpression(systemExpression)) {
-        throw createTemplateParseError(tagName, `on${eventName}`, '`modifiers.system` must be an object literal.');
+        throw createTemplateParseError(
+          tagName,
+          `on${eventName}`,
+          '`modifiers.system` must be an object literal.'
+        );
       }
 
-      assertStaticObjectLiteralShape(systemExpression, tagName, `on${eventName}`);
+      assertStaticObjectLiteralShape(
+        systemExpression,
+        tagName,
+        `on${eventName}`
+      );
 
       (['ctrl', 'shift', 'alt', 'meta'] as const).forEach((name) => {
-        if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(systemExpression, name)))) {
+        if (
+          isTrueLikeLiteral(
+            readObjectPropertyExpression(
+              getObjectLiteralProperty(systemExpression, name)
+            )
+          )
+        ) {
           modifiers.push(`system:${name}`);
         }
       });
@@ -799,16 +908,30 @@ const collectEventObjectBinding = (
   let listener: EventNode['listener'];
   if (listenerExpression) {
     if (!ts.isObjectLiteralExpression(listenerExpression)) {
-      throw createTemplateParseError(tagName, `on${eventName}`, '`listener` must be an object literal.');
+      throw createTemplateParseError(
+        tagName,
+        `on${eventName}`,
+        '`listener` must be an object literal.'
+      );
     }
 
-    assertStaticObjectLiteralShape(listenerExpression, tagName, `on${eventName}`);
+    assertStaticObjectLiteralShape(
+      listenerExpression,
+      tagName,
+      `on${eventName}`
+    );
 
     // listener 选项和系统修饰符拆开保存，后续运行时更容易直接映射到 addEventListener 选项。
     // 这样模板修饰符仍保留模板语义，浏览器 listener option 则走原生通道。
     const nextListener: NonNullable<EventNode['listener']> = {};
     (['once', 'capture', 'passive'] as const).forEach((name) => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(listenerExpression, name)))) {
+      if (
+        isTrueLikeLiteral(
+          readObjectPropertyExpression(
+            getObjectLiteralProperty(listenerExpression, name)
+          )
+        )
+      ) {
         nextListener[name] = true;
       }
     });
@@ -848,11 +971,19 @@ const collectModelObjectDirective = (
   );
 
   if (targetExpression && sourceExpression) {
-    throw createTemplateParseError(tagName, 'model', '`target` and `source` cannot be used together.');
+    throw createTemplateParseError(
+      tagName,
+      'model',
+      '`target` and `source` cannot be used together.'
+    );
   }
 
   if (!targetExpression && !sourceExpression) {
-    throw createTemplateParseError(tagName, 'model', 'model object must include `target` or `source`.');
+    throw createTemplateParseError(
+      tagName,
+      'model',
+      'model object must include `target` or `source`.'
+    );
   }
 
   const propExpression = readObjectPropertyExpression(
@@ -860,7 +991,11 @@ const collectModelObjectDirective = (
   );
   const prop = readStaticStringLiteral(propExpression) ?? 'value';
   if (propExpression && !readStaticStringLiteral(propExpression)) {
-    throw createTemplateParseError(tagName, 'model', '`prop` must be a string literal.');
+    throw createTemplateParseError(
+      tagName,
+      'model',
+      '`prop` must be a string literal.'
+    );
   }
 
   const modifiersExpression = readObjectPropertyExpression(
@@ -870,7 +1005,11 @@ const collectModelObjectDirective = (
 
   if (modifiersExpression) {
     if (!ts.isObjectLiteralExpression(modifiersExpression)) {
-      throw createTemplateParseError(tagName, 'model', '`modifiers` must be an object literal.');
+      throw createTemplateParseError(
+        tagName,
+        'model',
+        '`modifiers` must be an object literal.'
+      );
     }
 
     assertStaticObjectLiteralShape(modifiersExpression, tagName, 'model');
@@ -886,7 +1025,13 @@ const collectModelObjectDirective = (
     ] as const;
 
     modifierNames.forEach((name) => {
-      if (isTrueLikeLiteral(readObjectPropertyExpression(getObjectLiteralProperty(modifiersExpression, name)))) {
+      if (
+        isTrueLikeLiteral(
+          readObjectPropertyExpression(
+            getObjectLiteralProperty(modifiersExpression, name)
+          )
+        )
+      ) {
         modifiers.push(name);
       }
     });
@@ -895,7 +1040,9 @@ const collectModelObjectDirective = (
     const debounceMsExpression = readObjectPropertyExpression(
       getObjectLiteralProperty(modifiersExpression, 'debounceMs')
     );
-    const debounceMs = debounceMsExpression ? Number(debounceMsExpression.getText(sourceFile)) : NaN;
+    const debounceMs = debounceMsExpression
+      ? Number(debounceMsExpression.getText(sourceFile))
+      : NaN;
 
     if (debounceMsExpression && Number.isFinite(debounceMs)) {
       modifiers.push(`debounceMs:${debounceMs}`);
@@ -903,7 +1050,8 @@ const collectModelObjectDirective = (
   }
 
   // 布尔语义的复选框修饰符直接推导出 prop，避免用户同时写 `prop` 与 `checked`。
-  const resolvedProp = prop === 'value' && modifiers.includes('checked') ? 'checked' : prop;
+  const resolvedProp =
+    prop === 'value' && modifiers.includes('checked') ? 'checked' : prop;
 
   return {
     type: 'DirectiveNode',
@@ -923,10 +1071,19 @@ const normalizeEventBindingMetadata = (
   expression: string
 ): Pick<EventNode, 'modifiers' | 'listener' | 'hints' | 'expression'> => {
   if (component && modifiers.length > 0) {
-    throw createTemplateParseError(tagName, `on${eventName}`, 'component events only support `listener` options.');
+    throw createTemplateParseError(
+      tagName,
+      `on${eventName}`,
+      'component events only support `listener` options.'
+    );
   }
 
-  const lowered = lowerEventModifiers(modifiers, eventName, tagName, expression);
+  const lowered = lowerEventModifiers(
+    modifiers,
+    eventName,
+    tagName,
+    expression
+  );
 
   // `prevent.self` / `prevent.immediate` 在 IR 里统一归一为 `prevent:<scope>`，
   // 避免运行时再从修饰符序列里回溯“它前面是不是 prevent”。
@@ -935,7 +1092,9 @@ const normalizeEventBindingMetadata = (
     normalizedModifiers.push(modifier);
 
     if (modifier === 'prevent') {
-      lowered.preventScopes.forEach((scope) => normalizedModifiers.push(`prevent:${scope}`));
+      lowered.preventScopes.forEach((scope) =>
+        normalizedModifiers.push(`prevent:${scope}`)
+      );
     }
   });
 
@@ -1002,7 +1161,10 @@ const parseJsxAttributes = (
     const analysis = analyzeTsxBindingName(property.nameText, {
       intrinsicElement: intrinsicTag,
     });
-    const expressionText = getJsxExpressionText(property.initializer, sourceFile);
+    const expressionText = getJsxExpressionText(
+      property.initializer,
+      sourceFile
+    );
     const expressionNode = getJsxExpressionNode(property.initializer);
 
     switch (analysis.kind) {
@@ -1068,11 +1230,20 @@ const parseJsxAttributes = (
 
         // `model` 在标准 TSX 中只有对象入口，避免与普通属性赋值语义混淆。
         if (intrinsicTag && analysis.kind === 'model-directive') {
-          if (!expressionNode || !ts.isObjectLiteralExpression(expressionNode)) {
-            throw createTemplateParseError(tagName, 'model', 'TSX `model` must use an object literal.');
+          if (
+            !expressionNode ||
+            !ts.isObjectLiteralExpression(expressionNode)
+          ) {
+            throw createTemplateParseError(
+              tagName,
+              'model',
+              'TSX `model` must use an object literal.'
+            );
           }
 
-          directiveNodes.push(collectModelObjectDirective(expressionNode, sourceFile, tagName));
+          directiveNodes.push(
+            collectModelObjectDirective(expressionNode, sourceFile, tagName)
+          );
           return;
         }
 
@@ -1091,7 +1262,10 @@ const parseJsxAttributes = (
           break;
         }
 
-        const styleDirectives = collectStyleObjectDirectives(expressionNode, sourceFile);
+        const styleDirectives = collectStyleObjectDirectives(
+          expressionNode,
+          sourceFile
+        );
         if (styleDirectives) {
           directiveNodes.push(...styleDirectives);
           return;
@@ -1107,10 +1281,18 @@ const parseJsxAttributes = (
       // 它们只对原生标签生效，组件标签仍优先按 props / component event 语义处理。
       if (analysis.bindingName === 'use' && expressionNode) {
         if (!ts.isObjectLiteralExpression(expressionNode)) {
-          throw createTemplateParseError(tagName, 'use', 'TSX `use` must use an object literal.');
+          throw createTemplateParseError(
+            tagName,
+            'use',
+            'TSX `use` must use an object literal.'
+          );
         }
 
-        const useDirectives = collectUseObjectDirectives(expressionNode, sourceFile, tagName);
+        const useDirectives = collectUseObjectDirectives(
+          expressionNode,
+          sourceFile,
+          tagName
+        );
         if (useDirectives) {
           directiveNodes.push(...useDirectives);
           return;
@@ -1247,7 +1429,7 @@ const parseJsxAttributes = (
 // 子节点解析负责把 TS JSX 节点递归压平为模板树节点。
 const parseJsxChild = (
   node: ts.Node,
-  sourceFile: ts.SourceFile,
+  sourceFile: ts.SourceFile
 ): TemplateChildNode[] => {
   if (ts.isJsxText(node)) {
     // JSX 文本节点需要先按模板语义压缩空白，再决定是否保留。
@@ -1273,7 +1455,11 @@ const parseJsxChild = (
 
   if (ts.isJsxSelfClosingElement(node)) {
     const tagName = node.tagName.getText(sourceFile);
-    const parsedAttributes = parseJsxAttributes(node.attributes, sourceFile, tagName);
+    const parsedAttributes = parseJsxAttributes(
+      node.attributes,
+      sourceFile,
+      tagName
+    );
 
     // 自闭合节点没有 children，但属性、事件、指令仍要完整解析后再落入模板树。
     return [
@@ -1301,7 +1487,9 @@ const parseJsxChild = (
     node.openingElement.tagName.getText(sourceFile)
   );
   // 这里先得到完整 children，再把“属性侧信息”和“子树侧信息”做交叉约束检查。
-  const children = node.children.flatMap((child) => parseJsxChild(child, sourceFile));
+  const children = node.children.flatMap((child) =>
+    parseJsxChild(child, sourceFile)
+  );
   // 非自闭合元素只有在子节点递归完成后，才能判断 `html` 指令是否与 children 冲突。
   assertHtmlDirectiveChildExclusion(
     node.openingElement.tagName.getText(sourceFile),
@@ -1326,11 +1514,7 @@ const parseJsxChild = (
 
 export const unwrapJsxExpression = (
   expression: ts.Expression
-):
-  | ts.JsxElement
-  | ts.JsxSelfClosingElement
-  | ts.JsxFragment
-  | undefined => {
+): ts.JsxElement | ts.JsxSelfClosingElement | ts.JsxFragment | undefined => {
   if (ts.isParenthesizedExpression(expression)) {
     // 支持 `return (<div />)` 这类被括号包裹的 JSX。
     return unwrapJsxExpression(expression.expression);
@@ -1349,7 +1533,7 @@ export const unwrapJsxExpression = (
 
 export const parseReturnedJsxTemplate = (
   sourceFile: ts.SourceFile,
-  expression: ts.Expression,
+  expression: ts.Expression
 ): TemplateNode => {
   const jsxRoot = unwrapJsxExpression(expression);
 

@@ -9,21 +9,14 @@
  * 这样不同 host runtime 只需要关注自己的阶段调度与渲染细节，不必重复拼接这些通用数据结构。
  */
 import {
-  applyBasePrevContext,
-  applyBaseCommitContext,
   createBaseCommitResult,
   type BasePrevApplier,
   type BasePrevContext,
   type BaseTransitionPreviousCommitKind,
   type BasePrevResult,
-  type BaseCommitApplier,
   type BaseCommitResult,
 } from '../../runtime';
-import {
-  pruneLeavingSnapshots,
-  type GroupCommitPublishInput,
-  resolveSnapshots,
-} from '../state/state';
+import { type GroupCommitPublishInput } from '../state/state';
 import {
   type GroupCommitInput,
   type GroupDomHostRuntime,
@@ -31,10 +24,7 @@ import {
   type GroupSnapshotRuntime,
   type TransitionGroupState,
 } from '../types';
-import {
-  syncDomHostStaticEntries,
-  wrapDisplayWithTag,
-} from './display';
+import { syncDomHostStaticEntries, wrapDisplayWithTag } from './display';
 
 export type SnapshotCommitState<TRenderable> = {
   currentSnapshots: TRenderable[];
@@ -51,17 +41,15 @@ export type GroupPrevCommitKind = Extract<
   'leaving' | 'hidden'
 >;
 
-export type GroupPrevCommitContext<TRenderable> =
-  BasePrevContext<
-    TransitionGroupState<TRenderable>,
-    GroupPrevCommitKind
-  >;
+export type GroupPrevCommitContext<TRenderable> = BasePrevContext<
+  TransitionGroupState<TRenderable>,
+  GroupPrevCommitKind
+>;
 
-export type GroupPrevCommitResult<TRenderable> =
-  BasePrevResult<
-    TransitionGroupState<TRenderable>,
-    GroupPrevCommitKind
-  >;
+export type GroupPrevCommitResult<TRenderable> = BasePrevResult<
+  TransitionGroupState<TRenderable>,
+  GroupPrevCommitKind
+>;
 
 export const createPrevCommitResult = <TRenderable>(
   kind: GroupPrevCommitKind,
@@ -84,18 +72,23 @@ export type GroupCommitPublishContext<TPrevious, TRenderable> =
     publishStateInput: GroupCommitPublishInput<TRenderable>;
   };
 
-export type DomHostCommitContext<TRenderable> =
-  GroupCommitPublishContext<TransitionGroupState<TRenderable> | undefined, TRenderable> & {
-    rendered: readonly TRenderable[];
-  };
+export type DomHostCommitContext<TRenderable> = GroupCommitPublishContext<
+  TransitionGroupState<TRenderable> | undefined,
+  TRenderable
+> & {
+  rendered: readonly TRenderable[];
+};
 
-export type SnapshotCommitContext<TRenderable> =
-  GroupCommitPublishContext<TransitionGroupState<TRenderable>, TRenderable> & {
+export type SnapshotCommitContext<TRenderable> = GroupCommitPublishContext<
+  TransitionGroupState<TRenderable>,
+  TRenderable
+> & {
   state: SnapshotCommitState<TRenderable>;
 };
 
-export type GroupCommitResult<TRenderable> =
-  BaseCommitResult<TransitionGroupState<TRenderable>>;
+export type GroupCommitResult<TRenderable> = BaseCommitResult<
+  TransitionGroupState<TRenderable>
+>;
 
 // commit context 统一附带当前 keys 与 previous keys，供后续阶段复用。
 export const createCommitContext = <
@@ -141,7 +134,8 @@ export const createCommitPublishInput = <TRenderable>(options: {
   leavingSnapshots?: Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>;
   leaveVersion?: number;
 }): GroupCommitPublishInput<TRenderable> => {
-  const { keys, snapshots, container, leavingSnapshots, leaveVersion } = options;
+  const { keys, snapshots, container, leavingSnapshots, leaveVersion } =
+    options;
   return {
     keys,
     snapshots,
@@ -170,13 +164,19 @@ export const createPrevCommitInput = <TRenderable>(
     keys: [],
     snapshots: [],
     container: context.previous.container,
-    leavingSnapshots: context.kind === 'leaving' ? context.previous.leavingSnapshots : new Map(),
+    leavingSnapshots:
+      context.kind === 'leaving'
+        ? context.previous.leavingSnapshots
+        : new Map(),
     leaveVersion: context.previous.leaveVersion,
   };
 };
 
 export const createLeavingCommitInput = <TRenderable>(options: {
-  previous: Pick<TransitionGroupState<TRenderable>, 'container' | 'leaveVersion'>;
+  previous: Pick<
+    TransitionGroupState<TRenderable>,
+    'container' | 'leaveVersion'
+  >;
   leavingSnapshots: Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>;
 }): GroupCommitPublishInput<TRenderable> => {
   const { previous, leavingSnapshots } = options;
@@ -206,7 +206,9 @@ export const createCommitStatePublisher = <TRenderable>(options: {
   publishState(
     input: GroupCommitPublishInput<TRenderable>
   ): TransitionGroupState<TRenderable>;
-}): (<TContext extends { publishStateInput: GroupCommitPublishInput<TRenderable> }>(
+}): (<
+  TContext extends { publishStateInput: GroupCommitPublishInput<TRenderable> },
+>(
   context: TContext
 ) => GroupCommitResult<TRenderable>) => {
   const { publishState } = options;
@@ -294,8 +296,13 @@ export const bindCommitFlowRuntime = <
   prepareVisibleCommit?(context: TContext): void;
   commitInitial?(input: GroupCommitInput<TRenderable>): TResult;
 }): void => {
-  const { runtime, createContext, dispatchVisibleCommitPhases, prepareVisibleCommit, commitInitial } =
-    options;
+  const {
+    runtime,
+    createContext,
+    dispatchVisibleCommitPhases,
+    prepareVisibleCommit,
+    commitInitial,
+  } = options;
   runtime.dispatchVisibleCommitPhases = dispatchVisibleCommitPhases;
   if (prepareVisibleCommit) {
     runtime.prepareVisibleCommit = prepareVisibleCommit;

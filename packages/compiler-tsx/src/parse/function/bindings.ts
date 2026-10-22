@@ -54,10 +54,15 @@ const isPropertyNameIdentifier = (node: ts.Identifier): boolean => {
 
 const isAlreadyThisMember = (node: ts.Identifier): boolean => {
   // `this.foo` 里的 `foo` 已经是目标形态，避免再次包裹成非法访问。
-  return ts.isPropertyAccessExpression(node.parent) && node.parent.name === node;
+  return (
+    ts.isPropertyAccessExpression(node.parent) && node.parent.name === node
+  );
 };
 
-const collectBindingNames = (name: ts.BindingName, target: Set<string>): void => {
+const collectBindingNames = (
+  name: ts.BindingName,
+  target: Set<string>
+): void => {
   if (ts.isIdentifier(name)) {
     target.add(name.text);
     return;
@@ -187,7 +192,12 @@ const createBindingTransformer = (
             node,
             node.expression,
             node.typeArguments,
-            [ts.factory.createPropertyAccessExpression(ts.factory.createThis(), 'props')]
+            [
+              ts.factory.createPropertyAccessExpression(
+                ts.factory.createThis(),
+                'props'
+              ),
+            ]
           );
         }
 
@@ -206,7 +216,12 @@ const createBindingTransformer = (
                 : 'createBoundHandlers'
             ),
             node.typeArguments,
-            [ts.factory.createPropertyAccessExpression(ts.factory.createThis(), 'props')]
+            [
+              ts.factory.createPropertyAccessExpression(
+                ts.factory.createThis(),
+                'props'
+              ),
+            ]
           );
         }
 
@@ -234,7 +249,11 @@ const createBindingTransformer = (
 
           return node.arguments.length === 0
             ? readValue
-            : ts.factory.createCallExpression(readValue, node.typeArguments, node.arguments);
+            : ts.factory.createCallExpression(
+                readValue,
+                node.typeArguments,
+                node.arguments
+              );
         }
       }
 
@@ -244,12 +263,15 @@ const createBindingTransformer = (
         ts.isIdentifier(node.expression) &&
         bindings.emitAliases.has(node.expression.text)
       ) {
-        const nextArguments = node.arguments.map((argument) =>
-          ts.visitNode(argument, visit) as ts.Expression
+        const nextArguments = node.arguments.map(
+          (argument) => ts.visitNode(argument, visit) as ts.Expression
         );
         return ts.factory.updateCallExpression(
           node,
-          ts.factory.createPropertyAccessExpression(ts.factory.createThis(), 'emit'),
+          ts.factory.createPropertyAccessExpression(
+            ts.factory.createThis(),
+            'emit'
+          ),
           node.typeArguments,
           nextArguments
         );
@@ -264,8 +286,8 @@ const createBindingTransformer = (
         node.arguments.length === 1 &&
         !isShadowedByLocalScope(node.expression.text)
       ) {
-        const nextArguments = node.arguments.map((argument) =>
-          ts.visitNode(argument, visit) as ts.Expression
+        const nextArguments = node.arguments.map(
+          (argument) => ts.visitNode(argument, visit) as ts.Expression
         );
         return ts.factory.updateCallExpression(
           node,
@@ -284,8 +306,8 @@ const createBindingTransformer = (
         node.arguments.length === 2 &&
         !isShadowedByLocalScope(node.expression.text)
       ) {
-        const nextArguments = node.arguments.map((argument) =>
-          ts.visitNode(argument, visit) as ts.Expression
+        const nextArguments = node.arguments.map(
+          (argument) => ts.visitNode(argument, visit) as ts.Expression
         );
         return ts.factory.updateCallExpression(
           node,
@@ -300,15 +322,20 @@ const createBindingTransformer = (
         ts.isCallExpression(node) &&
         ts.isPropertyAccessExpression(node.expression) &&
         ts.isIdentifier(node.expression.expression) &&
-        bindings.emitAliases.has(`${node.expression.expression.text}.${node.expression.name.text}`) &&
+        bindings.emitAliases.has(
+          `${node.expression.expression.text}.${node.expression.name.text}`
+        ) &&
         node.expression.name.text === 'emit'
       ) {
-        const nextArguments = node.arguments.map((argument) =>
-          ts.visitNode(argument, visit) as ts.Expression
+        const nextArguments = node.arguments.map(
+          (argument) => ts.visitNode(argument, visit) as ts.Expression
         );
         return ts.factory.updateCallExpression(
           node,
-          ts.factory.createPropertyAccessExpression(ts.factory.createThis(), 'emit'),
+          ts.factory.createPropertyAccessExpression(
+            ts.factory.createThis(),
+            'emit'
+          ),
           node.typeArguments,
           nextArguments
         );
@@ -324,9 +351,11 @@ const createBindingTransformer = (
           return ts.visitEachChild(node, visit, context);
         }
 
-        const signalName = bindings.signalSetterToName.get(node.expression.text)!;
-        const nextArguments = node.arguments.map((argument) =>
-          ts.visitNode(argument, visit) as ts.Expression
+        const signalName = bindings.signalSetterToName.get(
+          node.expression.text
+        )!;
+        const nextArguments = node.arguments.map(
+          (argument) => ts.visitNode(argument, visit) as ts.Expression
         );
         return ts.factory.updateCallExpression(
           node,
@@ -355,7 +384,10 @@ const createBindingTransformer = (
         // `count.value`、`count.peek` 这类成员访问需要整体前移到 `this.count.xxx`。
         return ts.factory.updatePropertyAccessExpression(
           node,
-          ts.factory.createPropertyAccessExpression(ts.factory.createThis(), node.expression.text),
+          ts.factory.createPropertyAccessExpression(
+            ts.factory.createThis(),
+            node.expression.text
+          ),
           node.name
         );
       }
@@ -436,7 +468,10 @@ const createBindingTransformer = (
         !isPropertyNameIdentifier(node) &&
         !isAlreadyThisMember(node)
       ) {
-        return ts.factory.createPropertyAccessExpression(ts.factory.createThis(), node.text);
+        return ts.factory.createPropertyAccessExpression(
+          ts.factory.createThis(),
+          node.text
+        );
       }
 
       if (
@@ -448,7 +483,10 @@ const createBindingTransformer = (
         !isAlreadyThisMember(node)
       ) {
         // 普通 setup 绑定与 signal 最终都暴露成实例字段，读路径保持一致即可。
-        return ts.factory.createPropertyAccessExpression(ts.factory.createThis(), node.text);
+        return ts.factory.createPropertyAccessExpression(
+          ts.factory.createThis(),
+          node.text
+        );
       }
 
       // 其余节点保持递归访问，让子表达式继续有机会命中特殊重写规则。
@@ -485,10 +523,13 @@ export const rewriteExpressionWithBindings = (
     return expression;
   }
 
-  const transformed = ts.transform(wrapped, [createBindingTransformer(bindings)]);
+  const transformed = ts.transform(wrapped, [
+    createBindingTransformer(bindings),
+  ]);
   const nextSourceFile = transformed.transformed[0];
   const nextStatement = nextSourceFile.statements[0] as ts.VariableStatement;
-  const nextInitializer = nextStatement.declarationList.declarations[0]?.initializer;
+  const nextInitializer =
+    nextStatement.declarationList.declarations[0]?.initializer;
   transformed.dispose();
 
   if (!nextInitializer) {
@@ -504,7 +545,11 @@ export const rewriteExpressionWithBindings = (
     );
   }
 
-  return printer.printNode(ts.EmitHint.Expression, nextInitializer, nextSourceFile);
+  return printer.printNode(
+    ts.EmitHint.Expression,
+    nextInitializer,
+    nextSourceFile
+  );
 };
 
 /** 在函数包装中重写语句块，保留原始语句顺序。 */
@@ -517,7 +562,9 @@ export const rewriteBlockWithBindings = (
     '__lania_function_block__.tsx',
     `function __lania_block__() {\n${body}\n}`
   );
-  const transformed = ts.transform(wrapped, [createBindingTransformer(bindings)]);
+  const transformed = ts.transform(wrapped, [
+    createBindingTransformer(bindings),
+  ]);
   const nextSourceFile = transformed.transformed[0];
   const statement = nextSourceFile.statements[0];
   transformed.dispose();
@@ -539,7 +586,9 @@ export const rewriteFunctionTemplateNode = (
   node: TemplateNode,
   bindings: FunctionBindingContext
 ): TemplateNode => {
-  const rewriteChildren = (children: typeof node.children): typeof node.children => {
+  const rewriteChildren = (
+    children: typeof node.children
+  ): typeof node.children => {
     return children.map((child) => {
       if (child.type === 'ExpressionNode') {
         return {
@@ -564,7 +613,9 @@ export const rewriteFunctionTemplateNode = (
           attributes: child.attributes.map((attribute) => ({
             ...attribute,
             value:
-              attribute.static || attribute.value === null || typeof attribute.value === 'string'
+              attribute.static ||
+              attribute.value === null ||
+              typeof attribute.value === 'string'
                 ? attribute.value
                 : {
                     ...attribute.value,
@@ -576,13 +627,19 @@ export const rewriteFunctionTemplateNode = (
           })),
           events: child.events.map((event) => ({
             ...event,
-            expression: rewriteExpressionWithBindings(event.expression, bindings),
+            expression: rewriteExpressionWithBindings(
+              event.expression,
+              bindings
+            ),
           })),
           directives: child.directives.map((directive) => {
             if (directive.kind === 'ref') {
               const target = directive.expression.trim();
 
-              if (/^[A-Za-z_$][\w$]*$/.test(target) && bindings.refNames.has(target)) {
+              if (
+                /^[A-Za-z_$][\w$]*$/.test(target) &&
+                bindings.refNames.has(target)
+              ) {
                 // `createRef()` 声明的 ref：把绑定结果直接写回实例字段，业务侧无需 `.current`。
                 return {
                   ...directive,
@@ -593,7 +650,10 @@ export const rewriteFunctionTemplateNode = (
 
             return {
               ...directive,
-              expression: rewriteExpressionWithBindings(directive.expression, bindings),
+              expression: rewriteExpressionWithBindings(
+                directive.expression,
+                bindings
+              ),
             };
           }),
           spreadAttributes: child.spreadAttributes?.map((expression) =>

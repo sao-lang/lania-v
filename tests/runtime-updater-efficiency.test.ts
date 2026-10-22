@@ -84,7 +84,9 @@ describe('updater scheduling efficiency', () => {
       computes = 0;
 
       protected _renderAndMount(): void {
-        const slot = this.registerSlot(new TextSlot(document.createTextNode(''), 0));
+        const slot = this.registerSlot(
+          new TextSlot(document.createTextNode(''), 0)
+        );
         const updater = new SimpleUpdater(
           () => {
             this.computes += 1;
@@ -103,7 +105,9 @@ describe('updater scheduling efficiency', () => {
 
     customElements.define('efficiency-element', EfficiencyElement);
 
-    const element = document.createElement('efficiency-element') as EfficiencyElement;
+    const element = document.createElement(
+      'efficiency-element'
+    ) as EfficiencyElement;
     document.body.appendChild(element);
     await flushMicrotasks();
 

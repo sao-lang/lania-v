@@ -53,12 +53,12 @@ private readonly effectQueue = new Set<Job>();
 private readonly unitQueue = new Map<SchedulerPriority, UnitOfWork[]>();
 ```
 
-| 队列 | 入口 |
-| --- | --- |
-| 普通队列 | `schedule()` / `scheduleSignal()` |
-| lifecycle | `scheduleLifecycle()` |
-| effect | `scheduleEffect()` |
-| unit-of-work | `scheduleUnitOfWork()` |
+| 队列         | 入口                              |
+| ------------ | --------------------------------- |
+| 普通队列     | `schedule()` / `scheduleSignal()` |
+| lifecycle    | `scheduleLifecycle()`             |
+| effect       | `scheduleEffect()`                |
+| unit-of-work | `scheduleUnitOfWork()`            |
 
 `Set` 会自动去重：同一轮内同一个 Job 多次入队只执行一次。
 

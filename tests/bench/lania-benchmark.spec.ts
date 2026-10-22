@@ -5,7 +5,8 @@ import { expect, test } from '@playwright/test';
 
 type BenchFramework = 'lania-v' | 'react' | 'vue' | 'solid';
 type BenchTargetId = 'lania-fc' | 'react' | 'vue' | 'solid';
-type BenchCaseName = 'mount' | 'text-update' | 'list-patch' | 'toggle' | 'model-input';
+type BenchCaseName =
+  'mount' | 'text-update' | 'list-patch' | 'toggle' | 'model-input';
 
 interface BenchCaseResult {
   name: BenchCaseName;
@@ -39,7 +40,9 @@ interface BenchSuiteResult {
 
 declare global {
   interface Window {
-    runBenchSuite: (options?: { target?: BenchTargetId }) => Promise<BenchSuiteResult>;
+    runBenchSuite: (options?: {
+      target?: BenchTargetId;
+    }) => Promise<BenchSuiteResult>;
   }
 }
 
@@ -47,7 +50,10 @@ const TARGETS: BenchTargetId[] = ['lania-fc', 'react', 'vue', 'solid'];
 
 test.describe.configure({ mode: 'serial' });
 
-test('runs full lania benchmark suite and writes latest results', async ({ page, browserName }) => {
+test('runs full lania benchmark suite and writes latest results', async ({
+  page,
+  browserName,
+}) => {
   const suites: BenchSuiteResult[] = [];
 
   for (const target of TARGETS) {
@@ -72,7 +78,11 @@ test('runs full lania benchmark suite and writes latest results', async ({ page,
 
   const outputDirectory = path.resolve(process.cwd(), 'test-results/benchmark');
   await mkdir(outputDirectory, { recursive: true });
-  await writeFile(path.join(outputDirectory, 'latest.json'), JSON.stringify(payload, null, 2), 'utf8');
+  await writeFile(
+    path.join(outputDirectory, 'latest.json'),
+    JSON.stringify(payload, null, 2),
+    'utf8'
+  );
 
   for (const suite of suites) {
     console.log(`benchmark target: ${suite.label} (${suite.target})`);

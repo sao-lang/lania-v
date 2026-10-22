@@ -184,7 +184,11 @@ interface KeepAliveProps {
   include?: readonly string[] | RegExp | null;
   exclude?: readonly string[] | RegExp | null;
   max?: number;
-  onActivate?: (value: EnhancedRenderable, key: string, reused: boolean) => void;
+  onActivate?: (
+    value: EnhancedRenderable,
+    key: string,
+    reused: boolean
+  ) => void;
   onDeactivate?: (value: EnhancedRenderable, key: string) => void;
   onCache?: (value: EnhancedRenderable, key: string) => void;
   onEvict?: (value: EnhancedRenderable, key: string) => void;
@@ -227,13 +231,13 @@ interface KeepAliveProps {
 
 ## 选择建议
 
-| 需求 | 选择 |
-| --- | --- |
-| 单个元素进出动画 | `Transition` |
-| 列表增删 / 重排动画 | `TransitionGroup` |
-| 切换 Tab 时保留表单状态 | `KeepAlive` |
-| 只保留 DOM，不保留状态 | 普通 `When` |
-| 长列表性能 | `Virtual` + `Each` |
+| 需求                    | 选择               |
+| ----------------------- | ------------------ |
+| 单个元素进出动画        | `Transition`       |
+| 列表增删 / 重排动画     | `TransitionGroup`  |
+| 切换 Tab 时保留表单状态 | `KeepAlive`        |
+| 只保留 DOM，不保留状态  | 普通 `When`        |
+| 长列表性能              | `Virtual` + `Each` |
 
 ## 下一步
 

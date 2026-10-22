@@ -21,12 +21,8 @@ import {
 } from '../../component/styles';
 import { writeClassAttribute } from '../class-value';
 import { writeStyleAttribute } from '../style-value';
-import {
-  flushHooksForNodes,
-} from '../../component/transition/host';
-import {
-  resolveAnchorDomTarget,
-} from '../../component/lifecycle/keepalive-registry';
+import { flushHooksForNodes } from '../../component/transition/host';
+import { resolveAnchorDomTarget } from '../../component/lifecycle/keepalive-registry';
 import {
   attachDelegatedEventListener,
   detachDelegated,
@@ -62,7 +58,9 @@ export interface Slot<T = unknown> {
   destroy(): void;
 }
 
-const isNodeLike = (value: unknown): value is Node | DocumentFragment | readonly Node[] => {
+const isNodeLike = (
+  value: unknown
+): value is Node | DocumentFragment | readonly Node[] => {
   if (value == null || value === false) {
     return false;
   }
@@ -101,7 +99,9 @@ export class TextSlot implements Slot<unknown> {
   // 结构型调用方（KeepAlive/Transition 等）按 `currentNodes` 读取区间，
   // 注入节点必须一并暴露，否则会被当成“空文本槽”而漏搬真实 DOM。
   get currentNodes(): Node[] | null {
-    return this.injectedNodes.length > 0 ? [this.node, ...this.injectedNodes] : null;
+    return this.injectedNodes.length > 0
+      ? [this.node, ...this.injectedNodes]
+      : null;
   }
 
   private clearInjectedNodes(): void {
@@ -165,12 +165,10 @@ export class AttrSlot implements Slot<unknown> {
     public readonly name: string,
     public readonly index: number
   ) {
-    this.staticClassValue = this.name === 'class'
-      ? (this.node.getAttribute('class') ?? '')
-      : '';
-    this.staticStyleValue = this.name === 'style'
-      ? (this.node.getAttribute('style') ?? '')
-      : '';
+    this.staticClassValue =
+      this.name === 'class' ? (this.node.getAttribute('class') ?? '') : '';
+    this.staticStyleValue =
+      this.name === 'style' ? (this.node.getAttribute('style') ?? '') : '';
   }
 
   private writeFastDomProperty(value: unknown): boolean {
@@ -273,7 +271,12 @@ export class StyleSlot implements Slot<unknown> {
   ) {}
 
   write(value: unknown): void {
-    applyStyleValue(this.node, this.property, value as string | number | boolean | null, this.unit);
+    applyStyleValue(
+      this.node,
+      this.property,
+      value as string | number | boolean | null,
+      this.unit
+    );
   }
 
   destroy(): void {
@@ -324,8 +327,13 @@ export class ClassSlot implements Slot<boolean> {
 // 某些 DOM property 在运行时表现得像 signal/setter，对它们写值时优先走 `.set()`。
 const isSignalLike = (
   value: unknown
-): value is ((...args: never[]) => unknown) & { set(next: unknown): unknown } => {
-  return typeof value === 'function' && typeof (value as { set?: unknown }).set === 'function';
+): value is ((...args: never[]) => unknown) & {
+  set(next: unknown): unknown;
+} => {
+  return (
+    typeof value === 'function' &&
+    typeof (value as { set?: unknown }).set === 'function'
+  );
 };
 
 // 销毁 property slot 时，一部分常用 DOM property 需要写回更安全的默认值。
@@ -399,8 +407,14 @@ export class EventSlot implements Slot<EventListener | null | undefined> {
 
     if (!this.attached) {
       // 首次写入时才真正挂监听；后续更新只替换 currentHandler 引用，避免频繁 add/remove。
-      if (shouldUseDelegatedEventListener(this.node, this.eventName, this.options)) {
-        this.delegated = attachDelegatedEventListener(this.node, this.eventName, this.listener);
+      if (
+        shouldUseDelegatedEventListener(this.node, this.eventName, this.options)
+      ) {
+        this.delegated = attachDelegatedEventListener(
+          this.node,
+          this.eventName,
+          this.listener
+        );
       }
 
       if (!this.delegated) {
@@ -416,7 +430,11 @@ export class EventSlot implements Slot<EventListener | null | undefined> {
       if (this.delegated) {
         detachDelegated(this.node, this.eventName, this.listener);
       } else {
-        this.node.removeEventListener(this.eventName, this.listener, this.options);
+        this.node.removeEventListener(
+          this.eventName,
+          this.listener,
+          this.options
+        );
       }
 
       this.attached = false;
@@ -429,7 +447,8 @@ export class EventSlot implements Slot<EventListener | null | undefined> {
 
 // 工厂函数允许直接返回 Node/Node[]/Fragment，slot 层统一拍平成稳定数组处理。
 export const cloneFactoryNodes = (
-  factory: (() => Node | Node[] | DocumentFragment | null | undefined) | undefined
+  factory:
+    (() => Node | Node[] | DocumentFragment | null | undefined) | undefined
 ): Node[] => {
   if (!factory) {
     return [];
@@ -448,7 +467,11 @@ export const cloneFactoryNodes = (
   return Array.isArray(created) ? created : [created];
 };
 
-export const appendNodesBeforeAnchor = (parent: Node, anchor: Node, nodes: readonly Node[]): void => {
+export const appendNodesBeforeAnchor = (
+  parent: Node,
+  anchor: Node,
+  nodes: readonly Node[]
+): void => {
   const resolved = resolveAnchorDomTarget({ parent, anchor });
   nodes.forEach((node) => {
     resolved.parent.insertBefore(node, resolved.anchor);
@@ -459,8 +482,13 @@ export const appendNodesBeforeAnchor = (parent: Node, anchor: Node, nodes: reado
   }
 };
 
-export const insertNodeBeforeSafe = (parent: Node, node: Node, beforeNode: Node | null): void => {
-  const resolvedBeforeNode = beforeNode && beforeNode.parentNode === parent ? beforeNode : null;
+export const insertNodeBeforeSafe = (
+  parent: Node,
+  node: Node,
+  beforeNode: Node | null
+): void => {
+  const resolvedBeforeNode =
+    beforeNode && beforeNode.parentNode === parent ? beforeNode : null;
   // appendChild 比 insertBefore(node, null) 少一次空值分支处理，是离屏拼装的常用路径。
   if (resolvedBeforeNode) {
     parent.insertBefore(node, resolvedBeforeNode);
@@ -525,7 +553,10 @@ export const reconcileNodesBeforeAnchor = (
   let beforeNode: Node | null = resolved.anchor;
   for (let index = nextNodes.length - 1; index >= 0; index -= 1) {
     const node = nextNodes[index]!;
-    if (node.parentNode !== resolved.parent || node.nextSibling !== beforeNode) {
+    if (
+      node.parentNode !== resolved.parent ||
+      node.nextSibling !== beforeNode
+    ) {
       resolved.parent.insertBefore(node, beforeNode);
       if (resolved.parent.isConnected) {
         flushHooksForNodes([node]);
@@ -557,7 +588,11 @@ export const normalizeDynamicResult = (value: unknown): Node[] => {
   return [document.createTextNode(String(value))];
 };
 
-export const setDynamicAttribute = (element: Element, name: string, value: unknown): void => {
+export const setDynamicAttribute = (
+  element: Element,
+  name: string,
+  value: unknown
+): void => {
   if (name === 'class') {
     writeClassAttribute(element, value);
     return;
@@ -576,7 +611,10 @@ export const setDynamicAttribute = (element: Element, name: string, value: unkno
   element.setAttribute(name, String(value));
 };
 
-export const appendDynamicChildren = (element: Element | HTMLElement, children: readonly Node[]): void => {
+export const appendDynamicChildren = (
+  element: Element | HTMLElement,
+  children: readonly Node[]
+): void => {
   // 这是“整段替换”语义，不做细粒度 diff；复杂协调由上层 DynamicSlot/ForSlot 负责。
   while (element.firstChild) {
     element.removeChild(element.firstChild);

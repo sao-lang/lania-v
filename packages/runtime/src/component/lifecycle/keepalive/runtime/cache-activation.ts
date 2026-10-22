@@ -34,7 +34,8 @@ const readBucketCallbacks = <TEntry extends KeepAliveBucketEntry, TValue>(
   bucket: KeepAliveBucket<TEntry>,
   key: string
 ): KeepAliveCallbacks<TValue> | undefined => {
-  return bucket.callbacksByKey.get(key) as KeepAliveCallbacks<TValue> | undefined;
+  return bucket.callbacksByKey.get(key) as
+    KeepAliveCallbacks<TValue> | undefined;
 };
 
 const syncBucketCallbacks = <TEntry extends KeepAliveBucketEntry, TValue>(
@@ -64,7 +65,9 @@ export const activateKeepAliveEntry = <TEntry extends KeepAliveBucketEntry>(
 
   return {
     deactivatedEntry:
-      previousActive && previousActive.key !== entry.key ? previousActive : null,
+      previousActive && previousActive.key !== entry.key
+        ? previousActive
+        : null,
     evictedEntries: evictKeepAliveEntries(bucket, max, entry.key),
   };
 };
@@ -118,7 +121,8 @@ export const resolveReuseAction = <
     // 本地模式没有父容器可比对，只依据 activeKey 是否变化和 entry 当前激活态决定。
     return {
       shouldUpdate,
-      shouldActivate: activeKeyChanged || !(lifecycle.isActive?.(entry) ?? false),
+      shouldActivate:
+        activeKeyChanged || !(lifecycle.isActive?.(entry) ?? false),
     };
   }
 
@@ -425,14 +429,8 @@ export const activateFreshEntry = <
   entry: TEntry;
   created: boolean;
 } => {
-  const {
-    bucket,
-    cacheState,
-    max,
-    lifecycle,
-    callbacks,
-    createEntry,
-  } = options;
+  const { bucket, cacheState, max, lifecycle, callbacks, createEntry } =
+    options;
   return activateCacheEntry({
     bucket,
     cacheState,
@@ -492,10 +490,7 @@ export const activateEntryInParent = <
   });
 };
 
-export const dispatchActivate = <
-  TEntry extends KeepAliveBucketEntry,
-  TValue,
->(
+export const dispatchActivate = <TEntry extends KeepAliveBucketEntry, TValue>(
   entry: TEntry,
   lifecycle: KeepAliveLifecycle<TEntry, TValue>,
   onActivate?: (value: TValue, key: string, reused: boolean) => void,
@@ -505,10 +500,7 @@ export const dispatchActivate = <
   onActivate?.(lifecycle.readValue(entry), entry.key, reused);
 };
 
-export const dispatchCache = <
-  TEntry extends KeepAliveBucketEntry,
-  TValue,
->(
+export const dispatchCache = <TEntry extends KeepAliveBucketEntry, TValue>(
   entry: TEntry,
   lifecycle: KeepAliveLifecycle<TEntry, TValue>,
   onCache?: (value: TValue, key: string) => void
@@ -520,17 +512,16 @@ export const dispatchCache = <
 export const dispatchEvict = <
   TEntry extends KeepAliveBucketEntry,
   TValue,
->(
-  options: {
-    bucket: KeepAliveBucket<TEntry>;
-    entry: TEntry;
-    lifecycle: KeepAliveLifecycle<TEntry, TValue>;
-    onEvict?: (value: TValue, key: string) => void;
-  }
-): void => {
+>(options: {
+  bucket: KeepAliveBucket<TEntry>;
+  entry: TEntry;
+  lifecycle: KeepAliveLifecycle<TEntry, TValue>;
+  onEvict?: (value: TValue, key: string) => void;
+}): void => {
   const { bucket, entry, lifecycle, onEvict } = options;
   // 驱逐时优先读取 bucket 中随 key 保存的回调，保证延迟淘汰也能命中正确监听器。
-  const resolvedOnEvict = readBucketCallbacks<TEntry, TValue>(bucket, entry.key)?.onEvict ?? onEvict;
+  const resolvedOnEvict =
+    readBucketCallbacks<TEntry, TValue>(bucket, entry.key)?.onEvict ?? onEvict;
   lifecycle.evict?.(entry);
   resolvedOnEvict?.(lifecycle.readValue(entry), entry.key);
   bucket.callbacksByKey.delete(entry.key);
@@ -539,14 +530,12 @@ export const dispatchEvict = <
 export const dispatchEvictions = <
   TEntry extends KeepAliveBucketEntry,
   TValue,
->(
-  options: {
-    entries: readonly TEntry[];
-    lifecycle: KeepAliveLifecycle<TEntry, TValue>;
-    bucket: KeepAliveBucket<TEntry>;
-    onEvict?: (value: TValue, key: string) => void;
-  }
-): void => {
+>(options: {
+  entries: readonly TEntry[];
+  lifecycle: KeepAliveLifecycle<TEntry, TValue>;
+  bucket: KeepAliveBucket<TEntry>;
+  onEvict?: (value: TValue, key: string) => void;
+}): void => {
   const { entries, lifecycle, bucket, onEvict } = options;
   entries.forEach((entry) => {
     dispatchEvict({
@@ -622,8 +611,17 @@ export const finalizeActivation = <
   deactivatedEntry: TEntry | null;
   evictedEntries: TEntry[];
 } => {
-  const { bucket, entry, previousActive, max, lifecycle, onDeactivate, callbacks } = options;
-  const previousCallbacks = bucket.activeCallbacks as KeepAliveCallbacks<TValue> | undefined;
+  const {
+    bucket,
+    entry,
+    previousActive,
+    max,
+    lifecycle,
+    onDeactivate,
+    callbacks,
+  } = options;
+  const previousCallbacks = bucket.activeCallbacks as
+    KeepAliveCallbacks<TValue> | undefined;
   // 激活 entry 本身会顺带推进 activeKey，并算出谁需要停用、谁需要被驱逐。
   const { deactivatedEntry, evictedEntries } = activateKeepAliveEntry(
     bucket,
@@ -633,7 +631,12 @@ export const finalizeActivation = <
   );
 
   // old active entry 的停用与新 active entry 的登记属于同一状态切换步骤。
-  dispatchDeactivateInternal(deactivatedEntry, lifecycle, previousCallbacks, onDeactivate);
+  dispatchDeactivateInternal(
+    deactivatedEntry,
+    lifecycle,
+    previousCallbacks,
+    onDeactivate
+  );
   // activeCallbacks 始终跟随 bucket.activeKey 一起切换，供后续延迟停用/驱逐读取到最新监听器。
   bucket.activeCallbacks = callbacks as KeepAliveCallbacks<unknown> | undefined;
 
@@ -659,13 +662,16 @@ export const ensureActivatedEntry = <
   evictedEntries: TEntry[];
   reused: boolean;
 } => {
-  const { bucket, cacheState, max, lifecycle, callbacks, createEntry } = options;
+  const { bucket, cacheState, max, lifecycle, callbacks, createEntry } =
+    options;
   let entry = cacheState.entry;
   let created = false;
 
   if (!entry) {
     if (!createEntry) {
-      throw new Error('KeepAlive cacheable state requires createEntry() when entry is absent.');
+      throw new Error(
+        'KeepAlive cacheable state requires createEntry() when entry is absent.'
+      );
     }
     // 未命中缓存时在这里补建 entry，之后通用激活逻辑就不需要区分新旧来源。
     entry = registerKeepAliveEntry(bucket, createEntry());

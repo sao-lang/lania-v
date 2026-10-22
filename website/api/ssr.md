@@ -73,7 +73,9 @@ for await (const chunk of renderToStream(App, { title: 'hello' })) {
 ```html
 <x-app>
   <template shadowrootmode="open">
-    <style>...</style>
+    <style>
+      ...
+    </style>
     <p>hello</p>
   </template>
 </x-app>
@@ -100,17 +102,19 @@ renderDeclarativeShadowRoot(
 
 ```html
 <template shadowrootmode="open">
-  <style data-lania-ssr-style>...</style>
+  <style data-lania-ssr-style>
+    ...
+  </style>
   ...html
 </template>
 ```
 
 选项：
 
-| 选项 | 说明 |
-| --- | --- |
-| `mode` | `open` / `closed` |
-| `styles` | 内联进 shadow root 的静态样式 |
+| 选项             | 说明                            |
+| ---------------- | ------------------------------- |
+| `mode`           | `open` / `closed`               |
+| `styles`         | 内联进 shadow root 的静态样式   |
 | `delegatesFocus` | 输出 `shadowrootdelegatesfocus` |
 
 ### `renderDeclarativeShadowComponent()`
@@ -162,7 +166,9 @@ renderLightComponent(
 
 ```html
 <x-app>
-  <style>...</style>
+  <style>
+    ...
+  </style>
   ...html
 </x-app>
 ```
@@ -310,12 +316,16 @@ renderToStringAsIsland(
 ```
 
 ```ts
-const html = renderToStringAsIsland(SearchBox, { query: 'lania' }, {
-  tagName: 'x-search-box',
-  name: 'SearchBox',
-  priority: 'visible',
-  styles: SearchBox.styles,
-});
+const html = renderToStringAsIsland(
+  SearchBox,
+  { query: 'lania' },
+  {
+    tagName: 'x-search-box',
+    name: 'SearchBox',
+    priority: 'visible',
+    styles: SearchBox.styles,
+  }
+);
 ```
 
 ### `ssrRenderIslandSlot()`
@@ -348,12 +358,12 @@ parseIslandProps(value: string | null): Record<string, unknown>
 
 规则：
 
-| 值 | 处理 |
-| --- | --- |
-| 函数 / symbol | 丢弃并 warning |
-| `bigint` | 转字符串 |
-| 普通对象 / 数组 / 字符串 / 数字 / 布尔 | JSON |
-| 解析失败 | `{}` |
+| 值                                     | 处理           |
+| -------------------------------------- | -------------- |
+| 函数 / symbol                          | 丢弃并 warning |
+| `bigint`                               | 转字符串       |
+| 普通对象 / 数组 / 字符串 / 数字 / 布尔 | JSON           |
+| 解析失败                               | `{}`           |
 
 ### 客户端水合
 
@@ -403,7 +413,8 @@ await hydrateIslands({
   root: document,
   components: {
     SearchBox,
-    HeavyChart: () => import('./HeavyChart.lania.tsx').then((mod) => mod.default),
+    HeavyChart: () =>
+      import('./HeavyChart.lania.tsx').then((mod) => mod.default),
   },
   priorities: ['eager', 'visible'],
   onHydrate: (record) => console.log('hydrated', record.name),
@@ -419,12 +430,12 @@ await hydrateIslands({
 
 #### 优先级调度
 
-| 优先级 | 调度 |
-| --- | --- |
-| `eager` | 立即加载并水合 |
-| `idle` | `requestIdleCallback`，回退 `setTimeout(0)` |
-| `visible` | `IntersectionObserver` 进入视口 |
-| `interaction` | `pointerdown` / `focusin` / `click` |
+| 优先级        | 调度                                        |
+| ------------- | ------------------------------------------- |
+| `eager`       | 立即加载并水合                              |
+| `idle`        | `requestIdleCallback`，回退 `setTimeout(0)` |
+| `visible`     | `IntersectionObserver` 进入视口             |
+| `interaction` | `pointerdown` / `focusin` / `click`         |
 
 非 `eager` 的组件代码也会等到触发器执行时才加载。
 
@@ -481,16 +492,16 @@ ssrEvaluate(expression: string, ctx?: Record<string, unknown>): unknown
 ssrResolveValue<T>(value: T | Promise<T>): Promise<T>
 ```
 
-| 工具 | 用途 |
-| --- | --- |
-| `ssrEscapeHtml` | HTML 转义 |
-| `ssrSerializeAttribute` | 序列化 attribute，处理 boolean / class / style |
-| `ssrRenderTextSlot` | 输出文本 slot marker |
-| `ssrRenderBlockSlot` | 输出结构块 marker |
-| `ssrRenderTeleportContainer` | 输出 teleport 容器 |
-| `ssrRenderSuspenseBoundary` | 输出 Suspense 边界 |
-| `applySSRChunk` | 把异步 chunk 应用回 DOM |
-| `ssrEvaluate` | 在受限上下文中求值表达式 |
+| 工具                         | 用途                                           |
+| ---------------------------- | ---------------------------------------------- |
+| `ssrEscapeHtml`              | HTML 转义                                      |
+| `ssrSerializeAttribute`      | 序列化 attribute，处理 boolean / class / style |
+| `ssrRenderTextSlot`          | 输出文本 slot marker                           |
+| `ssrRenderBlockSlot`         | 输出结构块 marker                              |
+| `ssrRenderTeleportContainer` | 输出 teleport 容器                             |
+| `ssrRenderSuspenseBoundary`  | 输出 Suspense 边界                             |
+| `applySSRChunk`              | 把异步 chunk 应用回 DOM                        |
+| `ssrEvaluate`                | 在受限上下文中求值表达式                       |
 
 这些函数主要供编译产物与自定义 SSR 集成使用。
 
@@ -531,17 +542,25 @@ import {
 import App from './App.lania.tsx';
 import SearchBox from './SearchBox.lania.tsx';
 
-const appHtml = renderToStringWithDeclarativeShadow(App, { title: 'lania' }, {
-  tagName: 'x-app',
-  styles: App.styles,
-});
+const appHtml = renderToStringWithDeclarativeShadow(
+  App,
+  { title: 'lania' },
+  {
+    tagName: 'x-app',
+    styles: App.styles,
+  }
+);
 
-const searchHtml = renderToStringAsIsland(SearchBox, { query: 'lania' }, {
-  tagName: 'x-search-box',
-  name: 'SearchBox',
-  priority: 'visible',
-  styles: SearchBox.styles,
-});
+const searchHtml = renderToStringAsIsland(
+  SearchBox,
+  { query: 'lania' },
+  {
+    tagName: 'x-search-box',
+    name: 'SearchBox',
+    priority: 'visible',
+    styles: SearchBox.styles,
+  }
+);
 
 const html = `
   <!doctype html>
@@ -563,7 +582,8 @@ import SearchBox from './SearchBox.lania.tsx';
 await hydrateIslands({
   components: {
     SearchBox,
-    HeavyChart: () => import('./HeavyChart.lania.tsx').then((mod) => mod.default),
+    HeavyChart: () =>
+      import('./HeavyChart.lania.tsx').then((mod) => mod.default),
   },
 });
 ```

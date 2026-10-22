@@ -120,7 +120,9 @@ const isRawExpressionValue = (
 
 // 把 payload 值树重新编码成一段可嵌入生成代码的表达式字符串。
 // 这里和 JSON.stringify 的差别在于：会保留 RawExpressionValue 对应的原始 JS 表达式。
-export const serializePayloadExpressionValue = (value: PayloadExpressionValue): string => {
+export const serializePayloadExpressionValue = (
+  value: PayloadExpressionValue
+): string => {
   if (isRawExpressionValue(value)) {
     return value.__rawExpression;
   }
@@ -152,7 +154,9 @@ export const serializePayloadExpressionValue = (value: PayloadExpressionValue): 
       return [];
     }
 
-    return [`${JSON.stringify(key)}: ${serializePayloadExpressionValue(entry)}`];
+    return [
+      `${JSON.stringify(key)}: ${serializePayloadExpressionValue(entry)}`,
+    ];
   });
 
   return `{ ${entries.join(', ')} }`;
@@ -178,7 +182,9 @@ const getPayloadFieldValue = (
   child: ElementNode,
   name: string
 ): PayloadExpressionValue | undefined => {
-  const attribute = child.attributes.find((candidate) => candidate.name === name);
+  const attribute = child.attributes.find(
+    (candidate) => candidate.name === name
+  );
 
   if (!attribute || attribute.value === null) {
     return undefined;
@@ -215,10 +221,13 @@ export const getEnhancedPayloadMetadataValue = (
 
     if (getEnhancedEventBackedMetadataPropNames(componentName).includes(name)) {
       const eventName = name.slice(2);
-      const normalizedEventName = eventName.length > 0
-        ? `${eventName[0]!.toLowerCase()}${eventName.slice(1)}`
-        : '';
-      const event = child.events.find((candidate) => candidate.name === normalizedEventName);
+      const normalizedEventName =
+        eventName.length > 0
+          ? `${eventName[0]!.toLowerCase()}${eventName.slice(1)}`
+          : '';
+      const event = child.events.find(
+        (candidate) => candidate.name === normalizedEventName
+      );
 
       if (event?.expression) {
         // 事件回调也会被回填到 metadata 中，供增强组件运行时协议读取。
@@ -271,10 +280,13 @@ export const getTransitionPayloadValue = (
 
     if (name.startsWith('on')) {
       const eventName = name.slice(2);
-      const normalizedEventName = eventName.length > 0
-        ? `${eventName[0]!.toLowerCase()}${eventName.slice(1)}`
-        : '';
-      const event = child.events.find((candidate) => candidate.name === normalizedEventName);
+      const normalizedEventName =
+        eventName.length > 0
+          ? `${eventName[0]!.toLowerCase()}${eventName.slice(1)}`
+          : '';
+      const event = child.events.find(
+        (candidate) => candidate.name === normalizedEventName
+      );
 
       if (event?.expression) {
         hooks[name] = rawExpression(event.expression);
@@ -288,12 +300,18 @@ export const getTransitionPayloadValue = (
     keyProp: transitionConfig.keyPropName,
     key: (() => {
       // key 既可能来自表达式，也可能来自静态字符串，二者都要保留。
-      const expression = getAttributeExpression(child, transitionConfig.keyPropName);
+      const expression = getAttributeExpression(
+        child,
+        transitionConfig.keyPropName
+      );
       if (expression) {
         return rawExpression(expression);
       }
 
-      const stringValue = getAttributeStringValue(child, transitionConfig.keyPropName);
+      const stringValue = getAttributeStringValue(
+        child,
+        transitionConfig.keyPropName
+      );
       return stringValue !== null ? stringValue : undefined;
     })(),
     // TransitionGroup 需要列表 key 才能判断 enter / move / leave；编译期把表达式原样带下去。
@@ -334,7 +352,10 @@ export const buildRuntimePropsExpression = (
 
         // 提示性修饰符需要独立监听，这里展开成多条动态事件绑定。
         return (event.hints ?? []).length > 0
-          ? [base, `{ name: ${JSON.stringify(event.name)}, handler: ${event.expression}, modifiers: [], hints: ${JSON.stringify(event.hints)} }`]
+          ? [
+              base,
+              `{ name: ${JSON.stringify(event.name)}, handler: ${event.expression}, modifiers: [], hints: ${JSON.stringify(event.hints)} }`,
+            ]
           : [base];
       })
       .join(', ')}
@@ -427,7 +448,9 @@ export const buildTransitionPayloadExpression = (
   // 这些字段已经由 `transition` 主对象承载，metadata 里只保留额外协议信息，
   // 这样运行时读取 payload 时就不需要在两个位置之间做冲突裁决。
   const transitionMetadata =
-    typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    !Array.isArray(metadata)
       ? Object.fromEntries(
           Object.entries(metadata).filter(
             ([key]) =>
@@ -457,7 +480,10 @@ export const buildTransitionPayloadExpression = (
     irKind: executableIrKind,
     transitionIndex: options.transitionIndex,
     template: buildTemplateContractValue(options.childTemplateHtml, undefined),
-    fallbackTemplate: buildTemplateContractValue(options.fallbackTemplateHtml, undefined),
+    fallbackTemplate: buildTemplateContractValue(
+      options.fallbackTemplateHtml,
+      undefined
+    ),
     transition,
     metadata: transitionMetadata,
   } satisfies PayloadExpressionValue;
@@ -509,8 +535,14 @@ export const buildBoundaryPayloadExpression = (
     irKind: executableIrKind,
     boundaryIndex: options.boundaryIndex,
     initialState: getDefaultBoundaryState(componentName),
-    childrenTemplate: buildTemplateContractValue(options.childTemplateHtml, undefined),
-    fallbackTemplate: buildTemplateContractValue(options.fallbackTemplateHtml, undefined),
+    childrenTemplate: buildTemplateContractValue(
+      options.childTemplateHtml,
+      undefined
+    ),
+    fallbackTemplate: buildTemplateContractValue(
+      options.fallbackTemplateHtml,
+      undefined
+    ),
     metadata: boundaryMetadata,
   } satisfies PayloadExpressionValue;
 

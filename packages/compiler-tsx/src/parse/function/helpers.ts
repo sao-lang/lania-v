@@ -15,16 +15,12 @@
  */
 import ts from 'typescript';
 
-import {
-  type SignalDeclaration,
-} from '@lania-v/compiler-core';
+import { type SignalDeclaration } from '@lania-v/compiler-core';
 import { parseReturnedJsxTemplate } from '../template';
 import { resolveImportedTypeDeclaration } from './imported-types';
 
 export type FunctionComponentLike =
-  | ts.FunctionDeclaration
-  | ts.FunctionExpression
-  | ts.ArrowFunction;
+  ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction;
 
 export interface ResolvedFunctionComponent {
   name: string;
@@ -79,10 +75,22 @@ export const FUNCTION_LIFECYCLE_HOOK_ALIASES = new Map<string, string>([
 
 // 旧生命周期的迁移提示集中放在这里，保证解析阶段与测试断言看到同一套文案。
 const REMOVED_FUNCTION_LIFECYCLE_HOOK_MESSAGES = new Map<string, string>([
-  ['onUpdate', 'FC lifecycle hook `onUpdate` has been removed in v0.2. Use `onUpdated` instead.'],
-  ['onBeforeUpdate', 'FC lifecycle hook `onBeforeUpdate` has been removed in v0.2. Use `onUpdated` instead.'],
-  ['onError', 'FC lifecycle hook `onError` has been removed in v0.2. Use `ErrorBoundary` instead.'],
-  ['onAdopted', 'FC lifecycle hook `onAdopted` is no longer part of the v0.2 core API. Move it to host-layer code instead.'],
+  [
+    'onUpdate',
+    'FC lifecycle hook `onUpdate` has been removed in v0.2. Use `onUpdated` instead.',
+  ],
+  [
+    'onBeforeUpdate',
+    'FC lifecycle hook `onBeforeUpdate` has been removed in v0.2. Use `onUpdated` instead.',
+  ],
+  [
+    'onError',
+    'FC lifecycle hook `onError` has been removed in v0.2. Use `ErrorBoundary` instead.',
+  ],
+  [
+    'onAdopted',
+    'FC lifecycle hook `onAdopted` is no longer part of the v0.2 core API. Move it to host-layer code instead.',
+  ],
   [
     'onAttributeChanged',
     'FC lifecycle hook `onAttributeChanged` is no longer part of the v0.2 core API. Move it to host-layer code instead.',
@@ -90,7 +98,9 @@ const REMOVED_FUNCTION_LIFECYCLE_HOOK_MESSAGES = new Map<string, string>([
 ]);
 
 /** 读取调用表达式名称，兼容 `foo()` 与 `ns.foo()`。 */
-export const getCallExpressionName = (expression: ts.Expression): string | null => {
+export const getCallExpressionName = (
+  expression: ts.Expression
+): string | null => {
   if (ts.isIdentifier(expression)) {
     return expression.text;
   }
@@ -112,7 +122,10 @@ export const validateFunctionLifecycleHookUsage = (
   }
 
   for (const statement of functionDeclaration.body.statements) {
-    if (!ts.isExpressionStatement(statement) || !ts.isCallExpression(statement.expression)) {
+    if (
+      !ts.isExpressionStatement(statement) ||
+      !ts.isCallExpression(statement.expression)
+    ) {
       continue;
     }
 
@@ -121,7 +134,9 @@ export const validateFunctionLifecycleHookUsage = (
       continue;
     }
 
-    const message = REMOVED_FUNCTION_LIFECYCLE_HOOK_MESSAGES.get(calleeName) ?? `Unsupported FC lifecycle hook \`${calleeName}\`.`;
+    const message =
+      REMOVED_FUNCTION_LIFECYCLE_HOOK_MESSAGES.get(calleeName) ??
+      `Unsupported FC lifecycle hook \`${calleeName}\`.`;
     const lineAndCharacter = sourceFile.getLineAndCharacterOfPosition(
       statement.expression.expression.getStart(sourceFile)
     );
@@ -137,7 +152,9 @@ const isUppercaseComponentName = (name: string | undefined): name is string => {
 };
 
 // 兼容 `defineComponent(() => ...)` 包装写法，把真实函数体抽取出来继续按 FC 处理。
-const getDefineComponentCallback = (expression: ts.Expression): FunctionComponentLike | null => {
+const getDefineComponentCallback = (
+  expression: ts.Expression
+): FunctionComponentLike | null => {
   if (
     !ts.isCallExpression(expression) ||
     getCallExpressionName(expression.expression) !== 'defineComponent'
@@ -176,7 +193,8 @@ const resolveFunctionComponentName = (
   fallbackName?: string
 ): string | null => {
   if (
-    (ts.isFunctionDeclaration(declaration) || ts.isFunctionExpression(declaration)) &&
+    (ts.isFunctionDeclaration(declaration) ||
+      ts.isFunctionExpression(declaration)) &&
     declaration.name &&
     isUppercaseComponentName(declaration.name.text)
   ) {
@@ -277,9 +295,9 @@ export const findFunctionComponents = (
 const hasDefaultModifier = (statement: ts.Statement): boolean => {
   return Boolean(
     ts.canHaveModifiers(statement) &&
-      ts
-        .getModifiers(statement)
-        ?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
+    ts
+      .getModifiers(statement)
+      ?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
   );
 };
 
@@ -288,7 +306,9 @@ export const findFunctionComponent = (
   sourceFile: ts.SourceFile
 ): ResolvedFunctionComponent | undefined => {
   const components = findFunctionComponents(sourceFile);
-  return components.find((component) => component.isDefaultExport) ?? components[0];
+  return (
+    components.find((component) => component.isDefaultExport) ?? components[0]
+  );
 };
 
 /** 从单表达式箭头函数或单 return 体中提取表达式文本。 */
@@ -319,7 +339,9 @@ export const getFunctionLikeParamsText = (
   callback: ts.ArrowFunction | ts.FunctionExpression,
   sourceFile: ts.SourceFile
 ): string => {
-  return callback.parameters.map((parameter) => parameter.getText(sourceFile)).join(', ');
+  return callback.parameters
+    .map((parameter) => parameter.getText(sourceFile))
+    .join(', ');
 };
 
 export const getFunctionLikeBodyText = (
@@ -327,7 +349,9 @@ export const getFunctionLikeBodyText = (
   sourceFile: ts.SourceFile
 ): string | null => {
   if (ts.isBlock(callback.body)) {
-    return callback.body.statements.map((statement) => statement.getText(sourceFile)).join('\n');
+    return callback.body.statements
+      .map((statement) => statement.getText(sourceFile))
+      .join('\n');
   }
 
   return callback.body.getText(sourceFile);
@@ -418,7 +442,10 @@ const collectPropsFromInterface = (
     }
 
     return clause.types.flatMap((type) => {
-      if (!ts.isExpressionWithTypeArguments(type) || !ts.isIdentifier(type.expression)) {
+      if (
+        !ts.isExpressionWithTypeArguments(type) ||
+        !ts.isIdentifier(type.expression)
+      ) {
         return [];
       }
 
@@ -476,7 +503,11 @@ const resolvePropsTypeName = (
     );
   }
 
-  return collectPropsFromInterface(imported.declaration, imported.sourceFile, seen);
+  return collectPropsFromInterface(
+    imported.declaration,
+    imported.sourceFile,
+    seen
+  );
 };
 
 const collectPropsFromTypeNode = (
@@ -596,7 +627,7 @@ export const collectContextEmitAliases = (
 /** 找到函数组件第一个带表达式的 return，并解析其中 JSX。 */
 export const parseFunctionReturnTemplate = (
   sourceFile: ts.SourceFile,
-  functionDeclaration: FunctionComponentLike,
+  functionDeclaration: FunctionComponentLike
 ) => {
   if (!functionDeclaration.body) {
     throw new Error('Function component body was not found.');

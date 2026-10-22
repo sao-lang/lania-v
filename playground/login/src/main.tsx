@@ -21,7 +21,10 @@ if (import.meta.env.DEV) {
 
   const trace: TraceEntry[] = [];
   const updaters = new Map<number, UpdaterSnapshot>();
-  const signals = new Map<number, { signalId: number; sets: number; lastAt: number }>();
+  const signals = new Map<
+    number,
+    { signalId: number; sets: number; lastAt: number }
+  >();
   const MAX_TRACE_ENTRIES = 2000;
 
   const record = (stage: string, detail: unknown): void => {
@@ -80,7 +83,8 @@ if (import.meta.env.DEV) {
     __lania: {
       trace,
       compile: () =>
-        (globalThis as { __laniaCompile?: Record<string, unknown> }).__laniaCompile ?? {},
+        (globalThis as { __laniaCompile?: Record<string, unknown> })
+          .__laniaCompile ?? {},
       snapshot: () => ({
         signals: [...signals.values()],
         updaters: [...updaters.values()],
@@ -126,7 +130,8 @@ const describeElement = (element: Element): string => {
 
 const describeNode = (node: Node): string => {
   if (node instanceof Element) return describeElement(node);
-  if (node.nodeType === Node.TEXT_NODE) return `#text(${JSON.stringify(node.nodeValue)})`;
+  if (node.nodeType === Node.TEXT_NODE)
+    return `#text(${JSON.stringify(node.nodeValue)})`;
   return node.nodeName;
 };
 
@@ -157,7 +162,10 @@ const formatMutation = (record: MutationRecord): string => {
 };
 
 // MutationObserver 不会跨 shadow root，所以这里把每个 shadow root 也纳入观察范围。
-const observeDeep = (root: Node, callback: (record: MutationRecord) => void): MutationObserver => {
+const observeDeep = (
+  root: Node,
+  callback: (record: MutationRecord) => void
+): MutationObserver => {
   function attach(node: Node): void {
     observer.observe(node, OBSERVE_OPTIONS);
     if (node instanceof Element && node.shadowRoot) {
@@ -200,7 +208,8 @@ const App = () => {
       <div>
         <LoginPage />
         <p className="app-footnote">
-          页面由 <code>LoginPage.lania.tsx</code> 编译产出，无 Virtual DOM、无整树 diff
+          页面由 <code>LoginPage.lania.tsx</code> 编译产出，无 Virtual
+          DOM、无整树 diff
         </p>
       </div>
     </div>
@@ -210,7 +219,7 @@ const App = () => {
 const root = document.querySelector('#app');
 
 if (root) {
-  createRoot(root).render(<App /> as unknown as Node);
+  createRoot(root).render((<App />) as unknown as Node);
 
   // 挂载完成后再安装，确保 login-page 的 shadow root 已经存在。
   observeDeep(document.body, (record) => {

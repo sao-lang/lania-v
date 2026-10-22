@@ -53,7 +53,10 @@ export const extractCrossComponentPropBindings = (
       {
         name: '__spread__',
         expression,
-        signalDependencies: analyzeExpressionDependencies(expression, propNames),
+        signalDependencies: analyzeExpressionDependencies(
+          expression,
+          propNames
+        ),
       },
     ];
   }
@@ -67,7 +70,10 @@ export const extractCrossComponentPropBindings = (
 
       if (ts.isObjectLiteralExpression(spreadExpression)) {
         // 对字面量 spread 做一次展开，尽量保留按 prop 粒度的依赖信息。
-        return extractCrossComponentPropBindings(spreadExpression.getText(), propNames);
+        return extractCrossComponentPropBindings(
+          spreadExpression.getText(),
+          propNames
+        );
       }
 
       return [
@@ -75,7 +81,10 @@ export const extractCrossComponentPropBindings = (
           name: '__spread__',
           expression: property.expression.getText(),
           // 非字面量 spread 只能把依赖挂在一个聚合绑定上，等待上层按整体处理。
-          signalDependencies: analyzeExpressionDependencies(property.expression.getText(), propNames),
+          signalDependencies: analyzeExpressionDependencies(
+            property.expression.getText(),
+            propNames
+          ),
         },
       ];
     }
@@ -89,7 +98,10 @@ export const extractCrossComponentPropBindings = (
         {
           name: property.name.text,
           expression: property.name.text,
-          signalDependencies: analyzeExpressionDependencies(property.name.text, propNames),
+          signalDependencies: analyzeExpressionDependencies(
+            property.name.text,
+            propNames
+          ),
         },
       ];
     }
@@ -105,7 +117,10 @@ export const extractCrossComponentPropBindings = (
         {
           name,
           expression: initializerText,
-          signalDependencies: analyzeExpressionDependencies(initializerText, propNames),
+          signalDependencies: analyzeExpressionDependencies(
+            initializerText,
+            propNames
+          ),
         },
       ];
     }
@@ -123,14 +138,19 @@ export const buildCrossComponentAnalysis = (
   const highFrequencyUpdaters = new Set<string>();
 
   const createUsage = (
-    usage: Omit<CrossComponentUsageIR, 'dependencySignals' | 'updatePriority' | 'codeSplitEligible'>
+    usage: Omit<
+      CrossComponentUsageIR,
+      'dependencySignals' | 'updatePriority' | 'codeSplitEligible'
+    >
   ): CrossComponentUsageIR => {
     // 把 prop 绑定里涉及的 signal 名字拍平，得到当前组件使用点的依赖摘要。
-    const dependencySignals = [...new Set(
-      usage.propBindings.flatMap((binding) =>
-        binding.signalDependencies.map((dependency) => dependency.name)
-      )
-    )].sort();
+    const dependencySignals = [
+      ...new Set(
+        usage.propBindings.flatMap((binding) =>
+          binding.signalDependencies.map((dependency) => dependency.name)
+        )
+      ),
+    ].sort();
     const updatePriority: 'high' | 'normal' =
       usage.updater &&
       usage.propBindings.length > 0 &&
@@ -167,7 +187,10 @@ export const buildCrossComponentAnalysis = (
             path: node.path,
             slotIndex: node.slotIndex,
             updater: `updateDynamicSlot${node.slotIndex}`,
-            propBindings: extractCrossComponentPropBindings(node.propsExpression, propNames),
+            propBindings: extractCrossComponentPropBindings(
+              node.propsExpression,
+              propNames
+            ),
             eventBindings: [],
           })
         );
@@ -187,7 +210,10 @@ export const buildCrossComponentAnalysis = (
             path: node.path,
             slotIndex: node.slotIndex,
             updater: `updateComponentSlot${node.slotIndex}`,
-            propBindings: extractCrossComponentPropBindings(node.propsExpression, propNames),
+            propBindings: extractCrossComponentPropBindings(
+              node.propsExpression,
+              propNames
+            ),
             eventBindings: node.eventNames,
           })
         );
@@ -206,7 +232,10 @@ export const buildCrossComponentAnalysis = (
               propBindings: node.dynamicAttributes.map((attribute) => ({
                 name: attribute.name,
                 expression: attribute.expression,
-                signalDependencies: analyzeExpressionDependencies(attribute.expression, propNames),
+                signalDependencies: analyzeExpressionDependencies(
+                  attribute.expression,
+                  propNames
+                ),
               })),
               eventBindings: node.events.map((event) => event.name),
             })

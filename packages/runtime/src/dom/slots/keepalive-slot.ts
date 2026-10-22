@@ -73,7 +73,10 @@ const createSlotSourceDef = (options: {
     activate(bindingInstance: MountedBindingInstance) {
       bindingInstance.activate();
     },
-    deactivate(bindingInstance: MountedBindingInstance, previousNodes: readonly Node[]) {
+    deactivate(
+      bindingInstance: MountedBindingInstance,
+      previousNodes: readonly Node[]
+    ) {
       bindingInstance.deactivate();
       removeNodes(previousNodes);
     },
@@ -265,7 +268,9 @@ export class KeepAliveSlot implements Slot<unknown> {
     // active entry 若仍存在于当前 slot，先主动销毁实例，再清空 host/runtime 自身记录。
     const activeEntry =
       this.runtime.activeState.bucket && this.runtime.activeState.key
-        ? this.runtime.activeState.bucket.entries.get(this.runtime.activeState.key) ?? null
+        ? (this.runtime.activeState.bucket.entries.get(
+            this.runtime.activeState.key
+          ) ?? null)
         : null;
     activeEntry?.instance.destroy();
     this.runtime.clearActive();

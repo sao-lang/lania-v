@@ -153,7 +153,11 @@ const createContextualActivationRuntime = <
 >(options: {
   lifecycle: KeepAliveLifecycle<TEntry, TValue>;
   readHostTarget(): KeepAliveHostTarget | null;
-  host: KeepAliveRuntimeController<TEntry, TValue, unknown>['hostRuntime']['host'];
+  host: KeepAliveRuntimeController<
+    TEntry,
+    TValue,
+    unknown
+  >['hostRuntime']['host'];
 }): KeepAliveActivation<TEntry, TValue> => {
   const { lifecycle, readHostTarget, host } = options;
   return {

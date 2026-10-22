@@ -1,5 +1,8 @@
 import type { ComponentIR } from '../../ir/component';
-import { buildStaticSignalFoldMap, collectRetainedComputedNames } from './expression';
+import {
+  buildStaticSignalFoldMap,
+  collectRetainedComputedNames,
+} from './expression';
 import { analyzeExpressionMerges, rebuildRenderPlan } from './render-plan';
 import {
   applySlotPacking,
@@ -57,25 +60,37 @@ export const optimizeComponentTemplate = (component: ComponentIR): void => {
     storeBindingMap: component.renderPlan.storeBindingMap,
   };
   component.computed = component.computed.filter(
-    (computed) => !usedComputed.has(computed.name) || retainedComputed.has(computed.name)
+    (computed) =>
+      !usedComputed.has(computed.name) || retainedComputed.has(computed.name)
   );
   const usedSignals = collectUsedSignalNames(component);
-  optimization.staticSignalFolds = Object.entries(staticSignals).map(([signal, folded]) => ({
-    signal,
-    folded,
-  }));
+  optimization.staticSignalFolds = Object.entries(staticSignals).map(
+    ([signal, folded]) => ({
+      signal,
+      folded,
+    })
+  );
   const prunedSignals = component.signals
     .filter((signal) => !usedSignals.has(signal.name))
     .map((signal) => signal.name)
     .sort();
   const runtimeUpdaterSignals = new Set(
-    component.renderPlan.runtimeUpdaters.flatMap((updater) => updater.dependencies)
+    component.renderPlan.runtimeUpdaters.flatMap(
+      (updater) => updater.dependencies
+    )
   );
-  component.signals = component.signals.filter((signal) => usedSignals.has(signal.name));
+  component.signals = component.signals.filter((signal) =>
+    usedSignals.has(signal.name)
+  );
   component.renderPlan.signalBindingMap = Object.fromEntries(
-    Object.entries(component.renderPlan.signalBindingMap).filter(([signalName]) => {
-      return !prunedSignals.includes(signalName) || runtimeUpdaterSignals.has(signalName);
-    })
+    Object.entries(component.renderPlan.signalBindingMap).filter(
+      ([signalName]) => {
+        return (
+          !prunedSignals.includes(signalName) ||
+          runtimeUpdaterSignals.has(signalName)
+        );
+      }
+    )
   );
   optimization.inlinedComputed = [...usedComputed].sort();
   optimization.prunedSignals = prunedSignals;
@@ -84,5 +99,6 @@ export const optimizeComponentTemplate = (component: ComponentIR): void => {
 };
 
 export const optimizeComponentUpdaters = (component: ComponentIR): void => {
-  component.optimizationPass.expressionMerges = analyzeExpressionMerges(component);
+  component.optimizationPass.expressionMerges =
+    analyzeExpressionMerges(component);
 };

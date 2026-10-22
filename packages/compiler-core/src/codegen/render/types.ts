@@ -117,10 +117,7 @@ export interface RenderKeepAliveBindingPlan {
 }
 
 export type RenderRuntimeUpdaterKind =
-  | 'single-slot'
-  | 'multi-slot'
-  | 'condition'
-  | 'effect';
+  'single-slot' | 'multi-slot' | 'condition' | 'effect';
 
 // runtime updater 计划：描述一个运行时 updater 如何构造、依赖哪些响应式源以及更新哪些 slot。
 export interface RenderRuntimeUpdaterPlan {

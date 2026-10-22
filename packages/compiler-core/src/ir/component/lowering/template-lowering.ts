@@ -135,7 +135,12 @@ export const lowerTemplateChildren = (
 
     if (child.tagName === 'component') {
       // 保留字 `<component>` 代表动态组件占位，单独走动态组件 lowering。
-      const dynamicNode = lowerDynamicElement(child, path, slotIndex, lowerTemplateChildren);
+      const dynamicNode = lowerDynamicElement(
+        child,
+        path,
+        slotIndex,
+        lowerTemplateChildren
+      );
 
       if (dynamicNode) {
         nodes.push(dynamicNode);
@@ -146,7 +151,11 @@ export const lowerTemplateChildren = (
       }
     }
 
-    const staticComponentNode = lowerStaticComponentElement(child, path, slotIndex);
+    const staticComponentNode = lowerStaticComponentElement(
+      child,
+      path,
+      slotIndex
+    );
 
     if (staticComponentNode) {
       // 静态组件标签会转成组件 slot，自身在父模板里表现为一个 block 占位。
@@ -202,7 +211,9 @@ export const lowerTemplateChildren = (
       },
       []
     );
-    const hasHtmlDirective = child.directives.some((directive) => directive.kind === 'html');
+    const hasHtmlDirective = child.directives.some(
+      (directive) => directive.kind === 'html'
+    );
     const loweredChildren = hasHtmlDirective
       ? {
           // `html` 指令会整体接管 innerHTML，因此常规 children 在这里直接视为空。
@@ -212,7 +223,13 @@ export const lowerTemplateChildren = (
           nextBoundaryIndex: boundaryIndex,
           renderedRootCount: 0,
         }
-      : lowerTemplateChildren(child.children, path, slotIndex, boundaryIndex, 0);
+      : lowerTemplateChildren(
+          child.children,
+          path,
+          slotIndex,
+          boundaryIndex,
+          0
+        );
     const elementNode: ElementIR = {
       type: 'ElementIR',
       tagName: child.tagName,
@@ -220,7 +237,9 @@ export const lowerTemplateChildren = (
       staticAttributes,
       dynamicAttributes,
       events: child.events.map((event) => lowerEvent(event, path)),
-      directives: child.directives.map((directive) => lowerDirective(directive, path)),
+      directives: child.directives.map((directive) =>
+        lowerDirective(directive, path)
+      ),
       children: loweredChildren.nodes,
     };
 

@@ -15,7 +15,10 @@
 import { createSignal, defineComponent } from '@lania-v/runtime';
 
 // 高级调试入口
-import { trackSignals, installDevtoolsOverlay } from '@lania-v/runtime/advanced';
+import {
+  trackSignals,
+  installDevtoolsOverlay,
+} from '@lania-v/runtime/advanced';
 
 // 测试辅助
 import { resetRuntimeTestState } from '@lania-v/runtime/testing';
@@ -32,28 +35,28 @@ import { ENHANCED_COMPONENT_NAMES } from '@lania-v/shared';
 
 ## 文档约定
 
-| 记号 | 含义 |
-| --- | --- |
-| `T` | 泛型参数 |
-| `?` | 可选参数 |
-| `ReadonlySignal<T>` | 可 `.value` 读取、可 `peek()`，但没有 `set` |
-| `Scheduler` | 调度器实例，默认 `defaultScheduler` |
-| `Job` | 一个无参函数，由调度器执行 |
+| 记号                 | 含义                                                     |
+| -------------------- | -------------------------------------------------------- |
+| `T`                  | 泛型参数                                                 |
+| `?`                  | 可选参数                                                 |
+| `ReadonlySignal<T>`  | 可 `.value` 读取、可 `peek()`，但没有 `set`              |
+| `Scheduler`          | 调度器实例，默认 `defaultScheduler`                      |
+| `Job`                | 一个无参函数，由调度器执行                               |
 | `EnhancedRenderable` | 可渲染值：`Node`、字符串、数字、布尔、`null`、数组、函数 |
-| `compile-only` | 只在 `.lania.tsx` 编译链中有意义，运行时直接调用会抛错 |
+| `compile-only`       | 只在 `.lania.tsx` 编译链中有意义，运行时直接调用会抛错   |
 
 ## API 分区
 
-| 分区 | 内容 |
-| --- | --- |
-| [响应式 API](/api/reactivity) | Signal、Memo、Effect、Scheduler、Store、Resource、Selector、Owner、Context |
-| [组件 API](/api/component) | `defineComponent`、挂载、生命周期、slots、expose、表单、`ReactiveElement` |
-| [DOM 与绑定 API](/api/dom) | class、style、html、model、ref、指令、Slot、Updater |
-| [增强组件 API](/api/enhanced-components) | `When`、`Each`、`Teleport`、`KeepAlive`、`Transition`、`Suspense` 等 |
-| [编译期 API](/api/compile-time) | compile-only 标记、编译器入口、插件 |
-| [SSR API](/api/ssr) | 字符串渲染、DSD、Islands、水合 |
-| [Vite 插件](/api/plugin) | 插件选项、transform、HMR、调试 |
-| [包与导出入口](/api/packages) | 各包职责与子路径 |
+| 分区                                     | 内容                                                                       |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| [响应式 API](/api/reactivity)            | Signal、Memo、Effect、Scheduler、Store、Resource、Selector、Owner、Context |
+| [组件 API](/api/component)               | `defineComponent`、挂载、生命周期、slots、expose、表单、`ReactiveElement`  |
+| [DOM 与绑定 API](/api/dom)               | class、style、html、model、ref、指令、Slot、Updater                        |
+| [增强组件 API](/api/enhanced-components) | `When`、`Each`、`Teleport`、`KeepAlive`、`Transition`、`Suspense` 等       |
+| [编译期 API](/api/compile-time)          | compile-only 标记、编译器入口、插件                                        |
+| [SSR API](/api/ssr)                      | 字符串渲染、DSD、Islands、水合                                             |
+| [Vite 插件](/api/plugin)                 | 插件选项、transform、HMR、调试                                             |
+| [包与导出入口](/api/packages)            | 各包职责与子路径                                                           |
 
 ## 三种 API
 
@@ -71,7 +74,9 @@ const double = createMemo(() => count() * 2);
 必须写在 `.lania.tsx` 中，由编译器改写：
 
 ```tsx
-onMount(() => { /* ... */ });
+onMount(() => {
+  /* ... */
+});
 provideContext(ThemeContext, theme);
 useFormValue(() => account());
 const inputRef = createRef<HTMLInputElement>();
@@ -82,7 +87,10 @@ const inputRef = createRef<HTMLInputElement>();
 只影响类型推断，不产生运行时行为：
 
 ```ts
-import type { LaniaJsxElement, LaniaNativeIntrinsicElements } from '@lania-v/runtime/jsx-runtime';
+import type {
+  LaniaJsxElement,
+  LaniaNativeIntrinsicElements,
+} from '@lania-v/runtime/jsx-runtime';
 ```
 
 ## 阅读顺序建议

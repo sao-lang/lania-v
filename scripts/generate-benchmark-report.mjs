@@ -31,9 +31,19 @@ const makeTable = (headers, rows) => {
   return [head, divider, body].filter(Boolean).join('\n');
 };
 
-const summaryHeaders = ['Target', 'Framework', 'Mount', 'Text', 'List Patch', 'Toggle', 'Model'];
+const summaryHeaders = [
+  'Target',
+  'Framework',
+  'Mount',
+  'Text',
+  'List Patch',
+  'Toggle',
+  'Model',
+];
 const summaryRows = suites.map((suite) => {
-  const byName = new Map((suite.cases ?? []).map((entry) => [entry.name, entry]));
+  const byName = new Map(
+    (suite.cases ?? []).map((entry) => [entry.name, entry])
+  );
   return [
     formatLabel(suite),
     suite.framework,
@@ -52,7 +62,9 @@ const winnerRows = caseNames.map((caseName) => {
       caseResult: (suite.cases ?? []).find((entry) => entry.name === caseName),
     }))
     .filter((entry) => entry.caseResult)
-    .sort((left, right) => left.caseResult.medianMs - right.caseResult.medianMs);
+    .sort(
+      (left, right) => left.caseResult.medianMs - right.caseResult.medianMs
+    );
 
   const winner = ranked[0];
   return [
@@ -71,7 +83,9 @@ const detailSections = caseNames.map((caseName) => {
       caseResult: (suite.cases ?? []).find((entry) => entry.name === caseName),
     }))
     .filter((entry) => entry.caseResult)
-    .sort((left, right) => left.caseResult.medianMs - right.caseResult.medianMs);
+    .sort(
+      (left, right) => left.caseResult.medianMs - right.caseResult.medianMs
+    );
 
   const rows = ranked.map(({ suite, caseResult }) => [
     formatLabel(suite),
@@ -87,7 +101,16 @@ const detailSections = caseNames.map((caseName) => {
   return [
     `## ${caseName}`,
     makeTable(
-      ['Target', 'Framework', 'Median', 'Mean', 'P95', 'Batch Median', 'Ops/Sample', 'Samples'],
+      [
+        'Target',
+        'Framework',
+        'Median',
+        'Mean',
+        'P95',
+        'Batch Median',
+        'Ops/Sample',
+        'Samples',
+      ],
       rows
     ),
   ].join('\n\n');

@@ -38,13 +38,20 @@ Declarative Shadow DOM 与部分水合已由运行时提供协议层（见后文
 推荐入口是 `renderComponentToString()`：它读取组件声明的 `renderMode`，自动选择输出形态。
 
 ```ts
-import { renderComponentToString, renderComponentToStream } from '@lania-v/runtime';
+import {
+  renderComponentToString,
+  renderComponentToStream,
+} from '@lania-v/runtime';
 
 // 组件未声明 renderMode 时按 shadow 输出 DSD
-const html = renderComponentToString(App, { title: 'hello' }, {
-  tagName: 'app-root',
-  attributes: { title: 'hello' },
-});
+const html = renderComponentToString(
+  App,
+  { title: 'hello' },
+  {
+    tagName: 'app-root',
+    attributes: { title: 'hello' },
+  }
+);
 // shadow: <app-root title="hello"><template shadowrootmode="open">…</template></app-root>
 // light : <app-root title="hello">…</app-root>
 
@@ -63,7 +70,13 @@ shadow root，SSR 内容因此不可见，客户端又会往 light DOM 渲染一
 `renderStreamToDeclarativeShadow()` 是它们的别名，同样会按 `renderMode` 分派）：
 
 ```ts
-renderDeclarativeShadowRoot('<p>hi</p>', { styles: css`p { color: red; }` });
+renderDeclarativeShadowRoot('<p>hi</p>', {
+  styles: css`
+    p {
+      color: red;
+    }
+  `,
+});
 renderDeclarativeShadowComponent('<p>hi</p>', { tagName: 'my-card' });
 renderLightComponent('<p>hi</p>', { tagName: 'my-card' });
 ```
@@ -101,11 +114,14 @@ renderLightComponent('<p>hi</p>', { tagName: 'my-card' });
 import { renderToStringAsIsland } from '@lania-v/runtime';
 
 const html =
-  renderToStringAsIsland(SearchBox, { query: 'a' }, {
-    tagName: 'search-box',
-    priority: 'visible',
-  }) +
-  renderToStringAsIsland(Footer, {}, { tagName: 'app-footer' });
+  renderToStringAsIsland(
+    SearchBox,
+    { query: 'a' },
+    {
+      tagName: 'search-box',
+      priority: 'visible',
+    }
+  ) + renderToStringAsIsland(Footer, {}, { tagName: 'app-footer' });
 ```
 
 ### 客户端

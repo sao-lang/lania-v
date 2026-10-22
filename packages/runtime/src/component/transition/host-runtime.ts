@@ -59,7 +59,9 @@ const readRuntimePayload = (
   }
 
   const transitionRecord = (payload as { transition?: unknown }).transition;
-  return transitionRecord && typeof transitionRecord === 'object' ? payload : null;
+  return transitionRecord && typeof transitionRecord === 'object'
+    ? payload
+    : null;
 };
 
 const hasTransitionPhase = (
@@ -76,7 +78,8 @@ const readTransitionHook = <THook>(
   const payloadHooks = payload?.transition.hooks;
 
   for (const hookName of payloadHookNames) {
-    const candidate = payloadHooks?.[hookName as keyof NonNullable<typeof payloadHooks>];
+    const candidate =
+      payloadHooks?.[hookName as keyof NonNullable<typeof payloadHooks>];
     if (candidate !== undefined) {
       return candidate as THook;
     }
@@ -92,7 +95,9 @@ export const resolveOptions = (options: {
 }): ResolvedTransitionOptions => {
   const payload = readRuntimePayload(options.payload);
   if (!payload) {
-    throw new Error('Transition runtime execution requires a shared transition payload.');
+    throw new Error(
+      'Transition runtime execution requires a shared transition payload.'
+    );
   }
   const transitionName = payload.transition.name;
   const keySource = payload.transition.key ?? payload.transition.name;
@@ -102,18 +107,15 @@ export const resolveOptions = (options: {
     transitionName,
     stateKey: String(keySource ?? 'default'),
     hooks: {
-      appear: readTransitionHook<TransitionDispatchHook<TransitionHookContextShape>>(
-        payload,
-        ['onAppear', 'appear']
-      ),
-      enter: readTransitionHook<TransitionDispatchHook<TransitionHookContextShape>>(
-        payload,
-        ['onEnter', 'enter']
-      ),
-      leave: readTransitionHook<TransitionDispatchHook<TransitionHookContextShape>>(
-        payload,
-        ['onLeave', 'leave']
-      ),
+      appear: readTransitionHook<
+        TransitionDispatchHook<TransitionHookContextShape>
+      >(payload, ['onAppear', 'appear']),
+      enter: readTransitionHook<
+        TransitionDispatchHook<TransitionHookContextShape>
+      >(payload, ['onEnter', 'enter']),
+      leave: readTransitionHook<
+        TransitionDispatchHook<TransitionHookContextShape>
+      >(payload, ['onLeave', 'leave']),
     },
     enabled: {
       appear: hasTransitionPhase(payload, 'appear'),
@@ -167,8 +169,16 @@ export const prepareRender = <TRenderable>(options: {
   host?: LeaveFinalizeHost;
   getElements: (snapshot: TRenderable) => readonly Element[];
 }): PreparedTransitionRender<TRenderable> => {
-  const { stateKey, visible, rendered, transitionName, hooks, enabled, host, getElements } =
-    options;
+  const {
+    stateKey,
+    visible,
+    rendered,
+    transitionName,
+    hooks,
+    enabled,
+    host,
+    getElements,
+  } = options;
   // 每次 render 都基于 stateKey 临时拉起一个 runtime 外观，底层状态仍由 registry 持久化。
   const runtime = bootstrapRuntime<TRenderable>({
     stateKey,
@@ -199,13 +209,7 @@ export const renderTransition = <TRenderable>(options: {
   host?: LeaveFinalizeHost;
   getElements: (snapshot: TRenderable) => readonly Element[];
 }): RenderedTransition<TRenderable> => {
-  const {
-    payload,
-    visible,
-    rendered,
-    host,
-    getElements,
-  } = options;
+  const { payload, visible, rendered, host, getElements } = options;
   const { stateKey, transitionName, hooks, enabled } = resolveOptions({
     payload,
   });
@@ -268,7 +272,8 @@ export const scheduleLeaving = <TRenderable>(options: {
   enabled: boolean;
   getElements: (snapshot: TRenderable) => readonly Element[];
 }): TransitionLeavingEntry<TRenderable> | null => {
-  const { stateKey, previous, name, hook, host, enabled, getElements } = options;
+  const { stateKey, previous, name, hook, host, enabled, getElements } =
+    options;
   if (!enabled) {
     return null;
   }

@@ -66,7 +66,10 @@ export const resolveHtmlBindingText = (value: unknown): string => {
   }
 
   // 明确拒绝普通字符串，避免把原本应该走文本转义的内容误注入为 HTML。
-  warning('The "html" directive only accepts values created by html`...`.', false);
+  warning(
+    'The "html" directive only accepts values created by html`...`.',
+    false
+  );
   return '';
 };
 

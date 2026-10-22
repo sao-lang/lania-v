@@ -43,8 +43,9 @@ const write = (name, content) => {
 const written = [];
 
 const entryClass =
-  compiled.componentClasses.find((entry) => entry.className === compiled.className) ??
-  compiled.componentClasses[0];
+  compiled.componentClasses.find(
+    (entry) => entry.className === compiled.className
+  ) ?? compiled.componentClasses[0];
 
 if (entryClass) {
   for (const [key, value] of Object.entries(entryClass.classCode)) {
@@ -56,10 +57,17 @@ if (entryClass) {
 
 written.push(write(`${stem}.module.ts`, emitted.moduleCode));
 written.push(write(`${stem}.static-html.html`, compiled.staticHtml));
-written.push(write(`${stem}.text-bindings.json`, JSON.stringify(compiled.textBindings, null, 2)));
+written.push(
+  write(
+    `${stem}.text-bindings.json`,
+    JSON.stringify(compiled.textBindings, null, 2)
+  )
+);
 written.push(write(`${stem}.ir.json`, JSON.stringify(compiled.ir, null, 2)));
 
-const tagName = compiled.className.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+const tagName = compiled.className
+  .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+  .toLowerCase();
 const readme = [
   `# ${fileName}`,
   '',

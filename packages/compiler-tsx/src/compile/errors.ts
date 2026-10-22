@@ -101,7 +101,9 @@ export const wrapLaniaTsxCompileError = (
 
   // 统一把任意异常折叠成带源码位置的编译错误，便于 IDE、测试与上游插件复用。
   const message =
-    error instanceof Error ? error.message : 'Unknown .lania.tsx compile error.';
+    error instanceof Error
+      ? error.message
+      : 'Unknown .lania.tsx compile error.';
   const location = extractMessageLocation(fileName, message);
   // 若消息中带了行列号，就回算成字符偏移，便于统一生成代码框。
   const offset = location

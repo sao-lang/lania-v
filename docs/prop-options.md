@@ -30,15 +30,15 @@ export default defineComponent(
 
 ## 2. 支持的选项
 
-| 选项 | 类型 | 说明 |
-| --- | --- | --- |
-| `type` | `String/Number/Boolean/Object/Array` | attribute 字符串的回读类型 |
-| `attribute` | `string \| false` | 自定义 attribute 名；`false` 表示不同步 |
-| `reflect` | `boolean` | prop 变化时是否写回 attribute |
-| `default` | 任意表达式 | prop signal 的初始值 |
-| `converter.from` | `(value) => unknown` | 自定义 attribute -> prop 转换 |
-| `converter.to` | `(value) => string \| null` | 自定义 prop -> attribute 转换 |
-| `validator` | `(value) => boolean` | dev 下校验失败输出 warning |
+| 选项             | 类型                                 | 说明                                    |
+| ---------------- | ------------------------------------ | --------------------------------------- |
+| `type`           | `String/Number/Boolean/Object/Array` | attribute 字符串的回读类型              |
+| `attribute`      | `string \| false`                    | 自定义 attribute 名；`false` 表示不同步 |
+| `reflect`        | `boolean`                            | prop 变化时是否写回 attribute           |
+| `default`        | 任意表达式                           | prop signal 的初始值                    |
+| `converter.from` | `(value) => unknown`                 | 自定义 attribute -> prop 转换           |
+| `converter.to`   | `(value) => string \| null`          | 自定义 prop -> attribute 转换           |
+| `validator`      | `(value) => boolean`                 | dev 下校验失败输出 warning              |
 
 `emits` 是字符串数组，参与 `emit()` 校验；未声明的事件在 dev 环境下输出 warning。
 
@@ -76,21 +76,32 @@ class FancyInput extends ReactiveElement {
   static __laniaOptions = { props: sharedProps, emits: EVENTS };
   static propOptions = resolvePropOptions(this.__laniaOptions?.props);
   static emits = this.__laniaOptions?.emits;
-  static observedAttributes = resolveObservedAttributes(this.propOptions, this.__laniaPropNames);
+  static observedAttributes = resolveObservedAttributes(
+    this.propOptions,
+    this.__laniaPropNames
+  );
 }
 ```
 
 因此下面这些写法现在都成立（不再要求字面量）：
 
 ```tsx
-import { ATTR_NAMES, SHARED_EVENTS, convertLevel, sharedProps } from './props-config';
+import {
+  ATTR_NAMES,
+  SHARED_EVENTS,
+  convertLevel,
+  sharedProps,
+} from './props-config';
 
-export default defineComponent(function FancyInput(props: FancyInputProps) {
-  return <div>{props.count}</div>;
-}, {
-  props: sharedProps,                       // 模块级常量 / 导入
-  emits: SHARED_EVENTS,                     // 导入的数组
-});
+export default defineComponent(
+  function FancyInput(props: FancyInputProps) {
+    return <div>{props.count}</div>;
+  },
+  {
+    props: sharedProps, // 模块级常量 / 导入
+    emits: SHARED_EVENTS, // 导入的数组
+  }
+);
 ```
 
 - `attribute: ATTR_NAMES.count` 这类表达式会在类求值时参与 `observedAttributes` 推导；

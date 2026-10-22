@@ -13,7 +13,7 @@ if (!existsSync(gitDir)) {
 const result = spawnSync('npx', ['--no-install', 'husky'], {
   cwd: root,
   stdio: 'inherit',
-  shell: process.platform === 'win32'
+  shell: process.platform === 'win32',
 });
 
 process.exit(result.status ?? 0);

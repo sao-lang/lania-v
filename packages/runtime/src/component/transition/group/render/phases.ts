@@ -18,18 +18,22 @@
  * - registry/host 模块负责怎么派发 hook；
  * - 本文件负责决定什么时候登记 leaving、什么时候补发 appear/enter/move。
  */
-import { dispatchTransitionHooks, type TransitionDispatchHook } from '../../host';
+import {
+  dispatchTransitionHooks,
+  type TransitionDispatchHook,
+} from '../../host';
 import {
   createGroupHooks,
   createFinalizeHandler,
   type GroupHookContext,
   type LeaveFinalizeHost,
 } from '../../registry';
-import { getTransitionGroupState, setTransitionGroupState, updateTransitionGroupState } from '../state/store';
 import {
-  createLeavingSnapshot,
-  deleteLeavingEntry,
-} from '../state/state';
+  getTransitionGroupState,
+  setTransitionGroupState,
+  updateTransitionGroupState,
+} from '../state/store';
+import { createLeavingSnapshot, deleteLeavingEntry } from '../state/state';
 import type {
   GroupLeaveEntry,
   GroupLeavingBlock,
@@ -79,10 +83,7 @@ export const dispatchLeavingHooks = (options: {
   );
 };
 
-export const finalizeSnapState = <
-  TState,
-  TRenderable,
->(
+export const finalizeSnapState = <TState, TRenderable>(
   current: TState,
   key: PropertyKey,
   leaveVersion: number,
@@ -100,16 +101,16 @@ export const finalizeSnapState = <
     key,
     leaveVersion
   );
-  return removed.nextEntries ? assignLeavingSnapshots(current, removed.nextEntries) : null;
+  return removed.nextEntries
+    ? assignLeavingSnapshots(current, removed.nextEntries)
+    : null;
 };
 
 export const finalizeBlockState = <TState>(
   current: TState,
   key: PropertyKey,
   leaveVersion: number,
-  selectLeavingBlocks: (
-    state: TState
-  ) => Map<PropertyKey, GroupLeavingBlock>,
+  selectLeavingBlocks: (state: TState) => Map<PropertyKey, GroupLeavingBlock>,
   assignLeavingBlocks: (
     state: TState,
     leavingBlocks: Map<PropertyKey, GroupLeavingBlock>
@@ -121,7 +122,9 @@ export const finalizeBlockState = <TState>(
     leaveVersion
   );
   return {
-    nextState: removed.nextEntries ? assignLeavingBlocks(current, removed.nextEntries) : null,
+    nextState: removed.nextEntries
+      ? assignLeavingBlocks(current, removed.nextEntries)
+      : null,
     entry: removed.entry,
   };
 };
@@ -260,8 +263,7 @@ export const registerLeavingSnapshot = <TRenderable>(options: {
   return {
     entry,
     finalize: createFinalizer({
-      finalize: () =>
-        finalizeLeavingSnapshot(stateKey, key, leaveVersion),
+      finalize: () => finalizeLeavingSnapshot(stateKey, key, leaveVersion),
       host,
     }),
   };
@@ -401,7 +403,16 @@ export const dispatchSnapshotPhases = <TRenderable>(options: {
   getElements: (snapshot: TRenderable) => readonly Element[];
   defer?: boolean;
 }): void => {
-  const { keys, snapshots, previousKeys, name, hooks, enabled, getElements, defer } = options;
+  const {
+    keys,
+    snapshots,
+    previousKeys,
+    name,
+    hooks,
+    enabled,
+    getElements,
+    defer,
+  } = options;
 
   if (!previousKeys) {
     if (!isGroupPhaseEnabled(enabled, 'appear')) {
@@ -458,7 +469,15 @@ export const scheduleDomHostPhase = (options: {
   name?: string;
   hook?: TransitionDispatchHook<GroupHookContext>;
 }): void => {
-  const { stateKey, container, keys, phase, items: requestedItems, name, hook } = options;
+  const {
+    stateKey,
+    container,
+    keys,
+    phase,
+    items: requestedItems,
+    name,
+    hook,
+  } = options;
   queueMicrotask(() => {
     // DOM host 模式需要等 block 和容器都稳定后再读状态，否则拿到的元素顺序可能还是旧的。
     const current = getTransitionGroupState<unknown>(stateKey);
@@ -510,7 +529,8 @@ export const scheduleDomHostPhases = (options: {
   hooks?: GroupPhaseHooks;
   enabled?: GroupPhaseEnabled;
 }): void => {
-  const { stateKey, container, keys, previousKeys, name, hooks, enabled } = options;
+  const { stateKey, container, keys, previousKeys, name, hooks, enabled } =
+    options;
 
   if (!previousKeys) {
     if (!isGroupPhaseEnabled(enabled, 'appear')) {
@@ -575,8 +595,17 @@ export const scheduleMissingSnaps = <TRenderable>(options: {
   enabled: boolean;
   getElements: (snapshot: TRenderable) => readonly Element[];
 }): Map<PropertyKey, GroupLeavingSnapshot<TRenderable>> => {
-  const { state, keys, nextLeavingSnapshots, stateKey, host, hook, name, enabled, getElements } =
-    options;
+  const {
+    state,
+    keys,
+    nextLeavingSnapshots,
+    stateKey,
+    host,
+    hook,
+    name,
+    enabled,
+    getElements,
+  } = options;
   const activeKeySet = new Set(keys);
 
   // 这一步是“兜底补录”：即便上层没有显式提供 leaving 集，也能从上一帧状态推导出缺失项。

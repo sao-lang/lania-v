@@ -80,7 +80,8 @@ declare namespace JSX {
   }
 
   interface IntrinsicElements
-    extends RuntimeNativeIntrinsicElements,
+    extends
+      RuntimeNativeIntrinsicElements,
       RuntimeEnhancedIntrinsicElements,
       Record<string, RuntimeIntrinsicElementProps> {}
 }
@@ -182,8 +183,8 @@ npm run dev
 `createRoot()` 是一个轻量挂载器，**只接受已经可渲染的值**：
 
 ```tsx
-root.render(<Counter />);       // JSX 结果
-root.render(Counter({}));       // 直接调用组件的结果
+root.render(<Counter />); // JSX 结果
+root.render(Counter({})); // 直接调用组件的结果
 root.render(document.createElement('div'));
 root.render('plain text');
 root.render([<Counter />, <p>done</p>]);

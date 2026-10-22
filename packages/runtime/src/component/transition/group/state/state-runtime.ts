@@ -12,12 +12,8 @@
 import {
   type DomHostBlockRecord,
   type DomHostOwner,
-  type DomHostTarget,
 } from '../../../host/function-component';
-import {
-  deleteLeaveEntry,
-  resolveLeaveEntry,
-} from '../../registry';
+import {} from '../../registry';
 import {
   applyBasePrevContext,
   applyBaseCommitContext,
@@ -26,14 +22,13 @@ import {
   createBaseTransitionDebugSummary,
   resolveCommitKind,
 } from '../../runtime';
-import { getTransitionGroupState, setTransitionGroupState, updateTransitionGroupState } from './store';
+import { getTransitionGroupState, setTransitionGroupState } from './store';
 import type {
   GroupCommitDebugSummary,
   GroupCommitInput,
   GroupCommitIntent,
   GroupDebugSummary,
   GroupDomHostRuntime,
-  GroupLeaveEntry,
   GroupLeavingBlock,
   GroupLeavingSnapshot,
   TransitionGroupRuntime,
@@ -177,7 +172,10 @@ export const publishGroupStateRaw = <TRenderable>(options: {
     snapshots,
     container,
     transitionTag,
-    leavingSnapshots = new Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>(),
+    leavingSnapshots = new Map<
+      PropertyKey,
+      GroupLeavingSnapshot<TRenderable>
+    >(),
     leaveVersion = 0,
   } = input;
   const {
@@ -257,9 +255,12 @@ export const summarizePrevState = <TRenderable>(
       hasPrevious: Boolean(previous),
       previousVisible: previous ? previous.keys.length > 0 : null,
       previousAppeared: previous ? previous.keys.length > 0 : null,
-      previousLeaving:
-        previous ? previous.leavingBlocks.size > 0 || previous.leavingSnapshots.size > 0 : null,
-      hasSnapshot: Boolean(previous?.snapshots.length || previous?.leavingSnapshots.size),
+      previousLeaving: previous
+        ? previous.leavingBlocks.size > 0 || previous.leavingSnapshots.size > 0
+        : null,
+      hasSnapshot: Boolean(
+        previous?.snapshots.length || previous?.leavingSnapshots.size
+      ),
     }),
     previousKeys: previous?.keys.map((key) => String(key)) ?? [],
     previousContainerChildCount: previous?.container?.childNodes.length ?? null,
@@ -307,9 +308,9 @@ export const resolveCommitIntent = <TRenderable>(options: {
     previousLeaving: hasLeavingContent(previous),
     hasSnapshot: Boolean(
       previous &&
-        (previous.snapshots.length > 0 ||
-          previous.leavingSnapshots.size > 0 ||
-          previous.leavingBlocks.size > 0)
+      (previous.snapshots.length > 0 ||
+        previous.leavingSnapshots.size > 0 ||
+        previous.leavingBlocks.size > 0)
     ),
   });
 };
@@ -387,7 +388,9 @@ export const createStateKeyBindings = <TRenderable>(stateKey: string) => {
         keys,
       });
     },
-    resolvePrevious(keys: readonly PropertyKey[]): TransitionGroupState<TRenderable> | undefined {
+    resolvePrevious(
+      keys: readonly PropertyKey[]
+    ): TransitionGroupState<TRenderable> | undefined {
       return readPrevForKeys({
         stateKey,
         keys,
@@ -395,7 +398,10 @@ export const createStateKeyBindings = <TRenderable>(stateKey: string) => {
     },
   } satisfies Pick<
     TransitionGroupRuntime<TRenderable>,
-    'getPrevious' | 'summarizePrevious' | 'resolveCommitIntent' | 'resolvePrevious'
+    | 'getPrevious'
+    | 'summarizePrevious'
+    | 'resolveCommitIntent'
+    | 'resolvePrevious'
   >;
 };
 
@@ -411,12 +417,17 @@ export const createPlaceholderKeys = <TRenderable>() => {
     resolveCommitIntent(_keys: readonly PropertyKey[]): GroupCommitIntent {
       return 'hidden';
     },
-    resolvePrevious(_keys: readonly PropertyKey[]): TransitionGroupState<TRenderable> | undefined {
+    resolvePrevious(
+      _keys: readonly PropertyKey[]
+    ): TransitionGroupState<TRenderable> | undefined {
       return undefined;
     },
   } satisfies Pick<
     TransitionGroupRuntime<TRenderable>,
-    'getPrevious' | 'summarizePrevious' | 'resolveCommitIntent' | 'resolvePrevious'
+    | 'getPrevious'
+    | 'summarizePrevious'
+    | 'resolveCommitIntent'
+    | 'resolvePrevious'
   >;
 };
 
@@ -473,7 +484,10 @@ export const bindStateKeyRuntime = <TRenderable>(options: {
   stateKey: string;
   runtime: Pick<
     TransitionGroupRuntime<TRenderable>,
-    'getPrevious' | 'summarizePrevious' | 'resolveCommitIntent' | 'resolvePrevious'
+    | 'getPrevious'
+    | 'summarizePrevious'
+    | 'resolveCommitIntent'
+    | 'resolvePrevious'
   >;
 }): void => {
   const { stateKey, runtime } = options;

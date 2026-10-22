@@ -65,10 +65,15 @@ const runTransitionHook = <TContext extends TransitionDispatchContext>(
     const canReadAnimations = typeof element.getAnimations === 'function';
     const isLeave = context.phase === 'leave';
 
-    const invoke = (): Promise<{ result: unknown; animationsBefore: Animation[] }> => {
+    const invoke = (): Promise<{
+      result: unknown;
+      animationsBefore: Animation[];
+    }> => {
       const run = () => {
         const animationsBefore = canReadAnimations
-          ? element.getAnimations().filter((animation) => animation.playState !== 'finished')
+          ? element
+              .getAnimations()
+              .filter((animation) => animation.playState !== 'finished')
           : [];
         const result = hook(element, context);
         return { result, animationsBefore };
@@ -105,7 +110,9 @@ const runTransitionHook = <TContext extends TransitionDispatchContext>(
           return;
         }
 
-        await Promise.allSettled(newAnimations.map((animation) => waitForAnimation(animation)));
+        await Promise.allSettled(
+          newAnimations.map((animation) => waitForAnimation(animation))
+        );
       });
     });
   } catch (error) {
@@ -116,7 +123,9 @@ const runTransitionHook = <TContext extends TransitionDispatchContext>(
 const pendingTransitionHooks = new WeakMap<Element, Array<() => void>>();
 let deferredTransitionHookDepth = 0;
 
-export const scheduleTransitionHooks = <TContext extends TransitionDispatchContext>(
+export const scheduleTransitionHooks = <
+  TContext extends TransitionDispatchContext,
+>(
   hook: TransitionDispatchHook<TContext> | undefined,
   entries: Array<TransitionHookEntry<TContext>>,
   onSettled?: () => void
@@ -128,7 +137,9 @@ export const scheduleTransitionHooks = <TContext extends TransitionDispatchConte
 
   queueMicrotask(() => {
     void Promise.allSettled(
-      entries.map(({ element, context }) => runTransitionHook(hook, element, context))
+      entries.map(({ element, context }) =>
+        runTransitionHook(hook, element, context)
+      )
     ).then(() => {
       onSettled?.();
     });
@@ -162,7 +173,9 @@ const queueDeferredHooks = <TContext extends TransitionDispatchContext>(
   entries.forEach(({ element, context }) => {
     const jobs = pendingTransitionHooks.get(element) ?? [];
     jobs.push(() => {
-      void Promise.resolve(runTransitionHook(hook, element, context)).finally(settleOne);
+      void Promise.resolve(runTransitionHook(hook, element, context)).finally(
+        settleOne
+      );
     });
     pendingTransitionHooks.set(element, jobs);
   });
@@ -173,14 +186,18 @@ const shouldDeferTransitionHooks = (): boolean => {
 };
 
 // defer 开启时，嵌套的过渡提交会先缓存 hook，避免节点尚未连接时过早执行。
-export const dispatchTransitionHooks = <TContext extends TransitionDispatchContext>(
+export const dispatchTransitionHooks = <
+  TContext extends TransitionDispatchContext,
+>(
   hook: TransitionDispatchHook<TContext> | undefined,
   entries: Array<TransitionHookEntry<TContext>>,
   options: TransitionDispatchOptions = {}
 ): void => {
   const { defer = true, onSettled } = options;
   const dispatch =
-    defer && shouldDeferTransitionHooks() ? queueDeferredHooks : scheduleTransitionHooks;
+    defer && shouldDeferTransitionHooks()
+      ? queueDeferredHooks
+      : scheduleTransitionHooks;
   dispatch(hook, entries, onSettled);
 };
 
@@ -191,7 +208,11 @@ export const dispatchNamedHooks = (
   phase: TransitionHookContextShape['phase'],
   options: TransitionDispatchOptions = {}
 ): void => {
-  dispatchTransitionHooks(hook, createNamedHooks(elements, name, phase), options);
+  dispatchTransitionHooks(
+    hook,
+    createNamedHooks(elements, name, phase),
+    options
+  );
 };
 
 // 通过计数器标记当前处于 defer 区间，支持多层嵌套调用。

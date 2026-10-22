@@ -55,7 +55,13 @@ describe('SimpleUpdater', () => {
     const slot = new TextSlot(document.createTextNode(''), 0);
     const slotTable = new SlotTable();
     slotTable.register(slot);
-    const updater = new SimpleUpdater(() => signal.value, slot, 'normal', scheduler, slotTable);
+    const updater = new SimpleUpdater(
+      () => signal.value,
+      slot,
+      'normal',
+      scheduler,
+      slotTable
+    );
 
     updater.deps.add(signal);
     updater.attach();
@@ -107,9 +113,13 @@ describe('EffectUpdater', () => {
     const scheduler = new Scheduler();
     const calls: string[] = [];
     const signal = createSignal(0, scheduler);
-    const updater = new EffectUpdater(() => {
-      calls.push(`effect:${signal.value}`);
-    }, 'low', scheduler);
+    const updater = new EffectUpdater(
+      () => {
+        calls.push(`effect:${signal.value}`);
+      },
+      'low',
+      scheduler
+    );
 
     updater.deps.add(signal);
     updater.attach();

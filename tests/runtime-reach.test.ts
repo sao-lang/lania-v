@@ -86,7 +86,8 @@ describe('Reach', () => {
   const withoutIntersectionObserver = async (run: () => Promise<void>) => {
     const original = globalThis.IntersectionObserver;
     // @ts-expect-error 测试里刻意移除。
-    delete (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
+    delete (globalThis as { IntersectionObserver?: unknown })
+      .IntersectionObserver;
 
     try {
       await run();
@@ -96,26 +97,30 @@ describe('Reach', () => {
   };
 
   it('fires only once in once mode when the bottom is reached repeatedly', async () => {
-    await withoutIntersectionObserver(async () => {  
+    await withoutIntersectionObserver(async () => {
       // `root` 模式按滚动位置判定：总高 1000，视口 100，滚到 900 即到底。
       const scroller = createScrollBox(1000, 100);
       const onReach = vi.fn();
-  
-      const host = Reach({ root: scroller, once: true, onReach }) as HTMLElement;
+
+      const host = Reach({
+        root: scroller,
+        once: true,
+        onReach,
+      }) as HTMLElement;
       scroller.appendChild(host);
-  
+
       await new Promise((resolve) => setTimeout(resolve, 30));
-  
+
       // 尚未到底。
       scroller.scrollTop = 100;
       scroller.dispatchEvent(new Event('scroll'));
       expect(onReach).not.toHaveBeenCalled();
-  
+
       // 到底触发一次。
       scroller.scrollTop = 900;
       scroller.dispatchEvent(new Event('scroll'));
       expect(onReach).toHaveBeenCalledTimes(1);
-  
+
       // once 模式下反复到底也不重复触发。
       scroller.scrollTop = 0;
       scroller.dispatchEvent(new Event('scroll'));
@@ -126,19 +131,19 @@ describe('Reach', () => {
   });
 
   it('re-arms after leaving the bottom when once is false', async () => {
-    await withoutIntersectionObserver(async () => {  
+    await withoutIntersectionObserver(async () => {
       const scroller = createScrollBox(1000, 100);
       const onReach = vi.fn();
-  
+
       const host = Reach({ root: scroller, onReach }) as HTMLElement;
       scroller.appendChild(host);
-  
+
       await new Promise((resolve) => setTimeout(resolve, 30));
-  
+
       scroller.scrollTop = 900;
       scroller.dispatchEvent(new Event('scroll'));
       expect(onReach).toHaveBeenCalledTimes(1);
-  
+
       // 离开底部后重新武装，可再次触发。
       scroller.scrollTop = 0;
       scroller.dispatchEvent(new Event('scroll'));
@@ -149,24 +154,24 @@ describe('Reach', () => {
   });
 
   it('respects rootMargin as an early-trigger distance', async () => {
-    await withoutIntersectionObserver(async () => {  
+    await withoutIntersectionObserver(async () => {
       const scroller = createScrollBox(1000, 100);
       const onReach = vi.fn();
-  
+
       const host = Reach({
         root: scroller,
         rootMargin: '200px',
         onReach,
       }) as HTMLElement;
       scroller.appendChild(host);
-  
+
       await new Promise((resolve) => setTimeout(resolve, 30));
-  
+
       // 距底部 300px：还没进入 200px 的提前量范围。
       scroller.scrollTop = 600;
       scroller.dispatchEvent(new Event('scroll'));
       expect(onReach).not.toHaveBeenCalled();
-  
+
       // 距底部 100px：已在提前量内。
       scroller.scrollTop = 800;
       scroller.dispatchEvent(new Event('scroll'));

@@ -132,7 +132,11 @@ const normalizeParsedEventModifiers = (
 const getDelegationPath = (event: Event, root: EventTarget): EventTarget[] => {
   const path =
     typeof event.composedPath === 'function'
-      ? event.composedPath().filter((target): target is EventTarget => target instanceof EventTarget)
+      ? event
+          .composedPath()
+          .filter(
+            (target): target is EventTarget => target instanceof EventTarget
+          )
       : [];
 
   if (path.length > 0) {
@@ -255,7 +259,8 @@ export const attachDelegatedEventListener = (
     root.addEventListener(eventName, listener);
   }
 
-  const currentHandlers = bucket.bindings.get(node) ?? new Set<DelegatedEventHandler>();
+  const currentHandlers =
+    bucket.bindings.get(node) ?? new Set<DelegatedEventHandler>();
   // 一个节点同一事件名下允许挂多个运行时 handler，委托层只维护目标节点到 handler 集合的映射。
   currentHandlers.add(handler);
   bucket.bindings.set(node, currentHandlers);
@@ -366,7 +371,10 @@ const matchesKeyModifier = (event: Event, modifier: EventModifier): boolean => {
   return actual === expected;
 };
 
-const matchesSystemModifier = (event: Event, modifier: EventModifier): boolean => {
+const matchesSystemModifier = (
+  event: Event,
+  modifier: EventModifier
+): boolean => {
   if (!modifier.startsWith('system:')) {
     return true;
   }
@@ -381,7 +389,10 @@ const MOUSE_BUTTON_INDEX: Record<string, number> = {
   right: 2,
 };
 
-const matchesButtonModifier = (event: Event, modifier: EventModifier): boolean => {
+const matchesButtonModifier = (
+  event: Event,
+  modifier: EventModifier
+): boolean => {
   if (!modifier.startsWith('button:')) {
     return true;
   }
@@ -432,7 +443,10 @@ export const parseEventBindingName = (
 
   const [eventName, ...modifiers] = sourceName.split('.');
 
-  if (!DOM_EVENT_NAMES.has(eventName) && !(modifiers.length > 0 && isPotentialDomEventName(eventName))) {
+  if (
+    !DOM_EVENT_NAMES.has(eventName) &&
+    !(modifiers.length > 0 && isPotentialDomEventName(eventName))
+  ) {
     return null;
   }
 

@@ -84,7 +84,9 @@ const getPathToken = (path: number[]): string => {
 
 const sanitizeIdentifierToken = (value: string): string => {
   // 属性名、事件名可能带符号字符，先清洗成合法标识符片段再拼 updater 名。
-  const normalized = value.replace(/[^a-zA-Z0-9_$]+/g, '_').replace(/^_+|_+$/g, '');
+  const normalized = value
+    .replace(/[^a-zA-Z0-9_$]+/g, '_')
+    .replace(/^_+|_+$/g, '');
   return normalized.length > 0 ? normalized : 'token';
 };
 
@@ -330,7 +332,9 @@ const allocateTemplateSlots = (
     // 非文本类运行时绑定统一在尾部追加索引，避免与模板 slot 冲突。
     // 这让 lowering 阶段产出的结构性 slot 与后续追加的交互 slot 共用一套线性编号空间。
     node.dynamicAttributes.forEach((attribute) => {
-      allocated.push(allocateAttributeSlot(attribute, node, nextSlotIndexRef.value));
+      allocated.push(
+        allocateAttributeSlot(attribute, node, nextSlotIndexRef.value)
+      );
       nextSlotIndexRef.value += 1;
     });
 
@@ -340,13 +344,17 @@ const allocateTemplateSlots = (
       const entryCount = Math.max(1, event.hints?.length ?? 1);
 
       for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
-        allocated.push(allocateEventSlot(event, node, nextSlotIndexRef.value, entryIndex));
+        allocated.push(
+          allocateEventSlot(event, node, nextSlotIndexRef.value, entryIndex)
+        );
         nextSlotIndexRef.value += 1;
       }
     });
 
     node.directives.forEach((directive) => {
-      allocated.push(allocateDirectiveSlot(directive, node, nextSlotIndexRef.value));
+      allocated.push(
+        allocateDirectiveSlot(directive, node, nextSlotIndexRef.value)
+      );
       nextSlotIndexRef.value += 1;
     });
 
@@ -354,7 +362,9 @@ const allocateTemplateSlots = (
   });
 };
 
-export const allocateComponentSlots = (component: ComponentIR): SlotAllocationIR => {
+export const allocateComponentSlots = (
+  component: ComponentIR
+): SlotAllocationIR => {
   const slots: AllocatedSlotIR[] = [];
   const nextSlotIndexRef = {
     // 附加 slot 一律从“现有模板 slot 的最大值 + 1”开始，保证不和 lowering 结果冲突。

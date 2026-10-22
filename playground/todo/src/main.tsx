@@ -10,7 +10,14 @@ const sharedStyles = css`
   :host {
     display: block;
     color: rgba(255, 255, 255, 0.92);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Helvetica,
+      Arial;
   }
 
   * {
@@ -26,7 +33,11 @@ const sharedStyles = css`
     border-radius: 16px;
     padding: 16px;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.05)
+    );
     box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
     backdrop-filter: blur(10px);
   }
@@ -60,7 +71,10 @@ const sharedStyles = css`
     cursor: pointer;
     font-size: 12px;
     line-height: 1;
-    transition: transform 70ms ease, background 140ms ease, border-color 140ms ease;
+    transition:
+      transform 70ms ease,
+      background 140ms ease,
+      border-color 140ms ease;
     user-select: none;
   }
 
@@ -80,13 +94,20 @@ const sharedStyles = css`
 
   .btn {
     border: 1px solid rgba(255, 255, 255, 0.14);
-    background: linear-gradient(180deg, rgba(139, 92, 246, 0.95), rgba(124, 58, 237, 0.95));
+    background: linear-gradient(
+      180deg,
+      rgba(139, 92, 246, 0.95),
+      rgba(124, 58, 237, 0.95)
+    );
     color: rgba(255, 255, 255, 0.92);
     padding: 10px 12px;
     border-radius: 12px;
     cursor: pointer;
     font-size: 12px;
-    transition: filter 140ms ease, transform 70ms ease, box-shadow 140ms ease;
+    transition:
+      filter 140ms ease,
+      transform 70ms ease,
+      box-shadow 140ms ease;
     user-select: none;
     box-shadow: 0 10px 26px rgba(124, 58, 237, 0.25);
   }
@@ -102,7 +123,11 @@ const sharedStyles = css`
 
   .danger {
     border-color: rgba(248, 113, 113, 0.55);
-    background: linear-gradient(180deg, rgba(248, 113, 113, 0.95), rgba(239, 68, 68, 0.95));
+    background: linear-gradient(
+      180deg,
+      rgba(248, 113, 113, 0.95),
+      rgba(239, 68, 68, 0.95)
+    );
     box-shadow: 0 10px 26px rgba(239, 68, 68, 0.22);
   }
 
@@ -113,7 +138,10 @@ const sharedStyles = css`
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.92);
-    transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease,
+      background 140ms ease;
   }
 
   .input:hover {
@@ -195,9 +223,13 @@ const sharedStyles = css`
 `;
 
 (
-  [FcBindingApiDemo, FcShowcase, TodoFc, ShowcaseCard, LocalStateCounterCard] as Array<
-    CustomElementConstructor & { styles?: unknown }
-  >
+  [
+    FcBindingApiDemo,
+    FcShowcase,
+    TodoFc,
+    ShowcaseCard,
+    LocalStateCounterCard,
+  ] as Array<CustomElementConstructor & { styles?: unknown }>
 ).forEach((component) => {
   component.styles = sharedStyles;
 });
@@ -223,5 +255,5 @@ const App = () => {
 const root = document.querySelector('#app');
 
 if (root) {
-  createRoot(root).render(<App /> as unknown as Node);
+  createRoot(root).render((<App />) as unknown as Node);
 }

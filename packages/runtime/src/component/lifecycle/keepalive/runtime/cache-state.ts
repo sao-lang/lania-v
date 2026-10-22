@@ -67,12 +67,8 @@ export const registerKeepAliveEntry = <TEntry extends KeepAliveBucketEntry>(
   return entry;
 };
 
-
 // 统一执行 deactivate 生命周期，并优先使用 entry 自己携带的 callbacks。
-export const dispatchDeactivate = <
-  TEntry extends KeepAliveBucketEntry,
-  TValue,
->(
+export const dispatchDeactivate = <TEntry extends KeepAliveBucketEntry, TValue>(
   entry: TEntry | null,
   lifecycle: KeepAliveLifecycle<TEntry, TValue>,
   onDeactivate?: (value: TValue, key: string) => void
@@ -83,8 +79,8 @@ export const dispatchDeactivate = <
 
   const resolvedOnDeactivate =
     // entry 自带回调优先级更高，确保按 key 注册的钩子不会被调用方临时回调覆盖。
-    (entry as TEntry & { callbacks?: KeepAliveCallbacks<TValue> }).callbacks?.onDeactivate ??
-    onDeactivate;
+    (entry as TEntry & { callbacks?: KeepAliveCallbacks<TValue> }).callbacks
+      ?.onDeactivate ?? onDeactivate;
   lifecycle.deactivate?.(entry);
   resolvedOnDeactivate?.(lifecycle.readValue(entry), entry.key);
 };

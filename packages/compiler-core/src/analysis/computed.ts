@@ -58,7 +58,9 @@ const isSimpleIdentifierSignalCall = (expression: ts.Expression): boolean => {
   );
 };
 
-const collectDependencies = (expression: ts.Expression): ComputedDependency[] => {
+const collectDependencies = (
+  expression: ts.Expression
+): ComputedDependency[] => {
   // 同一表达式里多次读取同一个 signal 时，只保留一份依赖描述，避免后续链路重复登记。
   const deps = new Map<string, ComputedDependency>();
 
@@ -132,7 +134,9 @@ const isSimpleComputedExpression = (
 
     if (!isSimpleCall) {
       // 只允许零参 signal 读取，其他调用统一降级为复杂表达式。
-      reasons.push(`call expression "${node.getText()}" is not a signal-style read`);
+      reasons.push(
+        `call expression "${node.getText()}" is not a signal-style read`
+      );
       return false;
     }
 
@@ -168,7 +172,9 @@ const isSimpleComputedExpression = (
     return true;
   }
 
-  reasons.push(`node kind "${ts.SyntaxKind[node.kind]}" requires updater-chain lowering`);
+  reasons.push(
+    `node kind "${ts.SyntaxKind[node.kind]}" requires updater-chain lowering`
+  );
   return false;
 };
 

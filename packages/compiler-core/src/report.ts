@@ -34,7 +34,8 @@ export const createCompileReportEntry = (
     effects: component.effects.length,
     dependencies: component.dependencyAnalysis.entries.length,
     crossComponentUsages:
-      component.dependencyAnalysis.crossComponentAnalysis.componentUsages.length,
+      component.dependencyAnalysis.crossComponentAnalysis.componentUsages
+        .length,
   };
 };
 

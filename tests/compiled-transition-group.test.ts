@@ -95,7 +95,8 @@ export default defineComponent(function Demo() {
     await flush();
 
     const buttons = [...(element.shadowRoot?.querySelectorAll('button') ?? [])];
-    const output = () => element.shadowRoot?.querySelector('output')?.textContent ?? '';
+    const output = () =>
+      element.shadowRoot?.querySelector('output')?.textContent ?? '';
     const itemsHtml = () =>
       [...(element.shadowRoot?.querySelectorAll('[data-key]') ?? [])]
         .map((node) => node.getAttribute('data-key'))

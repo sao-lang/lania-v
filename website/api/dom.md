@@ -28,10 +28,10 @@ type ClassValue =
 输入可以是：
 
 ```ts
-'card active'
-42
-['card', { active: true, disabled: false }]
-['card', ['nested', { selected: isSelected() }]]
+'card active';
+(42)[('card', { active: true, disabled: false })][
+  ('card', ['nested', { selected: isSelected() }])
+];
 ```
 
 统一输出：
@@ -222,10 +222,7 @@ target.innerHTML = resolveHtmlBindingText(value);
 单向绑定需要手写：
 
 ```tsx
-<input
-  value={draft()}
-  onInput={(event) => draft.set(event.target.value)}
-/>
+<input value={draft()} onInput={(event) => draft.set(event.target.value)} />
 ```
 
 `model` 把“写入当前值”和“监听事件回写”合并成一个 Slot：
@@ -284,24 +281,24 @@ type ModelBinding<T> = ModelTargetBinding<T> | ModelSourceBinding<T>;
 
 ### `prop`
 
-| prop | 写入目标 | 事件 |
-| --- | --- | --- |
-| `value`（默认） | `element.value` | `input` |
-| `checked` | `element.checked` | `change` |
-| `selected` | `element.selected` | `input` |
+| prop            | 写入目标           | 事件     |
+| --------------- | ------------------ | -------- |
+| `value`（默认） | `element.value`    | `input`  |
+| `checked`       | `element.checked`  | `change` |
+| `selected`      | `element.selected` | `input`  |
 
 `checked` 和带 `lazy` 的绑定使用 `change`，其余使用 `input`。
 
 ### 修饰符
 
-| 修饰符 | 行为 |
-| --- | --- |
-| `trim` | 去掉字符串首尾空白 |
-| `number` | `Number(value)` |
-| `lazy` | 使用 `change` 事件而不是 `input` |
-| `checked` | 等价于 `prop: 'checked'`，同样监听 `change` |
-| `boolean` | 复选框场景：把 `checked` 读成 `true` / `false` 写回状态 |
-| `empty` | 空字符串写回 `undefined`，便于区分“未填写”和“填了空串” |
+| 修饰符     | 行为                                                         |
+| ---------- | ------------------------------------------------------------ |
+| `trim`     | 去掉字符串首尾空白                                           |
+| `number`   | `Number(value)`                                              |
+| `lazy`     | 使用 `change` 事件而不是 `input`                             |
+| `checked`  | 等价于 `prop: 'checked'`，同样监听 `change`                  |
+| `boolean`  | 复选框场景：把 `checked` 读成 `true` / `false` 写回状态      |
+| `empty`    | 空字符串写回 `undefined`，便于区分“未填写”和“填了空串”       |
 | `debounce` | 回写前等待用户停止输入，延迟时间见 `debounceMs`（默认 16ms） |
 
 ```tsx
@@ -460,11 +457,11 @@ registerDirective<{ text: string }>('watermark', {
 
 ### 生命周期
 
-| 阶段 | 触发 |
-| --- | --- |
-| `mounted` | 第一次 `write()` |
-| `updated` | 同一个 Slot 后续 `write()` |
-| `unmounted` | `destroy()` 或绑定被移除 |
+| 阶段        | 触发                       |
+| ----------- | -------------------------- |
+| `mounted`   | 第一次 `write()`           |
+| `updated`   | 同一个 Slot 后续 `write()` |
+| `unmounted` | `destroy()` 或绑定被移除   |
 
 绑定从有值变为 `null` 时：
 
@@ -485,7 +482,11 @@ clearDirectiveRegistry(): void
 
 ```ts
 class DirectiveSlot<TValue, TElement extends HTMLElement> {
-  constructor(node: TElement, def: DirectiveDef<TValue, TElement>, index: number);
+  constructor(
+    node: TElement,
+    def: DirectiveDef<TValue, TElement>,
+    index: number
+  );
   write(value: TValue): void;
   destroy(): void;
 }
@@ -515,24 +516,24 @@ createDirectiveSlotForBinding(element, binding, index): Slot<unknown>
 
 按 `binding.kind` 分发：
 
-| kind | Slot |
-| --- | --- |
-| `bind` | `DirectiveBindingSlot` |
-| `model` | `ModelBindingSlot` |
+| kind               | Slot                   |
+| ------------------ | ---------------------- |
+| `bind`             | `DirectiveBindingSlot` |
+| `model`            | `ModelBindingSlot`     |
 | `html` / `unknown` | `DirectiveBindingSlot` |
-| `class` | `ClassSlot` |
-| `style` | `StyleSlot` |
-| `use` | `UseDirectiveSlot` |
-| `ref` | `RefSlot` |
+| `class`            | `ClassSlot`            |
+| `style`            | `StyleSlot`            |
+| `use`              | `UseDirectiveSlot`     |
+| `ref`              | `RefSlot`              |
 
 ### 内置绑定 Slot
 
-| 类 | 说明 |
-| --- | --- |
-| `UseDirectiveSlot` | `use` 指令，支持 KeepAlive 保活 |
-| `ModelBindingSlot` | `model` 双向绑定 |
-| `DirectiveBindingSlot` | 普通属性 / HTML 写入 |
-| `RefSlot` | ref 写入 |
+| 类                     | 说明                            |
+| ---------------------- | ------------------------------- |
+| `UseDirectiveSlot`     | `use` 指令，支持 KeepAlive 保活 |
+| `ModelBindingSlot`     | `model` 双向绑定                |
+| `DirectiveBindingSlot` | 普通属性 / HTML 写入            |
+| `RefSlot`              | ref 写入                        |
 
 ## Slot 基础
 
@@ -580,26 +581,26 @@ interface Slot<T = unknown> {
 
 ### 写入语义
 
-| Slot | 写入行为 |
-| --- | --- |
-| `TextSlot` | 写 `Text.data`；节点 / 数组会插入真实节点 |
-| `AttrSlot` | 写 attribute；class / style / 部分 property 有特化 |
-| `StyleSlot` | 写单条 style 声明 |
-| `StyleObjectSlot` | 合并 style 对象并移除旧属性 |
-| `ClassSlot` | 开关单个 class |
-| `PropSlot` | 写 DOM property |
-| `EventSlot` | 安装 / 替换事件监听 |
-| `IfSlot` | 在 truthy / falsy 分支间切换 |
-| `ForSlot` | 协调列表节点 |
-| `ComponentSlot` | 写组件 props |
-| `DynamicSlot` | 动态组件 / 标签 |
-| `BoundarySlot` | Suspense / ErrorBoundary / LazyLoad |
-| `TeleportSlot` | 挂载到外部容器 |
-| `KeepAliveSlot` | 缓存子树 |
-| `UseDirectiveSlot` | 自定义指令 |
-| `ModelBindingSlot` | 双向绑定 |
-| `DirectiveBindingSlot` | 普通属性 / HTML |
-| `RefSlot` | ref |
+| Slot                   | 写入行为                                           |
+| ---------------------- | -------------------------------------------------- |
+| `TextSlot`             | 写 `Text.data`；节点 / 数组会插入真实节点          |
+| `AttrSlot`             | 写 attribute；class / style / 部分 property 有特化 |
+| `StyleSlot`            | 写单条 style 声明                                  |
+| `StyleObjectSlot`      | 合并 style 对象并移除旧属性                        |
+| `ClassSlot`            | 开关单个 class                                     |
+| `PropSlot`             | 写 DOM property                                    |
+| `EventSlot`            | 安装 / 替换事件监听                                |
+| `IfSlot`               | 在 truthy / falsy 分支间切换                       |
+| `ForSlot`              | 协调列表节点                                       |
+| `ComponentSlot`        | 写组件 props                                       |
+| `DynamicSlot`          | 动态组件 / 标签                                    |
+| `BoundarySlot`         | Suspense / ErrorBoundary / LazyLoad                |
+| `TeleportSlot`         | 挂载到外部容器                                     |
+| `KeepAliveSlot`        | 缓存子树                                           |
+| `UseDirectiveSlot`     | 自定义指令                                         |
+| `ModelBindingSlot`     | 双向绑定                                           |
+| `DirectiveBindingSlot` | 普通属性 / HTML                                    |
+| `RefSlot`              | ref                                                |
 
 ### `TextSlot` 的细节
 
@@ -695,12 +696,12 @@ interface Updater {
 
 ### 内置实现
 
-| 类 | 用途 |
-| --- | --- |
-| `SimpleUpdater<T>` | 一个表达式写一个 Slot |
+| 类                    | 用途                  |
+| --------------------- | --------------------- |
+| `SimpleUpdater<T>`    | 一个表达式写一个 Slot |
 | `MultiSlotUpdater<T>` | 一个表达式写多个 Slot |
-| `ConditionUpdater<T>` | 条件分支 |
-| `EffectUpdater` | 语句块副作用 |
+| `ConditionUpdater<T>` | 条件分支              |
+| `EffectUpdater`       | 语句块副作用          |
 
 ### 执行流程
 

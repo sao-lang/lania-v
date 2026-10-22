@@ -8,8 +8,17 @@ export const loginStyles = css`
     width: 100%;
     max-width: 420px;
     color: rgba(255, 255, 255, 0.92);
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-      'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      'PingFang SC',
+      'Microsoft YaHei',
+      sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -22,7 +31,11 @@ export const loginStyles = css`
     padding: 32px 30px 28px;
     border-radius: 24px;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.045));
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.09),
+      rgba(255, 255, 255, 0.045)
+    );
     box-shadow:
       0 24px 70px rgba(0, 0, 0, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -35,7 +48,12 @@ export const loginStyles = css`
     position: absolute;
     inset: 0 0 auto;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.75), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(167, 139, 250, 0.75),
+      transparent
+    );
   }
 
   .brand {
@@ -476,7 +494,12 @@ export const loginStyles = css`
   .divider {
     height: 1px;
     margin: 20px 0 16px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.14),
+      transparent
+    );
   }
 
   .toolbar {
@@ -533,7 +556,11 @@ export const loginStyles = css`
     font-size: 14px;
     font-weight: 600;
     color: #ede9fe;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(59, 130, 246, 0.75));
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.85),
+      rgba(59, 130, 246, 0.75)
+    );
   }
 
   .user-main {

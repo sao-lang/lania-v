@@ -48,10 +48,15 @@ class Card extends ReactiveElement {
   private __prop_title: any;
   protected count: any;
   protected __laniaSetup(): void {
-    this.__prop_title = createSignal(resolvePropInitialValue(this, 'title', undefined));
+    this.__prop_title = createSignal(
+      resolvePropInitialValue(this, 'title', undefined)
+    );
     this.count = createSignal(0);
   }
-  constructor() { super(); this.__laniaSetup(); }
+  constructor() {
+    super();
+    this.__laniaSetup();
+  }
 }
 ```
 

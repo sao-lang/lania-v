@@ -20,9 +20,13 @@ export default defineComponent(function FormField() {
     expect(moduleCode).toContain('static formAssociated = true;');
     expect(moduleCode).toContain('this._setFormValue(this.value.value);');
     // 复用 effect 通道：依赖必须挂到负责写表单值的 updater 上。
-    expect(moduleCode).toMatch(/const runEffect___formValue = new EffectUpdater/);
+    expect(moduleCode).toMatch(
+      /const runEffect___formValue = new EffectUpdater/
+    );
     expect(moduleCode).toContain('runEffect___formValue.deps.add(this.value);');
-    expect(moduleCode).toContain('this.registerRuntimeUpdater(runEffect___formValue);');
+    expect(moduleCode).toContain(
+      'this.registerRuntimeUpdater(runEffect___formValue);'
+    );
   });
 
   it('does not treat useFormValue as a setup field', () => {
@@ -97,16 +101,18 @@ export default defineComponent(function EventField() {
 
   it('lower keyboard modifiers in object-style event bindings', () => {
     const moduleCode = compileEvent(
-      "onKeyDown={{ handler: submit, modifiers: { enter: true } }}"
+      'onKeyDown={{ handler: submit, modifiers: { enter: true } }}'
     );
 
     // 对象写法必须与 `onKeyDown.enter` 一样降到 `key:*`，否则运行时收不到修饰符。
-    expect(moduleCode).toContain('withEventModifiers(this.submit, ["key:enter"])');
+    expect(moduleCode).toContain(
+      'withEventModifiers(this.submit, ["key:enter"])'
+    );
   });
 
   it('lower system modifiers in object-style event bindings', () => {
     const moduleCode = compileEvent(
-      "onKeyDown={{ handler: submit, modifiers: { system: { ctrl: true }, prevent: true } }}"
+      'onKeyDown={{ handler: submit, modifiers: { system: { ctrl: true }, prevent: true } }}'
     );
 
     expect(moduleCode).toContain('"prevent","system:ctrl"');

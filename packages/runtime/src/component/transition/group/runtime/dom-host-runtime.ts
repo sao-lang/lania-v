@@ -21,20 +21,14 @@ import type { TransitionDispatchHook } from '../../host';
 import type { GroupHookContext } from '../../registry';
 import { getTransitionGroupState } from '../state/store';
 import {
-  bindStateKeyRuntime,
-  commitByIntent,
   createDomRenderTarget,
   createDomState,
   createDomStatePublisher,
   createLeavingBlock,
-  createPlaceholderCommit,
-  createPlaceholderKeys,
   publishDomBootstrap,
   resolveGroupKeys,
 } from '../state/state';
 import {
-  bindPrevCommitStateRuntime,
-  bindCommitStateRuntime,
   createPrevCommitResult,
   dispatchDomCommits,
   type DomHostCommitContext,
@@ -45,10 +39,7 @@ import {
   createDomPhases,
   renderDomPrev,
 } from './commit-runtime';
-import {
-  registerBlockState,
-  scheduleLeavingBlock,
-} from '../render/phases';
+import { registerBlockState, scheduleLeavingBlock } from '../render/phases';
 import {
   type GroupDomHostState,
   type GroupDomHostRuntime,
@@ -93,7 +84,9 @@ export const resolveRenderedEntries = <TRenderable>(
       return [entry];
     }
     if (entry instanceof DocumentFragment) {
-      return [...entry.childNodes].filter((child): child is Element => child instanceof Element);
+      return [...entry.childNodes].filter(
+        (child): child is Element => child instanceof Element
+      );
     }
     return [];
   });
@@ -117,13 +110,13 @@ export const renderEntries = <TRenderable>(
 };
 
 export const createEntryRenderer = <TRenderable>(
-  runtime: Pick<GroupDomHostRuntime<TRenderable>, 'container' | 'activeAnchor' | 'owner'>
+  runtime: Pick<
+    GroupDomHostRuntime<TRenderable>,
+    'container' | 'activeAnchor' | 'owner'
+  >
 ): ((renderEntries: () => readonly TRenderable[]) => TRenderable[]) => {
   return (readEntries) =>
-    renderEntries(
-      createDomRenderTarget(runtime),
-      readEntries
-    );
+    renderEntries(createDomRenderTarget(runtime), readEntries);
 };
 
 // DOM host 容器中始终维持 active/leave 两个锚点，便于插入和离场 handoff。
@@ -138,7 +131,10 @@ export const ensureAnchors = (
   if (leaveAnchor.parentNode !== container) {
     container.appendChild(leaveAnchor);
   }
-  if (activeAnchor.compareDocumentPosition(leaveAnchor) & Node.DOCUMENT_POSITION_PRECEDING) {
+  if (
+    activeAnchor.compareDocumentPosition(leaveAnchor) &
+    Node.DOCUMENT_POSITION_PRECEDING
+  ) {
     container.insertBefore(activeAnchor, leaveAnchor);
   }
 };
@@ -154,15 +150,15 @@ export const createDomHostRuntime = <TRenderable>(options: {
       ? previous.container
       : document.createElement(transitionTag);
   const activeAnchor =
-    previous?.domHostAnchor ?? document.createComment('lania-transition-group-anchor');
+    previous?.domHostAnchor ??
+    document.createComment('lania-transition-group-anchor');
   const leaveAnchor =
-    previous?.domHostLeaveAnchor ?? document.createComment('lania-transition-group-leave-anchor');
+    previous?.domHostLeaveAnchor ??
+    document.createComment('lania-transition-group-leave-anchor');
   const activeBlocks =
-    previous?.activeBlocks ??
-    new Map<PropertyKey, DomHostBlockRecord>();
+    previous?.activeBlocks ?? new Map<PropertyKey, DomHostBlockRecord>();
   const leavingBlocks =
-    previous?.leavingBlocks ??
-    new Map<PropertyKey, GroupLeavingBlock>();
+    previous?.leavingBlocks ?? new Map<PropertyKey, GroupLeavingBlock>();
   const leavingSnapshots =
     previous?.leavingSnapshots ??
     new Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>();
@@ -296,8 +292,17 @@ export const bindDomHostRuntime = <TRenderable>(options: {
   phaseHooks?: GroupPhaseHooks;
   phaseEnabled?: GroupPhaseEnabled;
 }): GroupDomHostRuntime<TRenderable> => {
-  const { stateKey, transitionTag, runtime, keys, snapshots, name, hook, phaseHooks, phaseEnabled } =
-    options;
+  const {
+    stateKey,
+    transitionTag,
+    runtime,
+    keys,
+    snapshots,
+    name,
+    hook,
+    phaseHooks,
+    phaseEnabled,
+  } = options;
   const publishDomHostState = createDomStatePublisher({
     stateKey,
     runtime,
@@ -368,14 +373,8 @@ export const bootstrapDomHostRuntime = <TRenderable>(options: {
   phaseHooks?: GroupPhaseHooks;
   phaseEnabled?: GroupPhaseEnabled;
 }): GroupDomHostRuntime<TRenderable> => {
-  const {
-    stateKey,
-    transitionTag,
-    name,
-    hook,
-    phaseHooks,
-    phaseEnabled,
-  } = options;
+  const { stateKey, transitionTag, name, hook, phaseHooks, phaseEnabled } =
+    options;
   const previous = getTransitionGroupState<TRenderable>(stateKey);
   const keys = options.keys ?? previous?.keys ?? [];
   const snapshots = options.snapshots ?? previous?.snapshots ?? [];

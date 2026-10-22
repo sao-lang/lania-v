@@ -15,7 +15,8 @@ const rowsOf = (host: HTMLElement): number[] =>
   );
 
 const textOf = (host: HTMLElement, rowIndex: number): string =>
-  host.querySelector<HTMLElement>(`[data-row="${rowIndex}"]`)?.textContent ?? '';
+  host.querySelector<HTMLElement>(`[data-row="${rowIndex}"]`)?.textContent ??
+  '';
 
 const scrollTo = (host: HTMLElement, offset: number): void => {
   host.scrollTop = offset;
@@ -55,9 +56,9 @@ describe('VirtualSizeCache', () => {
 
     const fromEstimator = new VirtualSizeCache((index) => 10 + index);
     fromEstimator.resize(5);
-    expect([0, 1, 2, 3, 4, 5].map((index) => fromEstimator.offset(index))).toEqual([
-      0, 10, 21, 33, 46, 60,
-    ]);
+    expect(
+      [0, 1, 2, 3, 4, 5].map((index) => fromEstimator.offset(index))
+    ).toEqual([0, 10, 21, 33, 46, 60]);
     expect(fromEstimator.indexAt(35)).toBe(3);
   });
 
@@ -77,12 +78,7 @@ describe('VirtualSizeCache', () => {
 
 describe('buildRowModel', () => {
   it('inserts one header per group and maps item index to row index', () => {
-    const items = [
-      { kind: 'a' },
-      { kind: 'a' },
-      { kind: 'b' },
-      { kind: 'a' },
-    ];
+    const items = [{ kind: 'a' }, { kind: 'a' }, { kind: 'b' }, { kind: 'a' }];
     const model = buildRowModel(items, (item: any) => item.kind);
 
     expect(model.rows.map((row) => `${row.kind}:${row.group ?? ''}`)).toEqual([
@@ -158,9 +154,9 @@ describe('Virtual rendering', () => {
       children: (item: any) => item.id,
     }) as VirtualHost;
 
-    expect(
-      host.querySelector<HTMLElement>('[data-row="0"]')?.dataset.key
-    ).toBe('item-0');
+    expect(host.querySelector<HTMLElement>('[data-row="0"]')?.dataset.key).toBe(
+      'item-0'
+    );
 
     scrollTo(host, 300);
     const row = host.querySelector<HTMLElement>('[data-row="15"]');
@@ -485,9 +481,9 @@ describe('Virtual horizontal mode', () => {
     expect(rowsOf(host)).toEqual([0, 1, 2]);
 
     // 行宽来自 itemWidth。
-    expect(
-      host.querySelector<HTMLElement>('[data-row="0"]')?.style.width
-    ).toBe('100px');
+    expect(host.querySelector<HTMLElement>('[data-row="0"]')?.style.width).toBe(
+      '100px'
+    );
   });
 
   it('skips horizontal layout without width', () => {

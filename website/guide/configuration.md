@@ -6,12 +6,12 @@
 
 ## 配置文件总览
 
-| 文件 | 作用 | 必需 |
-| --- | --- | --- |
-| `vite.config.ts` | 注册插件、设置 JSX 运行时与构建目标 | 是 |
-| `tsconfig.json` | 让编辑器和 `tsc` 认识 `.lania.tsx` | 是 |
-| `src/jsx.d.ts` | 声明 JSX 命名空间与增强组件标签 | 是 |
-| `package.json` | 依赖、脚本、`sideEffects` | 是 |
+| 文件             | 作用                                | 必需 |
+| ---------------- | ----------------------------------- | ---- |
+| `vite.config.ts` | 注册插件、设置 JSX 运行时与构建目标 | 是   |
+| `tsconfig.json`  | 让编辑器和 `tsc` 认识 `.lania.tsx`  | 是   |
+| `src/jsx.d.ts`   | 声明 JSX 命名空间与增强组件标签     | 是   |
+| `package.json`   | 依赖、脚本、`sideEffects`           | 是   |
 
 ## `vite.config.ts`
 
@@ -50,10 +50,7 @@ export default defineConfig(({ command }) => ({
     jsx: 'automatic',
     jsxImportSource: '@lania-v/runtime',
   },
-  define:
-    command === 'build'
-      ? { __LANIA_DEV__: 'false' }
-      : undefined,
+  define: command === 'build' ? { __LANIA_DEV__: 'false' } : undefined,
 }));
 ```
 
@@ -61,14 +58,14 @@ export default defineConfig(({ command }) => ({
 
 ## 插件选项
 
-| 选项 | 默认 | 作用 |
-| --- | --- | --- |
-| `tsxInclude` | `/\.lania\.tsx$/` | 需要编译的文件 |
-| `tsxExclude` | `undefined` | 排除规则（例如 `node_modules`） |
-| `tsxTemplateSyntaxMode` | `'jsx-standard'` | `jsx-standard` 或 `directive-extended` |
-| `debug` | `false` | 开发态输出编译快照并注入 `__laniaCompile` |
-| `hotReload` | `true` | 开发态生成可重跑的 `__laniaSetup()` |
-| `compilerPlugins` | `undefined` | 传给 `compiler-core` 的插件数组 |
+| 选项                    | 默认              | 作用                                      |
+| ----------------------- | ----------------- | ----------------------------------------- |
+| `tsxInclude`            | `/\.lania\.tsx$/` | 需要编译的文件                            |
+| `tsxExclude`            | `undefined`       | 排除规则（例如 `node_modules`）           |
+| `tsxTemplateSyntaxMode` | `'jsx-standard'`  | `jsx-standard` 或 `directive-extended`    |
+| `debug`                 | `false`           | 开发态输出编译快照并注入 `__laniaCompile` |
+| `hotReload`             | `true`            | 开发态生成可重跑的 `__laniaSetup()`       |
+| `compilerPlugins`       | `undefined`       | 传给 `compiler-core` 的插件数组           |
 
 ```ts
 laniaFcVitePlugin({
@@ -102,13 +99,13 @@ laniaFcVitePlugin({
 
 关键项：
 
-| 选项 | 为什么 |
-| --- | --- |
-| `jsx: "react-jsx"` | 走自动 JSX 运行时，不注入 `React.createElement` |
-| `jsxImportSource: "@lania-v/runtime"` | JSX 类型与运行时都来自 lania-v |
-| `moduleResolution: "Bundler"` | 解析 `exports` 里的条件导出与子路径 |
-| `allowImportingTsExtensions` | 允许 `import './X.lania.tsx'` 这类带扩展名导入 |
-| `types: ["vite/client"]` | 提供 `import.meta.hot` 等类型 |
+| 选项                                  | 为什么                                          |
+| ------------------------------------- | ----------------------------------------------- |
+| `jsx: "react-jsx"`                    | 走自动 JSX 运行时，不注入 `React.createElement` |
+| `jsxImportSource: "@lania-v/runtime"` | JSX 类型与运行时都来自 lania-v                  |
+| `moduleResolution: "Bundler"`         | 解析 `exports` 里的条件导出与子路径             |
+| `allowImportingTsExtensions`          | 允许 `import './X.lania.tsx'` 这类带扩展名导入  |
+| `types: ["vite/client"]`              | 提供 `import.meta.hot` 等类型                   |
 
 ### `jsx.d.ts`
 
@@ -132,7 +129,8 @@ declare namespace JSX {
   }
 
   interface IntrinsicElements
-    extends RuntimeNativeIntrinsicElements,
+    extends
+      RuntimeNativeIntrinsicElements,
       RuntimeEnhancedIntrinsicElements,
       Record<string, RuntimeIntrinsicElementProps> {}
 }
@@ -144,11 +142,11 @@ declare namespace JSX {
 
 标签名由编译器推导，不需要手写注册：
 
-| 组件名 | 标签 |
-| --- | --- |
-| `Counter` | `x-counter` |
-| `TodoList` | `todo-list` |
-| 显式 `static tagName = 'my-card'` | `my-card` |
+| 组件名                            | 标签        |
+| --------------------------------- | ----------- |
+| `Counter`                         | `x-counter` |
+| `TodoList`                        | `todo-list` |
+| 显式 `static tagName = 'my-card'` | `my-card`   |
 
 推导规则见 [组件 · 标签名](/guide/components#标签名)。已有的第三方自定义元素可以直接在 JSX 里使用。
 
@@ -166,11 +164,11 @@ export const __DEV__ =
 
 因此有三条可控路径：
 
-| 方式 | 适用场景 |
-| --- | --- |
-| Vite 条件导出（默认） | `vite build` 会解析 `production` 条件，自动使用 `index.prod.js` |
-| `define: { __LANIA_DEV__: 'false' }` | 打包器不支持条件导出，或需要强制取值 |
-| `import '@lania-v/runtime/prod'` | 测试 / 特殊构建，强制关闭调试 |
+| 方式                                 | 适用场景                                                        |
+| ------------------------------------ | --------------------------------------------------------------- |
+| Vite 条件导出（默认）                | `vite build` 会解析 `production` 条件，自动使用 `index.prod.js` |
+| `define: { __LANIA_DEV__: 'false' }` | 打包器不支持条件导出，或需要强制取值                            |
+| `import '@lania-v/runtime/prod'`     | 测试 / 特殊构建，强制关闭调试                                   |
 
 反向同理：测试环境可以 `import '@lania-v/runtime/dev'` 打开全部调试事件。
 
@@ -193,11 +191,11 @@ export default defineConfig({
 });
 ```
 
-| 项 | 建议 |
-| --- | --- |
-| `build.target` | `es2022`。运行时依赖 class fields 与可选链 |
+| 项                | 建议                                                           |
+| ----------------- | -------------------------------------------------------------- |
+| `build.target`    | `es2022`。运行时依赖 class fields 与可选链                     |
 | `build.sourcemap` | 开发与预发建议开启；编译产物的 sourcemap 会对齐回 `.lania.tsx` |
-| `define` | 生产构建建议显式写 `__LANIA_DEV__: 'false'` |
+| `define`          | 生产构建建议显式写 `__LANIA_DEV__: 'false'`                    |
 
 `.lania.tsx` 在构建期就被编译成普通模块，产物里不含编译器，也不含 HMR 包装。
 
@@ -249,12 +247,12 @@ export const render = (props: Record<string, unknown>) =>
   renderToStringWithDeclarativeShadow(App, props, { mode: 'open' });
 ```
 
-| 配置点 | 说明 |
-| --- | --- |
-| 服务端与客户端共用同一份编译产物 | 组件类上已经生成 `static render()` / `renderStream()` |
-| 组件级渲染模式 | `static renderMode = 'shadow' \| 'light'` |
-| 组件级水合策略 | `static hydration = 'eager' \| 'manual'` |
-| Island 标记 | `client:load` / `client:idle` / `client:visible` / `client:interaction` |
+| 配置点                           | 说明                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| 服务端与客户端共用同一份编译产物 | 组件类上已经生成 `static render()` / `renderStream()`                   |
+| 组件级渲染模式                   | `static renderMode = 'shadow' \| 'light'`                               |
+| 组件级水合策略                   | `static hydration = 'eager' \| 'manual'`                                |
+| Island 标记                      | `client:load` / `client:idle` / `client:visible` / `client:interaction` |
 
 完整流程见 [SSR 与部分水合](/guide/ssr) 与 [SSR API](/api/ssr)。
 

@@ -24,39 +24,63 @@ export const collectTemplateSignalDependencies = (
       switch (node.type) {
         case 'ExpressionIR':
           return analyzeExpression(node.expression);
-          // 文本表达式和列表 iterable 都直接由单个表达式驱动。
+        // 文本表达式和列表 iterable 都直接由单个表达式驱动。
         case 'ListIR':
           return analyzeExpression(node.expression);
-          // `IfIR` 既依赖条件表达式，也依赖 truthy/fallback 两侧子树里的表达式。
+        // `IfIR` 既依赖条件表达式，也依赖 truthy/fallback 两侧子树里的表达式。
         case 'IfIR':
           // `IfIR` 既依赖条件表达式，也依赖 truthy/fallback 两侧子树里的表达式。
           // 真分支承载了 `When` 内的全部 DOM，漏掉它会让块内绑定完全失去依赖订阅。
           return mergeDependencies(
             analyzeExpression(node.expression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : [],
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : [],
             node.fallbackChildren
-              ? collectTemplateSignalDependencies(node.fallbackChildren, analyzeExpression)
+              ? collectTemplateSignalDependencies(
+                  node.fallbackChildren,
+                  analyzeExpression
+                )
               : []
           );
         case 'DynamicIR':
           // 动态组件的依赖来自组件引用、props 表达式以及其子绑定子树。
           return mergeDependencies(
-            analyzeExpression(`({ component: ${node.componentExpression}, props: ${node.propsExpression} })`),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            analyzeExpression(
+              `({ component: ${node.componentExpression}, props: ${node.propsExpression} })`
+            ),
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           );
         case 'TeleportIR':
           // Teleport 目标表达式和其内部子树都可能继续访问响应式值。
           return mergeDependencies(
             analyzeExpression(node.targetExpression),
-            node.children ? collectTemplateSignalDependencies(node.children, analyzeExpression) : []
+            node.children
+              ? collectTemplateSignalDependencies(
+                  node.children,
+                  analyzeExpression
+                )
+              : []
           );
         case 'StaticComponentIR':
           return analyzeExpression(node.propsExpression);
         case 'ElementIR':
           // 原生元素上的动态 attribute / directive 都会贡献依赖。
           return mergeDependencies(
-            ...node.dynamicAttributes.map((attribute) => analyzeExpression(attribute.expression)),
-            ...node.directives.map((directive) => analyzeExpression(directive.expression)),
+            ...node.dynamicAttributes.map((attribute) =>
+              analyzeExpression(attribute.expression)
+            ),
+            ...node.directives.map((directive) =>
+              analyzeExpression(directive.expression)
+            ),
             collectTemplateSignalDependencies(node.children, analyzeExpression)
           );
         case 'BoundaryIR':

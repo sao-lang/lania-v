@@ -33,7 +33,10 @@ export const replaceComputedCalls = (
   computedExpression: string
 ): string => {
   // 同时覆盖 `this.foo()` 与裸 `foo()` 两种调用风格。
-  const thisPattern = new RegExp(`\\bthis\\.${escapeRegExp(computedName)}\\(\\)`, 'g');
+  const thisPattern = new RegExp(
+    `\\bthis\\.${escapeRegExp(computedName)}\\(\\)`,
+    'g'
+  );
   const barePattern = new RegExp(`\\b${escapeRegExp(computedName)}\\(\\)`, 'g');
 
   return expression
@@ -47,7 +50,10 @@ export const replaceSignalCalls = (
   foldedValue: string
 ): string => {
   // signal 调用的替换规则与 computed 保持一致，便于后续统一折叠。
-  const thisPattern = new RegExp(`\\bthis\\.${escapeRegExp(signalName)}\\(\\)`, 'g');
+  const thisPattern = new RegExp(
+    `\\bthis\\.${escapeRegExp(signalName)}\\(\\)`,
+    'g'
+  );
   const barePattern = new RegExp(`\\b${escapeRegExp(signalName)}\\(\\)`, 'g');
 
   return expression
@@ -55,7 +61,9 @@ export const replaceSignalCalls = (
     .replace(barePattern, `(${foldedValue})`);
 };
 
-export const tryEvaluateConstantExpression = (expression: string): string | null => {
+export const tryEvaluateConstantExpression = (
+  expression: string
+): string | null => {
   try {
     // 先把任意表达式包进一条合法的变量声明，再交给 TS parser 做结构校验。
     const sourceFile = parseTypeScriptSource(
@@ -78,13 +86,18 @@ export const tryEvaluateConstantExpression = (expression: string): string | null
       return null;
     }
 
-    const evaluate = (node: ts.Expression): string | number | boolean | null | undefined => {
+    const evaluate = (
+      node: ts.Expression
+    ): string | number | boolean | null | undefined => {
       if (ts.isParenthesizedExpression(node)) {
         // 外层括号不影响常量值，直接继续递归。
         return evaluate(node.expression);
       }
 
-      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      if (
+        ts.isStringLiteral(node) ||
+        ts.isNoSubstitutionTemplateLiteral(node)
+      ) {
         return node.text;
       }
 
@@ -117,7 +130,10 @@ export const tryEvaluateConstantExpression = (expression: string): string | null
           }
         }
 
-        if (typeof value === 'boolean' && node.operator === ts.SyntaxKind.ExclamationToken) {
+        if (
+          typeof value === 'boolean' &&
+          node.operator === ts.SyntaxKind.ExclamationToken
+        ) {
           return !value;
         }
 
@@ -214,7 +230,9 @@ export const applyComputedInlineToExpression = (
  * 或另一个保留下来的 computed 还引用它，就必须继续暴露可读句柄，
  * 否则 `this.xxx` 会变成 undefined 而不是 memo。
  */
-export const collectRetainedComputedNames = (component: ComponentIR): Set<string> => {
+export const collectRetainedComputedNames = (
+  component: ComponentIR
+): Set<string> => {
   const names = component.computed.map((computed) => computed.name);
 
   if (names.length === 0) {
@@ -227,10 +245,15 @@ export const collectRetainedComputedNames = (component: ComponentIR): Set<string
   }));
 
   const collectReferences = (source: string): string[] =>
-    patterns.filter((entry) => entry.pattern.test(source)).map((entry) => entry.name);
+    patterns
+      .filter((entry) => entry.pattern.test(source))
+      .map((entry) => entry.name);
 
   const expressions = new Map(
-    component.computed.map((computed) => [computed.name, computed.expression ?? ''])
+    component.computed.map((computed) => [
+      computed.name,
+      computed.expression ?? '',
+    ])
   );
   const retained = new Set<string>();
   const pending = [
@@ -256,7 +279,9 @@ export const collectRetainedComputedNames = (component: ComponentIR): Set<string
   return retained;
 };
 
-export const tryExtractStaticSignalValue = (initializer: string | null): string | null => {
+export const tryExtractStaticSignalValue = (
+  initializer: string | null
+): string | null => {
   if (!initializer) {
     return null;
   }
@@ -277,7 +302,8 @@ export const tryExtractStaticSignalValue = (initializer: string | null): string 
       return null;
     }
 
-    const nextInitializer = statement.declarationList.declarations[0]?.initializer;
+    const nextInitializer =
+      statement.declarationList.declarations[0]?.initializer;
 
     if (
       !nextInitializer ||
@@ -313,7 +339,10 @@ export const tryExtractStaticSignalValue = (initializer: string | null): string 
   }
 };
 
-export const hasSignalWrite = (component: ComponentIR, signalName: string): boolean => {
+export const hasSignalWrite = (
+  component: ComponentIR,
+  signalName: string
+): boolean => {
   // 只要发现可能写入 signal，就不能把它视为全程静态值。
   const writePatterns = [
     new RegExp(`\\bthis\\.${escapeRegExp(signalName)}\\.set\\(`),
@@ -323,11 +352,16 @@ export const hasSignalWrite = (component: ComponentIR, signalName: string): bool
   const sources = [
     ...component.effects.map((effect) => effect.body),
     ...component.lifecycleCallbacks.map((callback) => callback.body ?? ''),
-    ...component.setupBindings.flatMap((binding) => [binding.body ?? '', binding.initializer ?? '']),
+    ...component.setupBindings.flatMap((binding) => [
+      binding.body ?? '',
+      binding.initializer ?? '',
+    ]),
   ].filter((source): source is string => typeof source === 'string');
 
   // 这里不追求完整数据流分析，只做“命中即保守放弃”的写入探测。
-  return sources.some((source) => writePatterns.some((pattern) => pattern.test(source)));
+  return sources.some((source) =>
+    writePatterns.some((pattern) => pattern.test(source))
+  );
 };
 
 export const buildStaticSignalFoldMap = (
@@ -341,7 +375,11 @@ export const buildStaticSignalFoldMap = (
         const folded = tryExtractStaticSignalValue(signal.initializer);
 
         // 被显式使用、可能被写入或根本无法静态提取的 signal 都不进入折叠表。
-        if (!folded || hasSignalWrite(component, signal.name) || usedSignals.has(signal.name)) {
+        if (
+          !folded ||
+          hasSignalWrite(component, signal.name) ||
+          usedSignals.has(signal.name)
+        ) {
           return null;
         }
 
@@ -360,12 +398,17 @@ export const applyStaticSignalInlineToExpression = (
   let currentExpression = expression;
 
   Object.entries(staticSignals).forEach(([signalName, foldedValue]) => {
-    const nextExpression = replaceSignalCalls(currentExpression, signalName, foldedValue);
+    const nextExpression = replaceSignalCalls(
+      currentExpression,
+      signalName,
+      foldedValue
+    );
 
     if (nextExpression !== currentExpression) {
       if (
         !optimization.staticSignalFolds.some(
-          (record) => record.signal === signalName && record.folded === foldedValue
+          (record) =>
+            record.signal === signalName && record.folded === foldedValue
         )
       ) {
         // 优化记录只保留唯一条目，便于调试时回看实际发生过哪些折叠。

@@ -54,9 +54,11 @@ const buildBundle = async (
       },
     },
   });
-  const outputs = (Array.isArray(result) ? result : [result]).flatMap((entry) => {
-    return entry && 'output' in entry ? entry.output : [];
-  });
+  const outputs = (Array.isArray(result) ? result : [result]).flatMap(
+    (entry) => {
+      return entry && 'output' in entry ? entry.output : [];
+    }
+  );
   const chunk = outputs.find((entry) => entry.type === 'chunk');
 
   if (!chunk || !('code' in chunk)) {
@@ -88,7 +90,9 @@ describe('runtime bundling', () => {
   it('exposes dedicated dev/prod entries and marks their side-effect boundaries', async () => {
     const runtimeDir = path.join(workspaceRoot, 'packages/runtime/dist/entry');
     const devEntry = pathToFileURL(path.join(runtimeDir, 'index.dev.js')).href;
-    const prodEntry = pathToFileURL(path.join(runtimeDir, 'index.prod.js')).href;
+    const prodEntry = pathToFileURL(
+      path.join(runtimeDir, 'index.prod.js')
+    ).href;
 
     globalThis.HTMLElement = class {} as typeof HTMLElement;
 
@@ -100,7 +104,9 @@ describe('runtime bundling', () => {
     ]);
 
     await import(`${devEntry}?entry=dev`);
-    const devEnvironment = (await import(distDebugEntry)) as DevEnvironmentModule;
+    const devEnvironment = (await import(
+      distDebugEntry
+    )) as DevEnvironmentModule;
     distDevEnvironment = devEnvironment;
     expect(devEnvironment.isDevEnvironment()).toBe(true);
 
@@ -109,7 +115,9 @@ describe('runtime bundling', () => {
   });
 
   it('replaces compile-time dev constants during bundling', async () => {
-    const envImport = toAbsoluteImportPath(path.join(workspaceRoot, 'packages/runtime/src/core/env.ts'));
+    const envImport = toAbsoluteImportPath(
+      path.join(workspaceRoot, 'packages/runtime/src/core/env.ts')
+    );
     const bundle = await buildBundle(
       `import { __DEV__ } from ${JSON.stringify(envImport)};\nexport default __DEV__;\n`,
       {
@@ -122,7 +130,9 @@ describe('runtime bundling', () => {
   });
 
   it('tree-shakes unrelated runtime modules when only createSignal is imported', async () => {
-    const entryImport = toAbsoluteImportPath(path.join(workspaceRoot, 'packages/runtime/src/index.ts'));
+    const entryImport = toAbsoluteImportPath(
+      path.join(workspaceRoot, 'packages/runtime/src/index.ts')
+    );
     const bundle = await buildBundle(
       `import { createSignal } from ${JSON.stringify(entryImport)};\nconst count = createSignal(0);\ncount.set(1);\nexport default count.value;\n`
     );

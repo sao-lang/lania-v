@@ -24,14 +24,14 @@ export default defineConfig({
 });
 ```
 
-| 选项 | 默认 | 说明 |
-| --- | --- | --- |
-| `debug` | `false` | 开发态输出编译快照，并暴露 `globalThis.__laniaCompile` |
-| `hotReload` | `true` | 开发态生成可重跑的 `__laniaSetup()` |
-| `tsxInclude` | `/\.lania\.tsx$/` | 需要编译的文件 |
-| `tsxExclude` | `undefined` | 排除规则 |
-| `tsxTemplateSyntaxMode` | `jsx-standard` | `jsx-standard` 或 `directive-extended` |
-| `compilerPlugins` | `undefined` | 传给 compiler-core 的插件 |
+| 选项                    | 默认              | 说明                                                   |
+| ----------------------- | ----------------- | ------------------------------------------------------ |
+| `debug`                 | `false`           | 开发态输出编译快照，并暴露 `globalThis.__laniaCompile` |
+| `hotReload`             | `true`            | 开发态生成可重跑的 `__laniaSetup()`                    |
+| `tsxInclude`            | `/\.lania\.tsx$/` | 需要编译的文件                                         |
+| `tsxExclude`            | `undefined`       | 排除规则                                               |
+| `tsxTemplateSyntaxMode` | `jsx-standard`    | `jsx-standard` 或 `directive-extended`                 |
+| `compilerPlugins`       | `undefined`       | 传给 compiler-core 的插件                              |
 
 ## 编译快照
 
@@ -306,9 +306,9 @@ afterEach(() => {
 ```ts
 import { isDevEnvironment, setDevEnvironmentOverride } from '@lania-v/runtime';
 
-isDevEnvironment();            // 开发构建为 true
-setDevEnvironmentOverride(true);  // 测试时强制开启
-setDevEnvironmentOverride(null);  // 恢复默认
+isDevEnvironment(); // 开发构建为 true
+setDevEnvironmentOverride(true); // 测试时强制开启
+setDevEnvironmentOverride(null); // 恢复默认
 ```
 
 ## 下一步

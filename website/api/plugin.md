@@ -73,8 +73,8 @@ laniaFcVitePlugin({
 默认：
 
 ```ts
-tsxInclude: /\.lania\.tsx$/
-tsxExclude: undefined
+tsxInclude: /\.lania\.tsx$/;
+tsxExclude: undefined;
 ```
 
 只处理匹配 `include` 且不匹配 `exclude` 的文件。
@@ -88,10 +88,10 @@ laniaFcVitePlugin({
 
 ### `tsxTemplateSyntaxMode`
 
-| 模式 | 支持 |
-| --- | --- |
-| `jsx-standard`（默认） | 标准 JSX 属性；`model={ {...} }`、`html={...}`、`className`、对象事件 |
-| `directive-extended` | 额外兼容 `model:value.trim`、`style:width.px`、`class:active`、`use:name`、`click.stop`、`if` |
+| 模式                   | 支持                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `jsx-standard`（默认） | 标准 JSX 属性；`model={ {...} }`、`html={...}`、`className`、对象事件                         |
+| `directive-extended`   | 额外兼容 `model:value.trim`、`style:width.px`、`class:active`、`use:name`、`click.stop`、`if` |
 
 示例：
 

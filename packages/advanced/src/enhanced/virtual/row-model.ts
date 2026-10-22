@@ -59,9 +59,7 @@ export const buildRowModel = (
   return { rows, rowOfItem };
 };
 
-const normalizeGroup = (
-  value: unknown
-): string | null => {
+const normalizeGroup = (value: unknown): string | null => {
   if (value == null || value === '') {
     return null;
   }

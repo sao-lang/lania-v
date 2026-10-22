@@ -19,7 +19,11 @@ import {
   preprocessTsxBindingSyntax,
 } from '../../syntax/tsx-binding';
 
-import { rewriteBlockWithBindings, rewriteExpressionWithBindings, rewriteFunctionTemplateNode } from './bindings';
+import {
+  rewriteBlockWithBindings,
+  rewriteExpressionWithBindings,
+  rewriteFunctionTemplateNode,
+} from './bindings';
 import {
   collectFunctionComputed,
   collectFunctionEffects,
@@ -42,7 +46,10 @@ import {
   type ResolvedFunctionComponent,
 } from './helpers';
 import { collectFunctionComponentOptions } from './options';
-import type { ParsedTsxFunctionComponent, FunctionBindingContext } from './types';
+import type {
+  ParsedTsxFunctionComponent,
+  FunctionBindingContext,
+} from './types';
 
 /**
  * 把一个组件声明解析成 compiler-core 的 `ComponentDeclaration`。
@@ -52,7 +59,7 @@ import type { ParsedTsxFunctionComponent, FunctionBindingContext } from './types
  */
 const createComponentDeclaration = (
   sourceFile: ts.SourceFile,
-  functionComponent: ResolvedFunctionComponent,
+  functionComponent: ResolvedFunctionComponent
 ): ComponentDeclaration => {
   const functionDeclaration = functionComponent.declaration;
 
@@ -84,7 +91,9 @@ const createComponentDeclaration = (
     sourceFile
   );
   const propAliases = destructuredProps.aliases;
-  const declaredPropNames = new Set(functionProps.props.map((prop) => prop.name));
+  const declaredPropNames = new Set(
+    functionProps.props.map((prop) => prop.name)
+  );
 
   if (propAliases.size > 0 && declaredPropNames.size === 0) {
     // 解构必须映射到真实的 prop 字段；无法展开类型时继续映射会得到 `this.xxx = undefined`。
@@ -127,7 +136,8 @@ const createComponentDeclaration = (
 
       statement.declarationList.declarations.forEach((declaration) => {
         const calleeName =
-          declaration.initializer && ts.isCallExpression(declaration.initializer)
+          declaration.initializer &&
+          ts.isCallExpression(declaration.initializer)
             ? getCallExpressionName(declaration.initializer.expression)
             : null;
 
@@ -149,7 +159,10 @@ const createComponentDeclaration = (
           ts.isIdentifier(secondElement.name)
         ) {
           // `const [count, setCount] = createSignal()` 需要把 setter 反查回 signal 名。
-          bindings.signalSetterToName.set(secondElement.name.text, firstElement.name.text);
+          bindings.signalSetterToName.set(
+            secondElement.name.text,
+            firstElement.name.text
+          );
         }
       });
     });
@@ -171,13 +184,15 @@ const createComponentDeclaration = (
         ? null
         : rewriteExpressionWithBindings(entry.expression, bindings),
   }));
-  const effects = collectFunctionEffects(functionDeclaration, sourceFile).map((effect) => ({
-    ...effect,
-    body:
-      effect.body === null
-        ? null
-        : rewriteBlockWithBindings(effect.body, bindings),
-  }));
+  const effects = collectFunctionEffects(functionDeclaration, sourceFile).map(
+    (effect) => ({
+      ...effect,
+      body:
+        effect.body === null
+          ? null
+          : rewriteBlockWithBindings(effect.body, bindings),
+    })
+  );
   const lifecycleCallbacks = collectFunctionLifecycleCallbacks(
     functionDeclaration,
     sourceFile
@@ -221,7 +236,10 @@ const createComponentDeclaration = (
     : rewrittenSetupBindings;
 
   // 解析阶段在这里收束为统一组件声明，后续 compiler-core 不再关心它最初是否来自函数组件。
-  const formValueExpression = collectFunctionFormValue(functionDeclaration, sourceFile);
+  const formValueExpression = collectFunctionFormValue(
+    functionDeclaration,
+    sourceFile
+  );
   const rewrittenFormValue =
     formValueExpression === null
       ? null
@@ -264,7 +282,8 @@ const createComponentDeclaration = (
     lifecycleHooks: collectFunctionLifecycleHooks(functionDeclaration),
     lifecycleCallbacks,
     setupBindings,
-    formAssociated: rewrittenFormValue !== null || rewrittenFormValidity !== null,
+    formAssociated:
+      rewrittenFormValue !== null || rewrittenFormValidity !== null,
     optionsSource: componentOptions.source ?? undefined,
     template: rewriteFunctionTemplateNode(
       // 模板内表达式必须使用与 setup/effect 相同的访问模型，否则后续 IR 会前后不一致。
@@ -284,7 +303,7 @@ const createComponentDeclaration = (
  */
 export const parseFunctionComponentTsx = (
   fileName: string,
-  source: string,
+  source: string
 ): ParsedTsxFunctionComponent => {
   // 旧式扩展指令写法已不再支持，这里给出明确的迁移提示而不是静默失效。
   assertNoLegacyTsxDirectiveSyntax(fileName, source);

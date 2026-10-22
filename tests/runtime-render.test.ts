@@ -48,7 +48,10 @@ const GeneratedRenderElement = (() => {
     protected _renderAndMount(): void {
       this.mountCalls += 1;
       const mounted = mountStaticTemplate(this.renderRoot, CARD_TEMPLATE);
-      const countNode = resolveTemplateNode(mounted.nodes, [0, 1, 1, 0]) as Text;
+      const countNode = resolveTemplateNode(
+        mounted.nodes,
+        [0, 1, 1, 0]
+      ) as Text;
 
       this.countSlot = new TextSlot(countNode, 0);
       this._slots[0] = this.countSlot.node;
@@ -79,14 +82,16 @@ describe('runtime render helpers', () => {
   });
 
   it('clones static trees per component instance instead of reusing live DOM nodes', async () => {
-    expect(customElements.get('x-generated-render')).toBe(GeneratedRenderElement);
+    expect(customElements.get('x-generated-render')).toBe(
+      GeneratedRenderElement
+    );
 
-    const first = document.createElement(
-      'x-generated-render'
-    ) as InstanceType<typeof GeneratedRenderElement>;
-    const second = document.createElement(
-      'x-generated-render'
-    ) as InstanceType<typeof GeneratedRenderElement>;
+    const first = document.createElement('x-generated-render') as InstanceType<
+      typeof GeneratedRenderElement
+    >;
+    const second = document.createElement('x-generated-render') as InstanceType<
+      typeof GeneratedRenderElement
+    >;
 
     document.body.append(first, second);
     await flushMicrotasks();
@@ -144,7 +149,10 @@ describe('runtime render helpers', () => {
   });
 
   it('collects teleport SSR output into target containers and reuses hydrated target nodes', () => {
-    const scope = attachSSRRenderContext({ title: 'Portal' }, createSSRRenderContext());
+    const scope = attachSSRRenderContext(
+      { title: 'Portal' },
+      createSSRRenderContext()
+    );
     const root = document.createElement('div');
     const target = document.createElement('div');
     target.id = 'portal-root';
@@ -254,7 +262,9 @@ describe('runtime render helpers', () => {
     resolveChunk('<article>Ready</article>');
     const [chunk] = await ssrDrainSuspenseChunks(scope);
 
-    expect(decodeURIComponent(chunk ?? '')).toContain('"payloadKind":"boundary"');
+    expect(decodeURIComponent(chunk ?? '')).toContain(
+      '"payloadKind":"boundary"'
+    );
     expect(applySSRChunk(root, chunk ?? '')).toBe(true);
   });
 });

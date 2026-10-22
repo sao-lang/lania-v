@@ -13,7 +13,9 @@ export default function BenchmarkSolid() {
   const [patchVersion, setPatchVersion] = createSignal(0);
   const [toggleVisible, setToggleVisible] = createSignal(true);
   const [draft, setDraft] = createSignal('seed');
-  const [middleSnapshot, setMiddleSnapshot] = createSignal(describeBenchItem(items()[BENCH_MIDDLE_ROW_INDEX]));
+  const [middleSnapshot, setMiddleSnapshot] = createSignal(
+    describeBenchItem(items()[BENCH_MIDDLE_ROW_INDEX])
+  );
 
   const increment = () => {
     setCount((value) => value + 1);
@@ -41,7 +43,11 @@ export default function BenchmarkSolid() {
       <div class="bench-grid">
         <div class="bench-card">
           <div class="bench-toolbar">
-            <button class="bench-btn" data-bench-action="increment" onClick={increment}>
+            <button
+              class="bench-btn"
+              data-bench-action="increment"
+              onClick={increment}
+            >
               increment
             </button>
             <output class="bench-output" data-bench-output="count">
@@ -53,13 +59,20 @@ export default function BenchmarkSolid() {
 
         <div class="bench-card">
           <div class="bench-toolbar">
-            <button class="bench-btn" data-bench-action="patch" onClick={patchMiddle}>
+            <button
+              class="bench-btn"
+              data-bench-action="patch"
+              onClick={patchMiddle}
+            >
               patch middle
             </button>
             <output class="bench-output" data-bench-output="patch-version">
               {String(patchVersion())}
             </output>
-            <output class="bench-output bench-output-wide" data-bench-output="middle-row">
+            <output
+              class="bench-output bench-output-wide"
+              data-bench-output="middle-row"
+            >
               {middleSnapshot()}
             </output>
           </div>
@@ -76,12 +89,18 @@ export default function BenchmarkSolid() {
               )}
             </For>
           </ul>
-          <p class="bench-note">1000-item keyed list patch + middle row verification</p>
+          <p class="bench-note">
+            1000-item keyed list patch + middle row verification
+          </p>
         </div>
 
         <div class="bench-card">
           <div class="bench-toolbar">
-            <button class="bench-btn" data-bench-action="toggle" onClick={toggle}>
+            <button
+              class="bench-btn"
+              data-bench-action="toggle"
+              onClick={toggle}
+            >
               toggle panel
             </button>
             <output class="bench-output" data-bench-output="toggle-state">
@@ -108,7 +127,10 @@ export default function BenchmarkSolid() {
                 setDraft(target?.value ?? '');
               }}
             />
-            <output class="bench-output bench-output-wide" data-bench-output="draft">
+            <output
+              class="bench-output bench-output-wide"
+              data-bench-output="draft"
+            >
               {draft()}
             </output>
           </div>

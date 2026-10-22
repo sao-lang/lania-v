@@ -134,19 +134,21 @@ describe('runtime styles', () => {
 
     expect(root.adoptedStyleSheets).toHaveLength(1);
     expect(root.adoptedStyleSheets[0]?.cssText).toContain('color: blue;');
-    expect((root.appendChild as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(
+      root.appendChild as unknown as ReturnType<typeof vi.fn>
+    ).not.toHaveBeenCalled();
   });
 
   it('auto-adopts single and array static styles on ReactiveElement', async () => {
     expect(customElements.get('x-single-style')).toBe(SingleStyleElement);
     expect(customElements.get('x-array-style')).toBe(ArrayStyleElement);
 
-    const single = document.createElement(
-      'x-single-style'
-    ) as InstanceType<typeof SingleStyleElement>;
-    const multi = document.createElement(
-      'x-array-style'
-    ) as InstanceType<typeof ArrayStyleElement>;
+    const single = document.createElement('x-single-style') as InstanceType<
+      typeof SingleStyleElement
+    >;
+    const multi = document.createElement('x-array-style') as InstanceType<
+      typeof ArrayStyleElement
+    >;
 
     document.body.append(single, multi);
     await flushMicrotasks();
@@ -156,10 +158,12 @@ describe('runtime styles', () => {
       'display: block;'
     );
     expect(multi.shadowRoot?.querySelectorAll('style')).toHaveLength(2);
-    expect(multi.shadowRoot?.querySelector('.item')).toBeInstanceOf(HTMLDivElement);
-    expect(multi.shadowRoot?.querySelectorAll('style')[1]?.textContent).toContain(
-      'font-weight: 600;'
+    expect(multi.shadowRoot?.querySelector('.item')).toBeInstanceOf(
+      HTMLDivElement
     );
+    expect(
+      multi.shadowRoot?.querySelectorAll('style')[1]?.textContent
+    ).toContain('font-weight: 600;');
   });
 
   it('supports dynamic style object updates and style directives with units', () => {
@@ -206,12 +210,16 @@ describe('runtime styles', () => {
       spacingMd: '16px',
     });
 
-    applyCSSVariables(host, {
-      primaryColor: '#7c3aed',
-    }, {
-      primaryColor: '#2563eb',
-      spacingMd: '16px',
-    });
+    applyCSSVariables(
+      host,
+      {
+        primaryColor: '#7c3aed',
+      },
+      {
+        primaryColor: '#2563eb',
+        spacingMd: '16px',
+      }
+    );
 
     expect(host.style.getPropertyValue('--primary-color')).toBe('#7c3aed');
     expect(host.style.getPropertyValue('--spacing-md')).toBe('');

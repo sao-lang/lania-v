@@ -5,7 +5,10 @@
  * 读取节点时会复用的辅助函数。
  */
 import type { DomHostBlockRecord } from '../../../component/host/function-component';
-import type { MountedStaticTemplate, StaticTemplate } from '../../../render/types';
+import type {
+  MountedStaticTemplate,
+  StaticTemplate,
+} from '../../../render/types';
 import type { Slot } from '../core';
 import { collectKeyedBlockNodes, reconcileNodesBeforeAnchor } from '../core';
 
@@ -63,7 +66,16 @@ export type TemplateBindingPayload = {
   hints?: readonly string[];
   template?: StaticTemplate;
   fallbackTemplate?: StaticTemplate;
-  directiveKind?: 'bind' | 'model' | 'html' | 'class' | 'style' | 'use' | 'ref' | 'unknown' | 'if';
+  directiveKind?:
+    | 'bind'
+    | 'model'
+    | 'html'
+    | 'class'
+    | 'style'
+    | 'use'
+    | 'ref'
+    | 'unknown'
+    | 'if';
 };
 
 export type KeyedSlotPayload = {
@@ -124,7 +136,10 @@ const mergeNodesInDocumentOrder = (nodes: readonly Node[]): Node[] => {
     if (left === right) {
       return 0;
     }
-    return left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    return left.compareDocumentPosition(right) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+      ? -1
+      : 1;
   });
   return unique;
 };
@@ -142,7 +157,9 @@ export const readMountedNodes = (instance: MountedBindingInstance): Node[] => {
       ? slot.collectMountedNodes()
       : (slot.currentNodes ?? slot.mountedNodes);
     if (structuralNodes) {
-      const liveStructuralNodes = structuralNodes.filter((node) => node.parentNode !== null);
+      const liveStructuralNodes = structuralNodes.filter(
+        (node) => node.parentNode !== null
+      );
       if (
         liveNodes.length === 1 &&
         liveNodes[0] instanceof Element &&
@@ -154,12 +171,20 @@ export const readMountedNodes = (instance: MountedBindingInstance): Node[] => {
       if (liveStructuralNodes.length > 0) {
         // 排除已经被 instance 节点包含的结构节点，避免同一个元素被搬移两次。
         const detachedStructuralNodes = liveStructuralNodes.filter(
-          (node) => !liveNodes.some((liveNode) => liveNode !== node && liveNode.contains(node))
+          (node) =>
+            !liveNodes.some(
+              (liveNode) => liveNode !== node && liveNode.contains(node)
+            )
         );
         if (liveNodes.length > 0 && detachedStructuralNodes.length > 0) {
-          return mergeNodesInDocumentOrder([...liveNodes, ...detachedStructuralNodes]);
+          return mergeNodesInDocumentOrder([
+            ...liveNodes,
+            ...detachedStructuralNodes,
+          ]);
         }
-        return detachedStructuralNodes.length > 0 ? detachedStructuralNodes : liveStructuralNodes;
+        return detachedStructuralNodes.length > 0
+          ? detachedStructuralNodes
+          : liveStructuralNodes;
       }
       if (liveNodes.length > 0) {
         return liveNodes;
@@ -187,7 +212,9 @@ export const readRangeContentNodes = (
   host: BoundarySlotRangeHost,
   currentNodes: readonly Node[]
 ): Node[] => {
-  return currentNodes.filter((node) => node !== host.rangeStart && node !== host.rangeEnd);
+  return currentNodes.filter(
+    (node) => node !== host.rangeStart && node !== host.rangeEnd
+  );
 };
 
 // boundary slot 依赖一对 range anchor 包裹内容，便于 replay 与局部替换。
@@ -209,7 +236,9 @@ export const ensureRangeAnchors = (
   if (host.rangeStart.parentNode !== parent) {
     const firstContentNode =
       preferredContentNodes.find((node) => node.parentNode === parent) ??
-      readRangeContentNodes(host, currentNodes).find((node) => node.parentNode === parent) ??
+      readRangeContentNodes(host, currentNodes).find(
+        (node) => node.parentNode === parent
+      ) ??
       host.rangeEnd;
     parent.insertBefore(host.rangeStart, firstContentNode);
   }
@@ -248,12 +277,29 @@ export const renderBoundarySlotRange = (
   const currentContentNodes = readRangeContentNodes(host, currentNodes);
   const parent = ensureRangeAnchors(host, anchor, currentNodes, nextNodes);
   if (!parent) {
-    currentNodes.splice(0, currentNodes.length, host.rangeStart, ...nextNodes, host.rangeEnd);
+    currentNodes.splice(
+      0,
+      currentNodes.length,
+      host.rangeStart,
+      ...nextNodes,
+      host.rangeEnd
+    );
     return;
   }
 
-  reconcileNodesBeforeAnchor(parent, host.rangeEnd, currentContentNodes, nextNodes);
-  currentNodes.splice(0, currentNodes.length, host.rangeStart, ...nextNodes, host.rangeEnd);
+  reconcileNodesBeforeAnchor(
+    parent,
+    host.rangeEnd,
+    currentContentNodes,
+    nextNodes
+  );
+  currentNodes.splice(
+    0,
+    currentNodes.length,
+    host.rangeStart,
+    ...nextNodes,
+    host.rangeEnd
+  );
 };
 
 export const replayBoundarySlotHost = (
@@ -293,10 +339,14 @@ export const attachNestedReplay = (
   });
 };
 
-export const readTransitionChildNodes = (instance: MountedBindingInstance): Node[] => {
+export const readTransitionChildNodes = (
+  instance: MountedBindingInstance
+): Node[] => {
   if (instance.slots.length === 1) {
     const structuralNodes = readMountedNodes(instance);
-    const hasConcreteWrapperNode = structuralNodes.some((node) => node.nodeType !== Node.COMMENT_NODE);
+    const hasConcreteWrapperNode = structuralNodes.some(
+      (node) => node.nodeType !== Node.COMMENT_NODE
+    );
     if (hasConcreteWrapperNode) {
       return structuralNodes;
     }
@@ -311,7 +361,9 @@ export const readTransitionChildNodes = (instance: MountedBindingInstance): Node
 };
 
 // KeepAlive 需要尽量完整追踪嵌套 slot 暴露的结构节点，避免只缓存外层注释锚点。
-export const readKeepAliveEntryNodes = (instance: MountedBindingInstance): Node[] => {
+export const readKeepAliveEntryNodes = (
+  instance: MountedBindingInstance
+): Node[] => {
   const trackedNodes: Node[] = [];
   const seen = new Set<Node>();
   const pushUnique = (nodes: readonly Node[] | null | undefined): void => {
@@ -347,16 +399,27 @@ export const readKeepAliveEntryNodes = (instance: MountedBindingInstance): Node[
     // IMPORTANT: if a slot exposes a wrapper element (e.g. TransitionGroup dom-host returns a <ul>),
     // tracking both the wrapper and its nested nodes would cause KeepAlive to move children out of
     // the wrapper. We only skip the dive when nested nodes are fully contained by a single wrapper.
-    const exposedNodes = structuralSlot.currentNodes ?? structuralSlot.mountedNodes ?? null;
+    const exposedNodes =
+      structuralSlot.currentNodes ?? structuralSlot.mountedNodes ?? null;
     const exposedElements = (exposedNodes ?? []).filter(
       (node): node is Element => node instanceof Element
     );
 
     const nestedInstances: Array<MountedBindingInstance | null | undefined> = [
-      (slot as unknown as { currentChildInstance?: MountedBindingInstance | null }).currentChildInstance,
-      (slot as unknown as { currentBindingInstance?: MountedBindingInstance | null }).currentBindingInstance,
-      (slot as unknown as { truthyInstance?: MountedBindingInstance | null }).truthyInstance,
-      (slot as unknown as { falsyInstance?: MountedBindingInstance | null }).falsyInstance,
+      (
+        slot as unknown as {
+          currentChildInstance?: MountedBindingInstance | null;
+        }
+      ).currentChildInstance,
+      (
+        slot as unknown as {
+          currentBindingInstance?: MountedBindingInstance | null;
+        }
+      ).currentBindingInstance,
+      (slot as unknown as { truthyInstance?: MountedBindingInstance | null })
+        .truthyInstance,
+      (slot as unknown as { falsyInstance?: MountedBindingInstance | null })
+        .falsyInstance,
     ];
 
     // If there is exactly one exposed element and all nested nodes are descendants of it,
@@ -366,7 +429,10 @@ export const readKeepAliveEntryNodes = (instance: MountedBindingInstance): Node[
       const nestedNodes = nestedInstances
         .flatMap((nested) => nested?.nodes ?? [])
         .filter((node) => node.parentNode !== null);
-      if (nestedNodes.length > 0 && nestedNodes.every((node) => root.contains(node))) {
+      if (
+        nestedNodes.length > 0 &&
+        nestedNodes.every((node) => root.contains(node))
+      ) {
         return;
       }
     }
@@ -390,7 +456,9 @@ export const readKeepAliveEntryNodes = (instance: MountedBindingInstance): Node[
 
   if (trackedNodes.length > 0) {
     pushUnique(instance.nodes);
-    const liveTrackedNodes = trackedNodes.filter((node) => node.parentNode !== null);
+    const liveTrackedNodes = trackedNodes.filter(
+      (node) => node.parentNode !== null
+    );
     return liveTrackedNodes.length > 0 ? liveTrackedNodes : trackedNodes;
   }
 

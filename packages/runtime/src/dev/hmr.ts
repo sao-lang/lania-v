@@ -202,8 +202,7 @@ export const applyComponentHmrUpdate = (
   }
 
   const previous = customElements.get(tagName) as
-    | HmrComponentConstructor
-    | undefined;
+    HmrComponentConstructor | undefined;
 
   if (!previous || previous === next) {
     return 0;

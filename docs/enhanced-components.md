@@ -219,10 +219,10 @@
 
 `itemHeight` 支持三态：
 
-| 形态 | 行为 |
-| --- | --- |
-| `number` | 固定行高，不测量，行高直接写进内联样式 |
-| `number[]` | 逐项预知高度，首帧即可正确定位，省掉测量抖动 |
+| 形态                | 行为                                               |
+| ------------------- | -------------------------------------------------- |
+| `number`            | 固定行高，不测量，行高直接写进内联样式             |
+| `number[]`          | 逐项预知高度，首帧即可正确定位，省掉测量抖动       |
 | `(index) => number` | 估算器；未测量的行用估算值占位，渲染后用实测值覆盖 |
 
 可变行高时，前缀偏移由 Fenwick 树维护，滚动定位是 `O(log n)`。实测值写入后会
@@ -234,7 +234,13 @@
 同时提供 `width` 与 `itemWidth` 时启用横向虚拟化，否则只做纵向。
 
 ```tsx
-<Virtual value={this.cells()} itemHeight={32} height={240} width={320} itemWidth={120}>
+<Virtual
+  value={this.cells()}
+  itemHeight={32}
+  height={240}
+  width={320}
+  itemWidth={120}
+>
   {(cell) => <span>{cell.label}</span>}
 </Virtual>
 ```

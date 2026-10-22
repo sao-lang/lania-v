@@ -10,7 +10,11 @@
  * 因此会缓存 mounted node buffer、keyed block 映射以及最近一次挂载目标，
  * 以便在 dom-host、KeepAlive、TransitionGroup 等复杂宿主场景下仍能找到正确的插入位置。
  */
-import { type DomHostBlockRecord, type DomHostOwner, getDomHostRedirect } from '../../component/host/function-component';
+import {
+  type DomHostBlockRecord,
+  type DomHostOwner,
+  getDomHostRedirect,
+} from '../../component/host/function-component';
 import { resolveAnchorDomTarget } from '../../component/lifecycle/keepalive-registry';
 import { acquireSlotNodeBuffer, releaseSlotNodeBuffer } from '../slot-pool';
 import {
@@ -54,7 +58,8 @@ export class ForSlot implements Slot<unknown> {
   constructor(
     public readonly node: Comment,
     public readonly index: number,
-    private readonly createFallbackNodes?: () => Node | Node[] | DocumentFragment | null
+    private readonly createFallbackNodes?: () =>
+      Node | Node[] | DocumentFragment | null
   ) {}
 
   // `mountedNodes` 通过缓冲池复用，避免频繁创建数组。
@@ -114,7 +119,11 @@ export class ForSlot implements Slot<unknown> {
     block.instance = instance;
 
     const nodes = instance.nodes;
-    if (allowElementAnchor && nodes.length === 1 && nodes[0] instanceof Element) {
+    if (
+      allowElementAnchor &&
+      nodes.length === 1 &&
+      nodes[0] instanceof Element
+    ) {
       block.element = nodes[0];
       block.start = null;
       block.end = null;
@@ -149,8 +158,8 @@ export class ForSlot implements Slot<unknown> {
     // 否则列表 push/pop 会静默失效。
     // 解析顺序为：当前 live parent -> 最近一次成功挂载目标 -> 已注册的 dom-host redirect。
     const fallbackTarget =
-      getDomHostRedirect(this.node)
-      ?? (this.lastMountParent && this.lastMountAnchor
+      getDomHostRedirect(this.node) ??
+      (this.lastMountParent && this.lastMountAnchor
         ? { parent: this.lastMountParent, anchor: this.lastMountAnchor }
         : null);
 
@@ -162,7 +171,10 @@ export class ForSlot implements Slot<unknown> {
     // 这样基于 `this.node` 建立的 redirect 才不会丢失。
     const resolved = defaultParent
       ? resolveAnchorDomTarget({ parent: defaultParent, anchor: this.node })
-      : resolveAnchorDomTarget({ parent: fallbackTarget!.parent, anchor: this.node });
+      : resolveAnchorDomTarget({
+          parent: fallbackTarget!.parent,
+          anchor: this.node,
+        });
 
     const parent = resolved.parent;
     const anchor = resolved.anchor as Comment;
@@ -191,7 +203,11 @@ export class ForSlot implements Slot<unknown> {
         return;
       }
 
-      if (this.listInstances.length === 0 && this.mountedNodes && this.mountedNodes.length > 0) {
+      if (
+        this.listInstances.length === 0 &&
+        this.mountedNodes &&
+        this.mountedNodes.length > 0
+      ) {
         removeNodes(this.mountedNodes);
         this.mountedNodes.length = 0;
       }
@@ -279,7 +295,11 @@ export class ForSlot implements Slot<unknown> {
     currentNodes.push(...nextNodes);
   }
 
-  private applyKeyed(parent: Node, anchor: Comment, payload: KeyedForPayload): void {
+  private applyKeyed(
+    parent: Node,
+    anchor: Comment,
+    payload: KeyedForPayload
+  ): void {
     const items = Array.isArray(payload.items) ? payload.items : [];
 
     // keyed 列表为空时，清掉所有 block，再决定是否展示 fallback。
@@ -349,7 +369,9 @@ export class ForSlot implements Slot<unknown> {
   // 这里返回一份快照，避免调用方持有内部缓冲区引用。
   collectMountedNodes(): Node[] {
     if (this.keyedBlocks && this.keyedBlockOrder.length > 0) {
-      return this.keyedBlockOrder.flatMap((block) => collectKeyedBlockNodes(block));
+      return this.keyedBlockOrder.flatMap((block) =>
+        collectKeyedBlockNodes(block)
+      );
     }
 
     return this.mountedNodes ? [...this.mountedNodes] : [];
@@ -374,7 +396,9 @@ export class ForSlot implements Slot<unknown> {
     }
 
     const hydratedBlocks =
-      this.keyedBlocks == null && this.mountedNodes && this.mountedNodes.length > 0
+      this.keyedBlocks == null &&
+      this.mountedNodes &&
+      this.mountedNodes.length > 0
         ? collectHydratedKeyedBlocks(this.mountedNodes)
         : [];
     const availableHydratedBlocks = [...hydratedBlocks];
@@ -399,17 +423,25 @@ export class ForSlot implements Slot<unknown> {
       owner?.registerActiveBlock || owner?.handoffRemovedBlock
     );
     const previousKeyOrder = [...this.keyedBlocks.keys()];
-    const previousIndexByKey = new Map(previousKeyOrder.map((key, index) => [key, index]));
+    const previousIndexByKey = new Map(
+      previousKeyOrder.map((key, index) => [key, index])
+    );
     const nextKeys = new Set<unknown>();
     const nextOrder: KeyedBlock[] = [];
     // 首次挂载（无既有 block、也无 SSR 命中）时，block 严格按 items 顺序插入，
     // 顺序天然正确，无需再执行一轮全量 move；批量插入也先落到离屏 fragment。
-    const isInitialBatch = previousKeyOrder.length === 0 && availableHydratedBlocks.length === 0;
+    const isInitialBatch =
+      previousKeyOrder.length === 0 && availableHydratedBlocks.length === 0;
     const staging = isInitialBatch ? document.createDocumentFragment() : null;
     // 没有过渡/保活宿主钩子时，条目可以用根元素自锚定，省掉每条两个注释节点。
-    const allowElementAnchor = !hasOwnerHooks && availableHydratedBlocks.length === 0;
-    let isStableOrder = isInitialBatch || previousKeyOrder.length === items.length;
-    const createBlockRecord = (block: KeyedBlock, initialParent: Node): DomHostBlockRecord => {
+    const allowElementAnchor =
+      !hasOwnerHooks && availableHydratedBlocks.length === 0;
+    let isStableOrder =
+      isInitialBatch || previousKeyOrder.length === items.length;
+    const createBlockRecord = (
+      block: KeyedBlock,
+      initialParent: Node
+    ): DomHostBlockRecord => {
       const record: DomHostBlockRecord = {
         key: block.key,
         parent: initialParent,
@@ -417,14 +449,20 @@ export class ForSlot implements Slot<unknown> {
         end: block.end!,
         getElements: () => collectKeyedBlockElements(block),
         moveBefore: (referenceNode: Node | null) => {
-          const currentParent = block.start?.parentNode ?? block.element?.parentNode;
+          const currentParent =
+            block.start?.parentNode ?? block.element?.parentNode;
           if (!currentParent) {
             return;
           }
-          moveKeyedBlockBefore(currentParent, block, referenceNode as ChildNode | null);
+          moveKeyedBlockBefore(
+            currentParent,
+            block,
+            referenceNode as ChildNode | null
+          );
         },
         finalizeRemoval: () => {
-          const currentParent = block.start?.parentNode ?? block.element?.parentNode;
+          const currentParent =
+            block.start?.parentNode ?? block.element?.parentNode;
           if (!currentParent) {
             return;
           }
@@ -484,7 +522,10 @@ export class ForSlot implements Slot<unknown> {
           if (block.element.parentNode !== parent) {
             insertNodeBeforeSafe(parent, block.element, anchor);
           }
-        } else if (block.start?.parentNode !== parent || block.end?.parentNode !== parent) {
+        } else if (
+          block.start?.parentNode !== parent ||
+          block.end?.parentNode !== parent
+        ) {
           insertNodeBeforeSafe(parent, block.start!, anchor);
           insertNodeBeforeSafe(parent, block.end!, anchor);
         }
@@ -497,7 +538,8 @@ export class ForSlot implements Slot<unknown> {
             index
           );
         } else {
-          shouldUpdateBlock = !Object.is(block.value, item) || previousIndex !== index;
+          shouldUpdateBlock =
+            !Object.is(block.value, item) || previousIndex !== index;
           if (!block.element) {
             // 内容节点也要确保仍位于 end marker 前，维持 block 边界闭包。
             const end = block.end!;
@@ -567,7 +609,11 @@ export class ForSlot implements Slot<unknown> {
     items: readonly unknown[],
     owner?: DomHostOwner
   ): boolean {
-    if (!this.keyedBlocks || this.keyedBlockOrder.length !== items.length || items.length === 0) {
+    if (
+      !this.keyedBlocks ||
+      this.keyedBlockOrder.length !== items.length ||
+      items.length === 0
+    ) {
       return false;
     }
 
@@ -581,7 +627,10 @@ export class ForSlot implements Slot<unknown> {
       }
     }
 
-    const createBlockRecord = (block: KeyedBlock, initialParent: Node): DomHostBlockRecord => {
+    const createBlockRecord = (
+      block: KeyedBlock,
+      initialParent: Node
+    ): DomHostBlockRecord => {
       const record: DomHostBlockRecord = {
         key: block.key,
         parent: initialParent,
@@ -589,14 +638,20 @@ export class ForSlot implements Slot<unknown> {
         end: block.end!,
         getElements: () => collectKeyedBlockElements(block),
         moveBefore: (referenceNode: Node | null) => {
-          const currentParent = block.start?.parentNode ?? block.element?.parentNode;
+          const currentParent =
+            block.start?.parentNode ?? block.element?.parentNode;
           if (!currentParent) {
             return;
           }
-          moveKeyedBlockBefore(currentParent, block, referenceNode as ChildNode | null);
+          moveKeyedBlockBefore(
+            currentParent,
+            block,
+            referenceNode as ChildNode | null
+          );
         },
         finalizeRemoval: () => {
-          const currentParent = block.start?.parentNode ?? block.element?.parentNode;
+          const currentParent =
+            block.start?.parentNode ?? block.element?.parentNode;
           if (!currentParent) {
             return;
           }
@@ -620,7 +675,10 @@ export class ForSlot implements Slot<unknown> {
         if (block.element.parentNode !== parent) {
           insertNodeBeforeSafe(parent, block.element, anchor);
         }
-      } else if (block.start?.parentNode !== parent || block.end?.parentNode !== parent) {
+      } else if (
+        block.start?.parentNode !== parent ||
+        block.end?.parentNode !== parent
+      ) {
         insertNodeBeforeSafe(parent, block.start!, anchor);
         insertNodeBeforeSafe(parent, block.end!, anchor);
       }

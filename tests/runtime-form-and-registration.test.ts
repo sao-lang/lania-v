@@ -66,7 +66,11 @@ describe('custom element registration guard', () => {
   it('reuses the registered constructor and keeps its styles', () => {
     const tagName = 'guard-widget-a';
     const first = createWidget('FirstWidget', tagName);
-    const firstStyles = css`:host { color: red; }`;
+    const firstStyles = css`
+      :host {
+        color: red;
+      }
+    `;
     first.styles = firstStyles;
 
     const created = createComponentElement(first);
@@ -74,7 +78,11 @@ describe('custom element registration guard', () => {
     expect(created.constructor as unknown).toBe(first);
 
     const second = createWidget('SecondWidget', tagName);
-    second.styles = css`:host { color: hotpink; }`;
+    second.styles = css`
+      :host {
+        color: hotpink;
+      }
+    `;
 
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     setDevEnvironmentOverride(true);

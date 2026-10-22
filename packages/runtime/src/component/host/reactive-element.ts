@@ -1,16 +1,18 @@
-import { emitLifecycleDebugEvent, isDevEnvironment, warning } from '../../core/debug';
 import {
-  isComponentHmrEnabled,
-} from '../../dev/hmr';
+  emitLifecycleDebugEvent,
+  isDevEnvironment,
+  warning,
+} from '../../core/debug';
+import { isComponentHmrEnabled } from '../../dev/hmr';
 import type { PropOptionsMap } from './prop-options';
 import type { Signal } from '@lania-v/reactivity';
-import {
-  HIGH,
-  defaultScheduler,
-  type Scheduler,
-} from '@lania-v/reactivity';
+import { HIGH, defaultScheduler, type Scheduler } from '@lania-v/reactivity';
 import { SlotTable } from '../../dom/slot-table';
-import { adoptStyles, registerAppliedStyleTexts, type StaticStyles } from '../styles';
+import {
+  adoptStyles,
+  registerAppliedStyleTexts,
+  type StaticStyles,
+} from '../styles';
 import type { Slot } from '../../dom/slots';
 import type { Updater } from '../../dom/updaters';
 import { withComponentProps, withContextHost } from './function-component';
@@ -45,7 +47,9 @@ export type HydrationStrategy = 'eager' | 'manual';
  * 规范只接受 `string | File | FormData | null`，而组件内部通常存的是任意 signal 值，
  * 因此在边界处统一做一次转换。
  */
-const normalizeFormValue = (value: unknown): string | File | FormData | null => {
+const normalizeFormValue = (
+  value: unknown
+): string | File | FormData | null => {
   if (value === null || value === undefined) {
     return null;
   }
@@ -72,7 +76,7 @@ const normalizeFormValue = (value: unknown): string | File | FormData | null => 
 };
 
 const ReactiveElementBase: typeof HTMLElement =
-  (globalThis.HTMLElement ?? class {} as typeof HTMLElement);
+  globalThis.HTMLElement ?? (class {} as typeof HTMLElement);
 
 export abstract class ReactiveElement extends ReactiveElementBase {
   /**
@@ -231,12 +235,14 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     this.requestUpdate();
   }
 
-  /** 是否延后首次挂载（`manual` 组件，或 SSR island 宿主）。 */  protected shouldDeferHydration(): boolean {
+  /** 是否延后首次挂载（`manual` 组件，或 SSR island 宿主）。 */ protected shouldDeferHydration(): boolean {
     const ctor = this.constructor as typeof ReactiveElement;
     // `<Child client:visible />` 渲染出的宿主带 `data-lania-island`，
     // 这类元素统一等 `hydrateIslands()` 调度，避免一升级就整块水合。
     const isIsland = this.hasAttribute('data-lania-island');
-    return (ctor.hydration === 'manual' || isIsland) && !this._hydrationRequested;
+    return (
+      (ctor.hydration === 'manual' || isIsland) && !this._hydrationRequested
+    );
   }
 
   /** 手动触发首次挂载；已挂载时为空操作。 */
@@ -284,9 +290,9 @@ export abstract class ReactiveElement extends ReactiveElementBase {
     }
 
     const observed = new Set(
-      ((this.constructor as typeof ReactiveElement).observedAttributes ?? []).map(
-        (name) => name.toLowerCase()
-      )
+      (
+        (this.constructor as typeof ReactiveElement).observedAttributes ?? []
+      ).map((name) => name.toLowerCase())
     );
 
     this._devAttributeObserver = new MutationObserver((records) => {
@@ -670,8 +676,7 @@ export abstract class ReactiveElement extends ReactiveElementBase {
         typeof (value as { set?: unknown }).set === 'function' &&
         (() => {
           const updaters = (value as { updaters?: unknown }).updaters as
-            | { add?: unknown; delete?: unknown }
-            | undefined;
+            { add?: unknown; delete?: unknown } | undefined;
           // Signal.updaters is a Set-like CompactJobSet at runtime, so use duck typing.
           return (
             updaters != null &&

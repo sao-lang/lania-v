@@ -10,7 +10,11 @@ import { createSignal, defineComponent } from '@lania-v/runtime';
 export default defineComponent(function Counter() {
   const count = createSignal(0);
 
-  return <button onClick={() => count.set((value) => value + 1)}>count: {count.value}</button>;
+  return (
+    <button onClick={() => count.set((value) => value + 1)}>
+      count: {count.value}
+    </button>
+  );
 });
 ```
 
@@ -28,11 +32,11 @@ export default Counter;
 
 编译产物会根据组件名推导标签名：
 
-| 组件名 | 标签 |
-| --- | --- |
-| `Counter` | `x-counter` |
-| `TodoList` | `todo-list` |
-| `MyCard`（显式 `tagName`） | `my-card` |
+| 组件名                     | 标签        |
+| -------------------------- | ----------- |
+| `Counter`                  | `x-counter` |
+| `TodoList`                 | `todo-list` |
+| `MyCard`（显式 `tagName`） | `my-card`   |
 
 推导规则：
 
@@ -46,16 +50,19 @@ export default Counter;
 ## `defineComponent(fn, options)`
 
 ```tsx
-export default defineComponent(function FancyInput(props: FancyInputProps) {
-  return <div>{props.count}</div>;
-}, {
-  props: {
-    count: { type: Number, reflect: true, default: 0 },
-    userName: { type: String, attribute: 'user-name' },
-    onSelect: { attribute: false },
+export default defineComponent(
+  function FancyInput(props: FancyInputProps) {
+    return <div>{props.count}</div>;
   },
-  emits: ['select'],
-});
+  {
+    props: {
+      count: { type: Number, reflect: true, default: 0 },
+      userName: { type: String, attribute: 'user-name' },
+      onSelect: { attribute: false },
+    },
+    emits: ['select'],
+  }
+);
 ```
 
 第二个参数只被编译器读取，运行时会把它原样保留在类上：
@@ -71,22 +78,30 @@ static emits = this.__laniaOptions?.emits;
 ```tsx
 import { SHARED_PROPS, EVENTS, convertLevel } from './props-config';
 
-export default defineComponent(function Field(props: FieldProps) {
-  return <div>{props.level}</div>;
-}, {
-  props: {
-    ...SHARED_PROPS,
-    level: { converter: { from: convertLevel } },
+export default defineComponent(
+  function Field(props: FieldProps) {
+    return <div>{props.level}</div>;
   },
-  emits: EVENTS,
-});
+  {
+    props: {
+      ...SHARED_PROPS,
+      level: { converter: { from: convertLevel } },
+    },
+    emits: EVENTS,
+  }
+);
 ```
 
 ### Prop 选项
 
 ```ts
 interface PropOption {
-  type?: StringConstructor | NumberConstructor | BooleanConstructor | ObjectConstructor | ArrayConstructor;
+  type?:
+    | StringConstructor
+    | NumberConstructor
+    | BooleanConstructor
+    | ObjectConstructor
+    | ArrayConstructor;
   attribute?: string | false;
   reflect?: boolean;
   default?: unknown;
@@ -98,15 +113,15 @@ interface PropOption {
 }
 ```
 
-| 选项 | 说明 |
-| --- | --- |
-| `type` | attribute 字符串的回读类型 |
-| `attribute` | 自定义 attribute 名；`false` 表示不同步 |
-| `reflect` | prop 变化时是否写回 attribute |
-| `default` | 初始值，优先于类型推导 |
-| `converter.from` | attribute → prop |
-| `converter.to` | prop → attribute |
-| `validator` | 开发态校验，失败输出 warning |
+| 选项             | 说明                                    |
+| ---------------- | --------------------------------------- |
+| `type`           | attribute 字符串的回读类型              |
+| `attribute`      | 自定义 attribute 名；`false` 表示不同步 |
+| `reflect`        | prop 变化时是否写回 attribute           |
+| `default`        | 初始值，优先于类型推导                  |
+| `converter.from` | attribute → prop                        |
+| `converter.to`   | prop → attribute                        |
+| `validator`      | 开发态校验，失败输出 warning            |
 
 未声明 `attribute` 时按 kebab-case 映射：
 
@@ -121,11 +136,14 @@ title      → title
 ### 事件声明
 
 ```tsx
-export default defineComponent(function Selector() {
-  return <div />;
-}, {
-  emits: ['select', 'clear'],
-});
+export default defineComponent(
+  function Selector() {
+    return <div />;
+  },
+  {
+    emits: ['select', 'clear'],
+  }
+);
 ```
 
 在开发模式下，调用 `emit()` 派发未声明事件会输出 warning。
@@ -151,7 +169,12 @@ function Card(props: { title: string; count: number }) {
 
 ```tsx
 function Card(props: CardProps) {
-  const { title, count: total, user: { name, age = 0 }, ...rest } = props;
+  const {
+    title,
+    count: total,
+    user: { name, age = 0 },
+    ...rest
+  } = props;
 
   return (
     <div>
@@ -188,7 +211,12 @@ user.name      → this.user?.name
 函数组件只保留三个正式钩子：
 
 ```tsx
-import { defineComponent, onCleanup, onMount, onUpdated } from '@lania-v/runtime';
+import {
+  defineComponent,
+  onCleanup,
+  onMount,
+  onUpdated,
+} from '@lania-v/runtime';
 
 export default defineComponent(function Panel() {
   onMount(() => {
@@ -207,11 +235,11 @@ export default defineComponent(function Panel() {
 });
 ```
 
-| Hook | 触发时机 |
-| --- | --- |
-| `onMount()` | 首次连接并准备挂载时 |
-| `onCleanup()` | 断开连接 / 卸载时 |
-| `onUpdated(changedProps)` | 每次更新完成后 |
+| Hook                      | 触发时机             |
+| ------------------------- | -------------------- |
+| `onMount()`               | 首次连接并准备挂载时 |
+| `onCleanup()`             | 断开连接 / 卸载时    |
+| `onUpdated(changedProps)` | 每次更新完成后       |
 
 兼容别名：
 
@@ -259,16 +287,16 @@ customElements.define('my-element', MyElement);
 
 可覆写的生命周期：
 
-| 方法 | 说明 |
-| --- | --- |
-| `connectedCallback()` | 连接 DOM |
-| `disconnectedCallback()` | 断开 DOM |
+| 方法                         | 说明                    |
+| ---------------------------- | ----------------------- |
+| `connectedCallback()`        | 连接 DOM                |
+| `disconnectedCallback()`     | 断开 DOM                |
 | `attributeChangedCallback()` | observed attribute 变化 |
-| `adoptedCallback()` | 文档迁移 |
+| `adoptedCallback()`          | 文档迁移                |
 | `shouldUpdate(changedProps)` | 返回 `false` 可跳过更新 |
-| `willUpdate(changedProps)` | 更新前 |
-| `updated(changedProps)` | 更新后 |
-| `firstUpdated(changedProps)` | 首次更新后 |
+| `willUpdate(changedProps)`   | 更新前                  |
+| `updated(changedProps)`      | 更新后                  |
+| `firstUpdated(changedProps)` | 首次更新后              |
 
 更新顺序：
 
@@ -357,7 +385,9 @@ export default defineComponent(function Panel(props: { children?: unknown }) {
     <section>
       <header>{slots.render('header', <h2>默认标题</h2>) as any}</header>
       <main>{slots.renderDefault(<p>没有内容</p>) as any}</main>
-      {slots.has('footer') ? <footer>{slots.render('footer') as any}</footer> : null}
+      {slots.has('footer') ? (
+        <footer>{slots.render('footer') as any}</footer>
+      ) : null}
     </section>
   );
 });
@@ -475,14 +505,10 @@ import { bindHandlers, bindProps, defineComponent } from '@lania-v/runtime';
 
 export default defineComponent(function Panel(_props: PanelProps) {
   // 形参仍需保留，编译器据此推导 prop 名单；但不用再传给 bind 辅助函数。
-  const p = bindProps<PanelProps>();   // 只有普通属性
+  const p = bindProps<PanelProps>(); // 只有普通属性
   const h = bindHandlers<PanelProps>(); // 只有 onXxx 回调
 
-  return (
-    <button onClick={() => h.onToggle?.()}>
-      {p.title}
-    </button>
-  );
+  return <button onClick={() => h.onToggle?.()}>{p.title}</button>;
 });
 ```
 
@@ -574,10 +600,10 @@ Counter.styles = [baseStyles, themeStyles];
 Counter.renderMode = 'light';
 ```
 
-| 模式 | 说明 |
-| --- | --- |
+| 模式             | 说明                 |
+| ---------------- | -------------------- |
 | `shadow`（默认） | 创建/复用 ShadowRoot |
-| `light` | 直接渲染到宿主元素 |
+| `light`          | 直接渲染到宿主元素   |
 
 ### CSS 变量与主题
 
@@ -608,7 +634,12 @@ const variables = consumeStyleVariables(child);
 默认情况下组件不参与原生表单。需要参与时显式声明：
 
 ```tsx
-import { createSignal, defineComponent, useFormValue, useFormValidity } from '@lania-v/runtime';
+import {
+  createSignal,
+  defineComponent,
+  useFormValue,
+  useFormValidity,
+} from '@lania-v/runtime';
 
 export default defineComponent(function CredentialField() {
   const account = createSignal('');
@@ -636,13 +667,13 @@ export default defineComponent(function CredentialField() {
 
 `setFormValue` 的归一化规则：
 
-| 值 | 上报结果 |
-| --- | --- |
-| `null` / `undefined` | 不上报 |
-| `string` | 原样 |
-| `boolean` | `true` → `'on'`，`false` → 不上报 |
-| `File` / `FormData` | 原样 |
-| 其它 | `String(value)` |
+| 值                   | 上报结果                          |
+| -------------------- | --------------------------------- |
+| `null` / `undefined` | 不上报                            |
+| `string`             | 原样                              |
+| `boolean`            | `true` → `'on'`，`false` → 不上报 |
+| `File` / `FormData`  | 原样                              |
+| 其它                 | `String(value)`                   |
 
 `useFormValidity` 接受：
 

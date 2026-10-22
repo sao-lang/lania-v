@@ -62,12 +62,21 @@ export const createAnchoredHost = (options: {
   anchor: Node;
   hostState: Pick<
     KeepAliveHostState,
-    'readNodes' | 'readCachedTarget' | 'writeCachedTarget' | 'isMounted' | 'syncNodes'
+    | 'readNodes'
+    | 'readCachedTarget'
+    | 'writeCachedTarget'
+    | 'isMounted'
+    | 'syncNodes'
   >;
   adapter?: KeepAliveHostAdapter;
   inferTarget?(nodes: readonly Node[]): KeepAliveHostTarget | null;
 }): KeepAliveHostRuntime => {
-  const { anchor, hostState, adapter = keepAliveDomHostAdapter, inferTarget } = options;
+  const {
+    anchor,
+    hostState,
+    adapter = keepAliveDomHostAdapter,
+    inferTarget,
+  } = options;
   const resolver = createAnchorResolver({
     anchor,
     readNodes() {
@@ -202,14 +211,8 @@ export const replaceUncachedInstance = <TInstance>(options: {
   mountNodes(nodes: readonly Node[]): void;
   syncNodes(nodes: readonly Node[]): void;
 }): readonly Node[] => {
-  const {
-    state,
-    nextInstance,
-    destroy,
-    readNodes,
-    mountNodes,
-    syncNodes,
-  } = options;
+  const { state, nextInstance, destroy, readNodes, mountNodes, syncNodes } =
+    options;
 
   clearUncachedInstance({
     state,

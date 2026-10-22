@@ -18,7 +18,9 @@ export const createPathRecord = (): Record<string, Set<string>> => ({});
 
 // 把任意文本清洗成可安全拼进变量名/缓存 key 的 token。
 export const sanitizeIdentifierToken = (value: string): string => {
-  const normalized = value.replace(/[^a-zA-Z0-9_$]+/g, '_').replace(/^_+|_+$/g, '');
+  const normalized = value
+    .replace(/[^a-zA-Z0-9_$]+/g, '_')
+    .replace(/^_+|_+$/g, '');
   return normalized.length > 0 ? normalized : 'token';
 };
 
@@ -79,7 +81,10 @@ export const normalizeNumberRecordSet = (
   record: Record<string, Set<number>>
 ): Record<string, number[]> => {
   return Object.fromEntries(
-    Object.entries(record).map(([key, values]) => [key, [...values].sort((a, b) => a - b)])
+    Object.entries(record).map(([key, values]) => [
+      key,
+      [...values].sort((a, b) => a - b),
+    ])
   );
 };
 
@@ -99,7 +104,10 @@ export const normalizePathRecord = (
 
 // 依赖分析里需要识别各种 `=` / `+=` / `??=` 等赋值运算符，这里统一走 TS 的 SyntaxKind 范围判断。
 export const isAssignmentOperatorToken = (kind: ts.SyntaxKind): boolean => {
-  return kind >= ts.SyntaxKind.FirstAssignment && kind <= ts.SyntaxKind.LastAssignment;
+  return (
+    kind >= ts.SyntaxKind.FirstAssignment &&
+    kind <= ts.SyntaxKind.LastAssignment
+  );
 };
 
 // 当前约定中，带连字符的标签名视为静态组件标签。
@@ -108,8 +116,14 @@ export const isStaticComponentTag = (tagName: string): boolean => {
 };
 
 // 只提取可以静态读出的对象字面量属性名；动态计算属性会返回 null，交给上层兜底处理。
-export const getObjectLiteralPropertyName = (name: ts.PropertyName): string | null => {
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+export const getObjectLiteralPropertyName = (
+  name: ts.PropertyName
+): string | null => {
+  if (
+    ts.isIdentifier(name) ||
+    ts.isStringLiteral(name) ||
+    ts.isNumericLiteral(name)
+  ) {
     return name.text;
   }
 

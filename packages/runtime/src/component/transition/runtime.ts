@@ -36,7 +36,13 @@ export type BaseDebugInput = {
 export const createBaseTransitionDebugSummary = (
   input: BaseDebugInput
 ): BaseTransitionDebugSummary => {
-  const { hasPrevious, previousVisible, previousAppeared, previousLeaving, hasSnapshot } = input;
+  const {
+    hasPrevious,
+    previousVisible,
+    previousAppeared,
+    previousLeaving,
+    hasSnapshot,
+  } = input;
   // 缺失值统一收敛成 null / false，方便调试面板稳定展示。
   return {
     hasPrevious,
@@ -87,13 +93,19 @@ export type BaseCommitApplier<TContext, TResult, TPublishResult = unknown> = {
   prepareVisibleCommit?(context: TContext): void;
   dispatchVisibleCommitPhases(context: TContext): void;
   publishVisibleCommitState(context: TContext): TPublishResult;
-  renderVisibleCommitResult(context: TContext, publishResult: TPublishResult): TResult;
+  renderVisibleCommitResult(
+    context: TContext,
+    publishResult: TPublishResult
+  ): TResult;
 };
 
-export type BaseCommitRuntime<TContext, TResult, TPublishResult = unknown> =
-  BaseCommitApplier<TContext, TResult, TPublishResult> & {
-    commitVisibleContext(context: TContext): TResult;
-  };
+export type BaseCommitRuntime<
+  TContext,
+  TResult,
+  TPublishResult = unknown,
+> = BaseCommitApplier<TContext, TResult, TPublishResult> & {
+  commitVisibleContext(context: TContext): TResult;
+};
 
 export const applyBaseCommitContext = <
   TContext,
@@ -149,21 +161,24 @@ export const resolveHiddenKind = (options: {
 export type BaseTransitionPreviousCommitKind = BaseHiddenCommitKind;
 
 export type BasePrevContextShape<
-  TKind extends BaseTransitionPreviousCommitKind = BaseTransitionPreviousCommitKind,
+  TKind extends BaseTransitionPreviousCommitKind =
+    BaseTransitionPreviousCommitKind,
 > = {
   kind: TKind;
 };
 
 export type BasePrevContext<
   TPrevious,
-  TKind extends BaseTransitionPreviousCommitKind = BaseTransitionPreviousCommitKind,
+  TKind extends BaseTransitionPreviousCommitKind =
+    BaseTransitionPreviousCommitKind,
 > = BasePrevContextShape<TKind> & {
   previous: TPrevious;
 };
 
 export type BasePrevResult<
   TValue,
-  TKind extends BaseTransitionPreviousCommitKind = BaseTransitionPreviousCommitKind,
+  TKind extends BaseTransitionPreviousCommitKind =
+    BaseTransitionPreviousCommitKind,
 > = {
   kind: TKind;
   value: TValue;
@@ -176,17 +191,19 @@ export type BasePrevApplier<
 > = {
   preparePreviousCommit?(context: TContext): void;
   publishPreviousCommitState(context: TContext): TPublishResult;
-  renderPreviousCommitResult(context: TContext, publishResult: TPublishResult): TResult;
+  renderPreviousCommitResult(
+    context: TContext,
+    publishResult: TPublishResult
+  ): TResult;
 };
 
 export type BasePrevRuntime<
   TContext extends BasePrevContextShape,
   TPublishResult extends BasePrevResult<unknown, TContext['kind']>,
   TResult,
-> =
-  BasePrevApplier<TContext, TPublishResult, TResult> & {
-    commitPreviousContext(context: TContext): TResult;
-  };
+> = BasePrevApplier<TContext, TPublishResult, TResult> & {
+  commitPreviousContext(context: TContext): TResult;
+};
 
 export type BaseHostDebugRuntime<
   TPrevious,
@@ -245,7 +262,13 @@ export type BaseHostFlowRuntime<
   >,
   TPreviousResult,
   TSummary extends BaseTransitionDebugSummary = BaseTransitionDebugSummary,
-> = BaseTransitionRuntime<TPrevious, TResolveArgs, TVisibleInput, TOutput, TSummary> &
+> = BaseTransitionRuntime<
+  TPrevious,
+  TResolveArgs,
+  TVisibleInput,
+  TOutput,
+  TSummary
+> &
   BaseHostCommitRuntime<
     TVisibleContext,
     TVisibleResult,

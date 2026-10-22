@@ -14,12 +14,16 @@ import type {
 } from './types';
 import { isBoundaryPayload, type BoundaryPayload } from '@lania-v/shared';
 
-export const SLOT_MARKER_PATTERN = /^__LANIA_SLOT_(\d+)_(START|END)__(?::([\s\S]+))?$/;
+export const SLOT_MARKER_PATTERN =
+  /^__LANIA_SLOT_(\d+)_(START|END)__(?::([\s\S]+))?$/;
 // 编译期块锚点：`<!--__LANIA_SLOT_N__-->`，仅用于客户端首次挂载时定位块位置。
 export const BLOCK_ANCHOR_PATTERN = /^__LANIA_SLOT_\d+__$/;
-export const BOUNDARY_MARKER_PATTERN = /^__LANIA_BOUNDARY_([^_]+)_(START|END)__(?::([^:]+)(?::([\s\S]+))?)?$/;
-export const TELEPORT_CONTAINER_PATTERN = /^__LANIA_TELEPORT_CONTAINER_(\d+)_(START|END)__(?::([\s\S]+))?$/;
-export const SUSPENSE_PATCH_PATTERN = /^__LANIA_SUSPENSE_PATCH_([^_]+)_(START|END)__(?::([\s\S]+))?$/;
+export const BOUNDARY_MARKER_PATTERN =
+  /^__LANIA_BOUNDARY_([^_]+)_(START|END)__(?::([^:]+)(?::([\s\S]+))?)?$/;
+export const TELEPORT_CONTAINER_PATTERN =
+  /^__LANIA_TELEPORT_CONTAINER_(\d+)_(START|END)__(?::([\s\S]+))?$/;
+export const SUSPENSE_PATCH_PATTERN =
+  /^__LANIA_SUSPENSE_PATCH_([^_]+)_(START|END)__(?::([\s\S]+))?$/;
 
 export const decodeSlotMeta = (value: string | undefined): unknown => {
   if (!value) {
@@ -33,7 +37,9 @@ export const decodeSlotMeta = (value: string | undefined): unknown => {
   }
 };
 
-export const parseSlotMarker = (value: string | null): ParsedSlotMarker | null => {
+export const parseSlotMarker = (
+  value: string | null
+): ParsedSlotMarker | null => {
   if (!value) {
     return null;
   }
@@ -56,7 +62,9 @@ export const parseSlotMarker = (value: string | null): ParsedSlotMarker | null =
         ? payload
         : payload.slice(0, firstSeparator);
   const metadata =
-    firstSeparator === -1 ? null : decodeSlotMeta(payload.slice(firstSeparator + 1));
+    firstSeparator === -1
+      ? null
+      : decodeSlotMeta(payload.slice(firstSeparator + 1));
 
   return {
     index: Number(match[1]),
@@ -66,7 +74,9 @@ export const parseSlotMarker = (value: string | null): ParsedSlotMarker | null =
   };
 };
 
-export const parseBoundaryMarker = (value: string | null): ParsedBoundaryMarker | null => {
+export const parseBoundaryMarker = (
+  value: string | null
+): ParsedBoundaryMarker | null => {
   if (!value) {
     return null;
   }
@@ -92,13 +102,19 @@ export const parseBoundaryMarker = (value: string | null): ParsedBoundaryMarker 
   };
 };
 
-export const serializeMarkerPayload = (kind: string, metadata: unknown): string => {
+export const serializeMarkerPayload = (
+  kind: string,
+  metadata: unknown
+): string => {
   return metadata === undefined
     ? kind
     : `${kind}:${encodeURIComponent(JSON.stringify(metadata))}`;
 };
 
-export const serializeBoundaryPayload = (component: string, metadata: unknown): string => {
+export const serializeBoundaryPayload = (
+  component: string,
+  metadata: unknown
+): string => {
   return metadata === undefined
     ? component
     : `${component}:${encodeURIComponent(JSON.stringify(metadata))}`;
@@ -120,7 +136,9 @@ export const renderTeleportContainerMarker = (
   metadata?: unknown
 ): string => {
   const payload =
-    metadata === undefined ? '' : `:${encodeURIComponent(JSON.stringify(metadata))}`;
+    metadata === undefined
+      ? ''
+      : `:${encodeURIComponent(JSON.stringify(metadata))}`;
   return `<!--__LANIA_TELEPORT_CONTAINER_${slotIndex}_${position === 'start' ? 'START' : 'END'}__${payload}-->`;
 };
 
@@ -130,7 +148,9 @@ export const renderSuspensePatchMarker = (
   metadata?: unknown
 ): string => {
   const payload =
-    metadata === undefined ? '' : `:${encodeURIComponent(JSON.stringify(metadata))}`;
+    metadata === undefined
+      ? ''
+      : `:${encodeURIComponent(JSON.stringify(metadata))}`;
   return `<!--__LANIA_SUSPENSE_PATCH_${boundaryId}_${position === 'start' ? 'START' : 'END'}__${payload}-->`;
 };
 

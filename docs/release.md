@@ -17,7 +17,7 @@
 npm login
 ```
 
-2. 首次发布前检查包名是否可用：
+1. 首次发布前检查包名是否可用：
 
 ```bash
 npm view @lania-v/runtime
@@ -27,7 +27,7 @@ npm view @lania-v/shared
 npm view @lania-v/vite-plugin
 ```
 
-3. 确保构建通过：
+1. 确保构建通过：
 
 ```bash
 npm run build

@@ -15,10 +15,15 @@ const createBenchItem = (id: number): BenchItem => ({
 });
 
 export const buildBenchItems = (): BenchItem[] => {
-  return Array.from({ length: BENCH_LIST_SIZE }, (_, index) => createBenchItem(index + 1));
+  return Array.from({ length: BENCH_LIST_SIZE }, (_, index) =>
+    createBenchItem(index + 1)
+  );
 };
 
-export const patchBenchItems = (items: readonly BenchItem[], nextVersion: number): BenchItem[] => {
+export const patchBenchItems = (
+  items: readonly BenchItem[],
+  nextVersion: number
+): BenchItem[] => {
   return items.map((item) => {
     if (item.id !== BENCH_MIDDLE_ROW_ID) {
       return item;
@@ -32,7 +37,9 @@ export const patchBenchItems = (items: readonly BenchItem[], nextVersion: number
   });
 };
 
-export const describeBenchItem = (item: BenchItem | null | undefined): string => {
+export const describeBenchItem = (
+  item: BenchItem | null | undefined
+): string => {
   if (!item) {
     return 'missing';
   }

@@ -23,9 +23,10 @@ import type { ChangedProps } from './reactive-element';
 import { appendRenderable, collectRenderableNodes } from '../renderable';
 import { markRefExposed, setRef, type RefBinding } from '../../dom/ref';
 
-export type FunctionComponent<Props = Record<string, unknown>, Result = unknown> = (
-  props: Props
-) => Result;
+export type FunctionComponent<
+  Props = Record<string, unknown>,
+  Result = unknown,
+> = (props: Props) => Result;
 
 export type DefinedComponent<
   Props = Record<string, unknown>,
@@ -33,8 +34,9 @@ export type DefinedComponent<
   TElement extends HTMLElement = HTMLElement,
 > = FunctionComponent<Props, Result> & ComponentElementConstructor<TElement>;
 
-export interface ComponentElementConstructor<TElement extends HTMLElement = HTMLElement>
-  extends CustomElementConstructor {
+export interface ComponentElementConstructor<
+  TElement extends HTMLElement = HTMLElement,
+> extends CustomElementConstructor {
   new (): TElement;
   tagName?: string;
   displayName?: string;
@@ -133,7 +135,9 @@ type HandlerKeyOf<T extends object> = Extract<
 >;
 
 export type BoundProps<T extends object> = Readonly<Omit<T, HandlerKeyOf<T>>>;
-export type BoundHandlers<T extends object> = Readonly<Pick<T, HandlerKeyOf<T>>>;
+export type BoundHandlers<T extends object> = Readonly<
+  Pick<T, HandlerKeyOf<T>>
+>;
 
 export interface SlotBindings {
   has(name?: string): boolean;
@@ -159,15 +163,22 @@ type ComponentPropsContext = {
   resolve?: () => object;
 };
 
-const FUNCTION_COMPONENT_BINDING_METADATA = Symbol('lania.function-component.binding-metadata');
-const functionComponentBindingStates = new WeakMap<object, FunctionComponentBindingState>();
+const FUNCTION_COMPONENT_BINDING_METADATA = Symbol(
+  'lania.function-component.binding-metadata'
+);
+const functionComponentBindingStates = new WeakMap<
+  object,
+  FunctionComponentBindingState
+>();
 
 // `bindProps()` / `bindHandlers()` 无参调用时从这里取当前组件的 props。
 // 函数组件由 JSX 入口在调用前入栈，编译产物由编译器补 `this.props`，
 // 构造期与 HMR 重挂载也会各自提供一个上下文。
 const componentPropsContextStack: ComponentPropsContext[] = [];
 
-const readComponentPropsContext = (context: ComponentPropsContext): object | null => {
+const readComponentPropsContext = (
+  context: ComponentPropsContext
+): object | null => {
   return (context.resolve ? context.resolve() : context.props) ?? null;
 };
 
@@ -176,7 +187,10 @@ const readComponentPropsContext = (context: ComponentPropsContext): object | nul
  *
  * 传函数时按调用时刻取值，适合实例 props 可能被重建的场景（HMR）。
  */
-export const withComponentProps = <T>(source: object | (() => object), run: () => T): T => {
+export const withComponentProps = <T>(
+  source: object | (() => object),
+  run: () => T
+): T => {
   const context: ComponentPropsContext =
     typeof source === 'function'
       ? { resolve: source as () => object }
@@ -192,18 +206,25 @@ export const withComponentProps = <T>(source: object | (() => object), run: () =
 };
 
 const getCurrentComponentProps = (): object | null => {
-  const context = componentPropsContextStack[componentPropsContextStack.length - 1];
+  const context =
+    componentPropsContextStack[componentPropsContextStack.length - 1];
   return context ? readComponentPropsContext(context) : null;
 };
 
-const renderableCleanupRegistry = new WeakMap<Node, Set<FunctionComponentCleanup>>();
+const renderableCleanupRegistry = new WeakMap<
+  Node,
+  Set<FunctionComponentCleanup>
+>();
 
 // 以“原始 slot anchor 节点”为键记录重定向目标。
 // 这样结构型 slot 仍可相对自己的 anchor 插入，而更高层宿主
 // （例如 TransitionGroup）又能把写入重定向到稳定容器中，无需改编译产物。
 const domHostRedirects = new WeakMap<Node, DomHostTarget>();
 
-export const registerDomHostRedirect = (anchor: Node, target: DomHostTarget): void => {
+export const registerDomHostRedirect = (
+  anchor: Node,
+  target: DomHostTarget
+): void => {
   domHostRedirects.set(anchor, target);
 };
 
@@ -213,29 +234,37 @@ export const getDomHostRedirect = (anchor: Node): DomHostTarget | undefined => {
 
 let currentScope: RuntimeScope | undefined;
 
-export const getCurrentRuntimeScope = (): RuntimeScope | undefined => currentScope;
-export const getCurrentDomHostTarget = (): DomHostTarget | undefined => currentScope?.domHost;
+export const getCurrentRuntimeScope = (): RuntimeScope | undefined =>
+  currentScope;
+export const getCurrentDomHostTarget = (): DomHostTarget | undefined =>
+  currentScope?.domHost;
 
-const isHandlerBindingValue = (value: unknown): value is HandlerBindingValue => {
-  return typeof value === 'function' || (
-    value !== null &&
-    typeof value === 'object' &&
-    typeof (value as { handler?: unknown }).handler === 'function'
+const isHandlerBindingValue = (
+  value: unknown
+): value is HandlerBindingValue => {
+  return (
+    typeof value === 'function' ||
+    (value !== null &&
+      typeof value === 'object' &&
+      typeof (value as { handler?: unknown }).handler === 'function')
   );
 };
 
 const inferHandlerKeysFromProps = (props: object): string[] => {
   return Object.keys(props).filter((key) => {
-    return /^on[A-Z]/.test(key) && isHandlerBindingValue((props as Record<string, unknown>)[key]);
+    return (
+      /^on[A-Z]/.test(key) &&
+      isHandlerBindingValue((props as Record<string, unknown>)[key])
+    );
   });
 };
 
 const getFunctionComponentBindingMetadata = (
   props: object
 ): FunctionComponentBindingMetadata | undefined => {
-  return (props as Record<PropertyKey, unknown>)[FUNCTION_COMPONENT_BINDING_METADATA] as
-    | FunctionComponentBindingMetadata
-    | undefined;
+  return (props as Record<PropertyKey, unknown>)[
+    FUNCTION_COMPONENT_BINDING_METADATA
+  ] as FunctionComponentBindingMetadata | undefined;
 };
 
 const createBindingView = (
@@ -261,7 +290,9 @@ const createBindingView = (
   return Object.freeze(view);
 };
 
-const getFunctionComponentBindingState = (props: object): FunctionComponentBindingState => {
+const getFunctionComponentBindingState = (
+  props: object
+): FunctionComponentBindingState => {
   const cached = functionComponentBindingStates.get(props);
   if (cached) {
     return cached;
@@ -348,7 +379,9 @@ const renderResolvedSlotContent = (
   return invokeSlotContent(fallback, args);
 };
 
-const registerFunctionComponentCleanup = (cleanup: FunctionComponentCleanup): void => {
+const registerFunctionComponentCleanup = (
+  cleanup: FunctionComponentCleanup
+): void => {
   currentScope?.functionComponentCleanups?.add(cleanup);
 };
 
@@ -412,7 +445,9 @@ export const registerFunctionComponentRenderResult = (
   // 一个函数组件结果值可能最终展开成多个节点；这里把 cleanup 绑定到
   // 所有可收集到的渲染节点上，后续 replace/unmount 时就能统一触发。
   collectRenderableNodes(result as never).forEach((node) => {
-    const registered = renderableCleanupRegistry.get(node) ?? new Set<FunctionComponentCleanup>();
+    const registered =
+      renderableCleanupRegistry.get(node) ??
+      new Set<FunctionComponentCleanup>();
     cleanups.forEach((cleanup) => {
       registered.add(cleanup);
     });
@@ -420,7 +455,9 @@ export const registerFunctionComponentRenderResult = (
   });
 };
 
-const requireComponentProps = (apiName: 'bindProps' | 'bindHandlers'): object => {
+const requireComponentProps = (
+  apiName: 'bindProps' | 'bindHandlers'
+): object => {
   const props = getCurrentComponentProps();
 
   if (!props) {
@@ -446,7 +483,10 @@ export const createBoundProps = <T extends object>(props: T): BoundProps<T> => {
     // 1. props 视图屏蔽 handler key，避免模板把事件函数误当普通值消费；
     // 2. handlers 视图只暴露 handler key，便于编译产物按职责读取。
     // 视图对象本身只创建一次，属性值始终按需回读原始 props。
-    state.propsView = createBindingView(props, (key) => !state.handlerKeys.has(key));
+    state.propsView = createBindingView(
+      props,
+      (key) => !state.handlerKeys.has(key)
+    );
   }
 
   return state.propsView as BoundProps<T>;
@@ -457,24 +497,34 @@ export const createBoundProps = <T extends object>(props: T): BoundProps<T> => {
  *
  * 同 `createBoundProps()`：编译器内部使用，业务代码请调用 `bindHandlers()`。
  */
-export const createBoundHandlers = <T extends object>(props: T): BoundHandlers<T> => {
+export const createBoundHandlers = <T extends object>(
+  props: T
+): BoundHandlers<T> => {
   const state = getFunctionComponentBindingState(props);
   if (!state.handlersView) {
     // handlers 视图与 props 视图共享同一份源对象，只是 key 过滤条件相反。
-    state.handlersView = createBindingView(props, (key) => state.handlerKeys.has(key));
+    state.handlersView = createBindingView(props, (key) =>
+      state.handlerKeys.has(key)
+    );
   }
 
   return state.handlersView as BoundHandlers<T>;
 };
 
 /** 读取当前组件的普通属性视图（排除了 `onXxx` 回调）。 */
-export const bindProps = <T extends object = Record<string, any>>(): BoundProps<T> => {
+export const bindProps = <
+  T extends object = Record<string, any>,
+>(): BoundProps<T> => {
   return createBoundProps(requireComponentProps('bindProps')) as BoundProps<T>;
 };
 
 /** 读取当前组件的回调视图（只包含 `onXxx` 回调）。 */
-export const bindHandlers = <T extends object = Record<string, any>>(): BoundHandlers<T> => {
-  return createBoundHandlers(requireComponentProps('bindHandlers')) as BoundHandlers<T>;
+export const bindHandlers = <
+  T extends object = Record<string, any>,
+>(): BoundHandlers<T> => {
+  return createBoundHandlers(
+    requireComponentProps('bindHandlers')
+  ) as BoundHandlers<T>;
 };
 
 export const bindSlots = (props?: { children?: unknown }): SlotBindings => {
@@ -599,7 +649,10 @@ export const getComponentTagName = (ctor: unknown): string | null => {
   }
 
   const explicitTagName = (ctor as { tagName?: unknown }).tagName;
-  if (typeof explicitTagName === 'string' && explicitTagName.trim().length > 0) {
+  if (
+    typeof explicitTagName === 'string' &&
+    explicitTagName.trim().length > 0
+  ) {
     return explicitTagName;
   }
 
@@ -609,7 +662,9 @@ export const getComponentTagName = (ctor: unknown): string | null => {
   }
 
   const name = (ctor as { name?: unknown }).name;
-  return typeof name === 'string' && name.trim().length > 0 ? inferComponentTagName(name) : null;
+  return typeof name === 'string' && name.trim().length > 0
+    ? inferComponentTagName(name)
+    : null;
 };
 
 // 同名标签重复注册时只提示一次，避免每次渲染都刷屏。
@@ -622,10 +677,15 @@ const registerComponentElement = <T extends ComponentElementConstructor>(
   const tagName = options.tagName ?? getComponentTagName(ctor);
 
   if (!tagName) {
-    throw new TypeError('Unable to resolve a custom element tag name for the component constructor.');
+    throw new TypeError(
+      'Unable to resolve a custom element tag name for the component constructor.'
+    );
   }
 
-  if (typeof customElements !== 'undefined' && typeof customElements.define === 'function') {
+  if (
+    typeof customElements !== 'undefined' &&
+    typeof customElements.define === 'function'
+  ) {
     const existing = customElements.get(tagName) as T | undefined;
     if (existing) {
       // 开发态 HMR：同名标签的新构造器不会重新 define，而是热替换原型并重挂载现有实例。
@@ -640,7 +700,11 @@ const registerComponentElement = <T extends ComponentElementConstructor>(
 
       // 已注册时浏览器会以先注册的构造器为准，后到的实现会被静默丢弃。
       // 这里显式告警，并把 styles 写回真正生效的构造器，避免版本错配难以排查。
-      if (existing !== ctor && isDevEnvironment() && !reportedTagConflicts.has(tagName)) {
+      if (
+        existing !== ctor &&
+        isDevEnvironment() &&
+        !reportedTagConflicts.has(tagName)
+      ) {
         reportedTagConflicts.add(tagName);
         console.warn(
           `[lania-v] <${tagName}> is already registered by another constructor; ` +
@@ -735,7 +799,8 @@ export const createComponentPropsSnapshot = (
 
   // 快照建好后接管当前构造期的 props 上下文，后续字段里的 `bindProps()`
   // 读到的就是能回读实例 signal 的快照，而不是构造期入参。
-  const context = componentPropsContextStack[componentPropsContextStack.length - 1];
+  const context =
+    componentPropsContextStack[componentPropsContextStack.length - 1];
   if (context && context.props === incoming) {
     context.props = snapshot;
   }
@@ -767,7 +832,9 @@ export const createComponentElement = <T extends ComponentElementConstructor>(
   const tagName = options.tagName ?? getComponentTagName(registered);
 
   if (!tagName) {
-    throw new TypeError('Unable to create a component element without a resolved tag name.');
+    throw new TypeError(
+      'Unable to create a component element without a resolved tag name.'
+    );
   }
 
   const props = options.props ?? {};
@@ -826,7 +893,9 @@ export const onCleanup = (_callback: FunctionLifecycleCallback): void => {
   throwCompileOnlyApiError('onCleanup');
 };
 export const onUnmounted = onCleanup;
-export const onUpdated = (_callback: FunctionLifecycleCallback<[ChangedProps]>): void => {
+export const onUpdated = (
+  _callback: FunctionLifecycleCallback<[ChangedProps]>
+): void => {
   throwCompileOnlyApiError('onUpdated');
 };
 
@@ -957,15 +1026,16 @@ export const lazy = <T extends FunctionComponent<any, any>>(
   const load = async (): Promise<T> => {
     const loaded = await loader();
     // 同时兼容直接导出组件与 `{ default: Component }` 两种懒加载模块形态。
-    resolvedComponent =
-      typeof loaded === 'function' ? loaded : loaded.default;
+    resolvedComponent = typeof loaded === 'function' ? loaded : loaded.default;
     return resolvedComponent;
   };
 
   const component = ((...args: Parameters<T>): ReturnType<T> => {
     if (resolvedComponent) {
       // 一旦 resolve 完成，后续调用退化为普通同步组件调用，不再触发 Suspense。
-      const callable = resolvedComponent as (...params: Parameters<T>) => ReturnType<T>;
+      const callable = resolvedComponent as (
+        ...params: Parameters<T>
+      ) => ReturnType<T>;
       return callable(...args);
     }
 

@@ -31,7 +31,7 @@ Integration       Vite Plugin / Playground / Debug / HMR
 
 项目采用 monorepo 结构，`packages/*` 为可复用核心包，`playground/*` 为本地演示与验收入口：
 
-```
+```text
 lania-v/
 ├── packages/
 │   ├── runtime/           运行时核心
@@ -119,14 +119,14 @@ npm run dev --workspace @lania-v/playground-login
 控制台还暴露了 `__lania` 检查器，可在交互后直接读取快照：
 
 ```js
-__lania.compile().LoginPage.ir.signals        // 编译期 signal 声明
-__lania.compile().LoginPage.ir.slotAllocation // slot 分配：索引、类型、绑定
-__lania.compile().LoginPage.ir.updaterGeneration // updater 规划：deps、目标 slot、优先级
-__lania.compile().LoginPage.renderPlan        // 最终渲染计划
-__lania.snapshot()                            // 每个 signal 的 set 次数、每个 updater 的 run 次数
-console.table(__lania.snapshot().updaters)    // 交互后再执行一次，可直接对比计数变化
-__lania.trace.slice(-10)                      // 最近 10 条事件，含时间戳与 payload
-__lania.clear()                               // 清空计数与历史，便于重新观察一次交互
+__lania.compile().LoginPage.ir.signals; // 编译期 signal 声明
+__lania.compile().LoginPage.ir.slotAllocation; // slot 分配：索引、类型、绑定
+__lania.compile().LoginPage.ir.updaterGeneration; // updater 规划：deps、目标 slot、优先级
+__lania.compile().LoginPage.renderPlan; // 最终渲染计划
+__lania.snapshot(); // 每个 signal 的 set 次数、每个 updater 的 run 次数
+console.table(__lania.snapshot().updaters); // 交互后再执行一次，可直接对比计数变化
+__lania.trace.slice(-10); // 最近 10 条事件，含时间戳与 payload
+__lania.clear(); // 清空计数与历史，便于重新观察一次交互
 ```
 
 `Updater.run.dependencyIds` 对应 `__lania.snapshot().signals` 里的 `signalId`；`slots` 与 `ir.slotAllocation.slots` 的 `index` 一一对应，可据此把一次更新追溯到具体的 IR 绑定。

@@ -14,7 +14,11 @@ import {
   getAttributeStringValue,
   renderStaticTemplateFromExpression,
 } from '../helpers/template-helpers';
-import { lowerEachElement, lowerSwitchElement, lowerWhenElement } from './lower-conditions';
+import {
+  lowerEachElement,
+  lowerSwitchElement,
+  lowerWhenElement,
+} from './lower-conditions';
 import {
   lowerDynamicElement,
   lowerKeepAliveElement,
@@ -58,7 +62,9 @@ const getTransitionPayloadComponentConfig = (
   return componentName === 'TransitionGroup' ? { tagPropName: 'tag' } : {};
 };
 
-const collectMaxSlotIndex = (node: LowerTemplateResult['nodes'][number]): number => {
+const collectMaxSlotIndex = (
+  node: LowerTemplateResult['nodes'][number]
+): number => {
   // 块内部可能已经消耗了若干 slot（块内 `<When>` / `<Each>` / 文本 / 属性）。
   // 父级游标必须跳过这些编号，否则后续兄弟节点会复用同一 slotIndex 而互相覆盖。
   let max = 'slotIndex' in node ? node.slotIndex : -1;
@@ -68,7 +74,11 @@ const collectMaxSlotIndex = (node: LowerTemplateResult['nodes'][number]): number
       return;
     }
 
-    const candidate = current as { slotIndex?: number; children?: unknown[]; fallbackChildren?: unknown[] };
+    const candidate = current as {
+      slotIndex?: number;
+      children?: unknown[];
+      fallbackChildren?: unknown[];
+    };
 
     if (typeof candidate.slotIndex === 'number') {
       max = Math.max(max, candidate.slotIndex);
@@ -112,21 +122,34 @@ const lowerChildrenOnlyBoundaryAsDynamic = (
   }
 
   // children-only 组件在特定场景下不能被静态扁平化，需要保留成动态块占位。
-  const template = lowerTemplateChildren(child.children, [], 0, boundaryIndex + 1, 0, {
-    preserveChildrenOnlyEnhancedAsDynamic: true,
-  });
-  const payloadExpression = buildTransitionPayloadExpression(child, child.tagName, {
-    transitionIndex: boundaryIndex,
-    childTemplateHtml: template.staticHtml,
-  });
+  const template = lowerTemplateChildren(
+    child.children,
+    [],
+    0,
+    boundaryIndex + 1,
+    0,
+    {
+      preserveChildrenOnlyEnhancedAsDynamic: true,
+    }
+  );
+  const payloadExpression = buildTransitionPayloadExpression(
+    child,
+    child.tagName,
+    {
+      transitionIndex: boundaryIndex,
+      childTemplateHtml: template.staticHtml,
+    }
+  );
   const runtimePropsExpression = buildRuntimePropsExpression(child, ['props']);
   const transitionConfig = getTransitionPayloadComponentConfig(child.tagName);
   // 某些过渡组件还需要把包装标签一并带给 SSR / hydration。
   const transitionTagExpression = transitionConfig.tagPropName
-    ? getAttributeExpression(child, transitionConfig.tagPropName) ??
+    ? (getAttributeExpression(child, transitionConfig.tagPropName) ??
       (getAttributeStringValue(child, transitionConfig.tagPropName)
-        ? JSON.stringify(getAttributeStringValue(child, transitionConfig.tagPropName))
-        : undefined)
+        ? JSON.stringify(
+            getAttributeStringValue(child, transitionConfig.tagPropName)
+          )
+        : undefined))
     : undefined;
   const dynamicNode: DynamicIR = {
     type: 'DynamicIR',
@@ -171,7 +194,7 @@ const lowerTransitionElement = (
   );
   const fallbackExpression = getAttributeExpression(child, 'fallback');
   const fallbackTemplateHtml = fallbackExpression
-    ? renderStaticTemplateFromExpression(fallbackExpression) ?? undefined
+    ? (renderStaticTemplateFromExpression(fallbackExpression) ?? undefined)
     : undefined;
   const slotIndex = nextSlotIndex;
   // TransitionIR 负责占住 block slot；真实 child 结构则继续保存在 `children` 中供 payload/codegen 复用。
@@ -229,7 +252,7 @@ const lowerBoundaryElement = (
   );
   const fallbackExpression = getAttributeExpression(child, 'fallback');
   const fallbackTemplateHtml = fallbackExpression
-    ? renderStaticTemplateFromExpression(fallbackExpression) ?? undefined
+    ? (renderStaticTemplateFromExpression(fallbackExpression) ?? undefined)
     : undefined;
   const slotIndex = nextSlotIndex;
   // BoundaryIR 与 TransitionIR 的壳子很像，但运行时协议会走边界恢复/报错兜底逻辑。
@@ -272,7 +295,9 @@ export const lowerEnhancedComponent = (
   options: LowerTemplateOptions = {}
 ): LowerTemplateResult | null => {
   // 是否属于已注册的 enhanced component，决定是否进入特殊 lowering 分支。
-  const enhancedEntry = getEnhancedComponentRegistryEntry(context.child.tagName);
+  const enhancedEntry = getEnhancedComponentRegistryEntry(
+    context.child.tagName
+  );
 
   if (!enhancedEntry) {
     return null;
@@ -367,9 +392,17 @@ export const lowerEnhancedComponent = (
     }
     case 'ListIR': {
       // 列表节点在 lowering 时就折叠成一个独立 block slot。
-      const eachNode = lowerEachElement(context.child, context.path, context.slotIndex);
+      const eachNode = lowerEachElement(
+        context.child,
+        context.path,
+        context.slotIndex
+      );
       return eachNode
-        ? createSingleSlotLoweringResult(eachNode, context.slotIndex, context.boundaryIndex)
+        ? createSingleSlotLoweringResult(
+            eachNode,
+            context.slotIndex,
+            context.boundaryIndex
+          )
         : null;
     }
     case 'DynamicIR': {
@@ -381,7 +414,11 @@ export const lowerEnhancedComponent = (
         lowerTemplateChildren
       );
       return dynamicNode
-        ? createSingleSlotLoweringResult(dynamicNode, context.slotIndex, context.boundaryIndex)
+        ? createSingleSlotLoweringResult(
+            dynamicNode,
+            context.slotIndex,
+            context.boundaryIndex
+          )
         : null;
     }
     case 'TeleportIR': {
@@ -393,7 +430,11 @@ export const lowerEnhancedComponent = (
         lowerTemplateChildren
       );
       return teleportNode
-        ? createSingleSlotLoweringResult(teleportNode, context.slotIndex, context.boundaryIndex)
+        ? createSingleSlotLoweringResult(
+            teleportNode,
+            context.slotIndex,
+            context.boundaryIndex
+          )
         : null;
     }
     default:

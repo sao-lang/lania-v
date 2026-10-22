@@ -117,7 +117,10 @@ const normalizeJsxOpeningTag = (source: string): string => {
       if (isReactStyleEvent && source[cursor] === '.') {
         let modifierCursor = cursor;
 
-        while (modifierCursor < source.length && /[A-Za-z0-9_:\-.]/.test(source[modifierCursor])) {
+        while (
+          modifierCursor < source.length &&
+          /[A-Za-z0-9_:\-.]/.test(source[modifierCursor])
+        ) {
           modifierCursor += 1;
         }
 
@@ -132,7 +135,10 @@ const normalizeJsxOpeningTag = (source: string): string => {
       // 指令名允许 `model:value.trim` 这种点号后缀，整体纳入 token 后再统一转义。
       let tokenCursor = cursor;
 
-      while (tokenCursor < source.length && /[A-Za-z0-9_:\-.]/.test(source[tokenCursor])) {
+      while (
+        tokenCursor < source.length &&
+        /[A-Za-z0-9_:\-.]/.test(source[tokenCursor])
+      ) {
         tokenCursor += 1;
       }
 
@@ -145,7 +151,9 @@ const normalizeJsxOpeningTag = (source: string): string => {
 
       // 只有“看起来像属性名，且后面紧跟 =”时才转义，避免把普通标识符误处理。
       result +=
-        lookahead < source.length && source[lookahead] === '=' && token.includes('.')
+        lookahead < source.length &&
+        source[lookahead] === '=' &&
+        token.includes('.')
           ? escapeBindingNameForTsxParser(token)
           : baseToken;
       index = token.includes('.') ? tokenCursor : cursor;
@@ -179,7 +187,10 @@ const isLegacyTsxBindingToken = (token: string): boolean => {
   }
 
   const [eventCandidate] = token.split('.');
-  if (DOM_EVENT_NAMES.has(eventCandidate) || looksLikeLegacyEventBindingToken(token)) {
+  if (
+    DOM_EVENT_NAMES.has(eventCandidate) ||
+    looksLikeLegacyEventBindingToken(token)
+  ) {
     return true;
   }
 
@@ -220,7 +231,10 @@ const getLegacyTsxBindingSuggestion = (token: string): string => {
   }
 
   const [eventCandidate] = token.split('.');
-  if (DOM_EVENT_NAMES.has(eventCandidate) || looksLikeLegacyEventBindingToken(token)) {
+  if (
+    DOM_EVENT_NAMES.has(eventCandidate) ||
+    looksLikeLegacyEventBindingToken(token)
+  ) {
     return `Use React-style DOM events such as \`on${eventCandidate.charAt(0).toUpperCase()}${eventCandidate.slice(1)}={...}\`.`;
   }
 
@@ -300,7 +314,10 @@ const findLegacyTsxBindingToken = (source: string): string | null => {
 
           if (isIdentifierStart(tagChar)) {
             cursor += 1;
-            while (cursor < source.length && isIdentifierPart(source[cursor]!)) {
+            while (
+              cursor < source.length &&
+              isIdentifierPart(source[cursor]!)
+            ) {
               cursor += 1;
             }
             tagNameConsumed = true;
@@ -322,7 +339,11 @@ const findLegacyTsxBindingToken = (source: string): string | null => {
             lookahead += 1;
           }
 
-          if (lookahead < source.length && source[lookahead] === '=' && isLegacyTsxBindingToken(token)) {
+          if (
+            lookahead < source.length &&
+            source[lookahead] === '=' &&
+            isLegacyTsxBindingToken(token)
+          ) {
             return token;
           }
 

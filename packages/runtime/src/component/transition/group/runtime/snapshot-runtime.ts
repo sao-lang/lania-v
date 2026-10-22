@@ -16,10 +16,8 @@ import {
   createGroupState,
   createSnapPublisher,
   resolveGroupKeys,
-  type GroupCommitPublishInput,
 } from '../state/state';
 import {
-  bindPrevCommitRuntime,
   bindSnapDisplay,
   createSnapPhases,
   createSnapCommit,
@@ -47,7 +45,9 @@ import type {
 } from '../types';
 
 // 先创建一份可工作的默认 runtime，再由 bindSnapshotRuntime 补齐真实实现。
-export const createSnapshotRuntime = <TRenderable>(): GroupSnapshotRuntime<TRenderable> => {
+export const createSnapshotRuntime = <
+  TRenderable,
+>(): GroupSnapshotRuntime<TRenderable> => {
   return {
     ...createGroupRuntimeScaffold<
       TRenderable,
@@ -78,7 +78,13 @@ export const createSnapshotRuntime = <TRenderable>(): GroupSnapshotRuntime<TRend
     publishVisibleCommitState(context) {
       return createBaseCommitResult(context.previous);
     },
-    publishState({ keys, snapshots, container, leavingSnapshots, leaveVersion }) {
+    publishState({
+      keys,
+      snapshots,
+      container,
+      leavingSnapshots,
+      leaveVersion,
+    }) {
       // 默认实现只发布最朴素的 snapshot state，绑定后再替换成带 tag/stateKey 的正式发布器。
       return createGroupState({
         keys: [...keys],
@@ -91,7 +97,8 @@ export const createSnapshotRuntime = <TRenderable>(): GroupSnapshotRuntime<TRend
         activeBlocks: new Map(),
         leavingBlocks: new Map(),
         leavingSnapshots:
-          leavingSnapshots ?? new Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>(),
+          leavingSnapshots ??
+          new Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>(),
         leaveVersion: leaveVersion ?? 0,
       });
     },
@@ -192,7 +199,13 @@ export const bindSnapshotRuntime = <TRenderable>(options: {
   });
 
   runtime.dispatchPhases = dispatchSnapshotPhases;
-  runtime.publishState = ({ keys, snapshots, container, leavingSnapshots, leaveVersion }) => {
+  runtime.publishState = ({
+    keys,
+    snapshots,
+    container,
+    leavingSnapshots,
+    leaveVersion,
+  }) => {
     return publishSnapshotState({
       keys,
       snapshots,
@@ -202,7 +215,11 @@ export const bindSnapshotRuntime = <TRenderable>(options: {
     });
   };
   // 缺失的旧快照会在这里登记为 leaving snapshot，随后交给 hook 调度异步清理。
-  runtime.scheduleLeavingSnapshots = ({ state, keys, nextLeavingSnapshots }) => {
+  runtime.scheduleLeavingSnapshots = ({
+    state,
+    keys,
+    nextLeavingSnapshots,
+  }) => {
     return scheduleMissingSnaps({
       state,
       keys,

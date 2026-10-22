@@ -30,11 +30,15 @@ for await (const chunk of renderToStream(App, { title: 'hello' })) {
 ```ts
 import { renderToStringWithDeclarativeShadow } from '@lania-v/runtime';
 
-const html = renderToStringWithDeclarativeShadow(App, { title: 'hello' }, {
-  tagName: 'x-app',
-  styles: App.styles,
-  mode: 'open',
-});
+const html = renderToStringWithDeclarativeShadow(
+  App,
+  { title: 'hello' },
+  {
+    tagName: 'x-app',
+    styles: App.styles,
+    mode: 'open',
+  }
+);
 ```
 
 输出形态：
@@ -42,7 +46,9 @@ const html = renderToStringWithDeclarativeShadow(App, { title: 'hello' }, {
 ```html
 <x-app>
   <template shadowrootmode="open">
-    <style data-lania-ssr-style>...</style>
+    <style data-lania-ssr-style>
+      ...
+    </style>
     <!-- 组件 HTML -->
   </template>
 </x-app>
@@ -89,16 +95,16 @@ interface DeclarativeShadowComponentOptions {
 }
 ```
 
-| 选项 | 说明 |
-| --- | --- |
-| `tagName` | 自定义元素标签名 |
-| `mode` | shadow root 模式 |
-| `styles` | 内联进 shadow root 的静态样式 |
-| `delegatesFocus` | 输出 `shadowrootdelegatesfocus` |
-| `attributes` | 宿主 attribute |
-| `lightDom` | 宿主 light DOM，用于 `<slot>` 投影 |
-| `renderMode` | 覆盖组件声明的渲染模式 |
-| `inlineStyles` | light 模式是否内联样式 |
+| 选项             | 说明                               |
+| ---------------- | ---------------------------------- |
+| `tagName`        | 自定义元素标签名                   |
+| `mode`           | shadow root 模式                   |
+| `styles`         | 内联进 shadow root 的静态样式      |
+| `delegatesFocus` | 输出 `shadowrootdelegatesfocus`    |
+| `attributes`     | 宿主 attribute                     |
+| `lightDom`       | 宿主 light DOM，用于 `<slot>` 投影 |
+| `renderMode`     | 覆盖组件声明的渲染模式             |
+| `inlineStyles`   | light 模式是否内联样式             |
 
 ## 客户端接管 DSD
 
@@ -123,12 +129,16 @@ customElements.define('x-app', App);
 ```ts
 import { renderIsland, renderToStringAsIsland } from '@lania-v/runtime';
 
-const html = renderToStringAsIsland(SearchBox, { query: 'lania' }, {
-  tagName: 'x-search-box',
-  name: 'SearchBox',
-  priority: 'visible',
-  styles: SearchBox.styles,
-});
+const html = renderToStringAsIsland(
+  SearchBox,
+  { query: 'lania' },
+  {
+    tagName: 'x-search-box',
+    name: 'SearchBox',
+    priority: 'visible',
+    styles: SearchBox.styles,
+  }
+);
 ```
 
 输出元素会带上：
@@ -161,7 +171,8 @@ await hydrateIslands({
   root: document,
   components: {
     SearchBox,
-    HeavyChart: () => import('./HeavyChart.lania.tsx').then((mod) => mod.default),
+    HeavyChart: () =>
+      import('./HeavyChart.lania.tsx').then((mod) => mod.default),
   },
   priorities: ['eager', 'visible'],
   onHydrate: (record) => console.log('hydrated', record.name),
@@ -181,7 +192,10 @@ interface HydrateIslandsOptions {
   components?: Record<
     string,
     | CustomElementConstructor
-    | (() => CustomElementConstructor | void | Promise<CustomElementConstructor | void>)
+    | (() =>
+        | CustomElementConstructor
+        | void
+        | Promise<CustomElementConstructor | void>)
   >;
   priorities?: readonly ('eager' | 'idle' | 'visible' | 'interaction')[];
   onHydrate?: (record: IslandRecord) => void;
@@ -191,12 +205,12 @@ interface HydrateIslandsOptions {
 
 ### 四档优先级
 
-| 优先级 | 触发时机 |
-| --- | --- |
-| `eager` | 立即加载并水合 |
-| `idle` | `requestIdleCallback`，不支持时 `setTimeout(0)` |
-| `visible` | `IntersectionObserver` 进入视口 |
-| `interaction` | `pointerdown` / `focusin` / `click` |
+| 优先级        | 触发时机                                        |
+| ------------- | ----------------------------------------------- |
+| `eager`       | 立即加载并水合                                  |
+| `idle`        | `requestIdleCallback`，不支持时 `setTimeout(0)` |
+| `visible`     | `IntersectionObserver` 进入视口                 |
+| `interaction` | `pointerdown` / `focusin` / `click`             |
 
 非 `eager` island 的组件代码也会等到触发器执行时才加载，避免拖慢首屏。
 
@@ -228,10 +242,10 @@ MyComponent.renderMode = 'shadow' | 'light';
 MyComponent.hydration = 'eager' | 'manual';
 ```
 
-| 配置 | 默认 | 说明 |
-| --- | --- | --- |
-| `renderMode` | `shadow` | 渲染根 |
-| `hydration` | `eager` | 是否等待显式 `hydrate()` |
+| 配置         | 默认     | 说明                     |
+| ------------ | -------- | ------------------------ |
+| `renderMode` | `shadow` | 渲染根                   |
+| `hydration`  | `eager`  | 是否等待显式 `hydrate()` |
 
 `manual` 组件在 `hydrate()` 之前：
 

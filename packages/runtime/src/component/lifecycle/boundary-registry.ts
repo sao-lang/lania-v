@@ -47,8 +47,7 @@ export interface ErrorBoundaryState {
 }
 
 export type ErrorBoundaryFallback<TValue> =
-  | TValue
-  | ((error: unknown, reset: () => void) => TValue);
+  TValue | ((error: unknown, reset: () => void) => TValue);
 
 export interface SuspenseState {
   pending: Promise<unknown> | null;
@@ -139,7 +138,9 @@ export const readBoundaryComponent = (
     return null;
   }
   const component = candidate.component;
-  return component === 'LazyLoad' || component === 'ErrorBoundary' || component === 'Suspense'
+  return component === 'LazyLoad' ||
+    component === 'ErrorBoundary' ||
+    component === 'Suspense'
     ? component
     : null;
 };
@@ -163,7 +164,9 @@ export const resolveLazyOptions = (options: {
 }): ResolvedLazyLoadRuntimeOptions => {
   const payload = readBoundaryPayload(options.payload, 'LazyLoad');
   if (!payload) {
-    throw new Error('LazyLoad runtime execution requires a shared boundary payload.');
+    throw new Error(
+      'LazyLoad runtime execution requires a shared boundary payload.'
+    );
   }
   const keySource = readBoundaryMeta<PropertyKey | null>(payload, 'lazyKey');
   return {
@@ -181,9 +184,14 @@ export const resolveErrorOptions = (options: {
 }): ResolvedErrorBoundaryRuntimeOptions => {
   const payload = readBoundaryPayload(options.payload, 'ErrorBoundary');
   if (!payload) {
-    throw new Error('ErrorBoundary runtime execution requires a shared boundary payload.');
+    throw new Error(
+      'ErrorBoundary runtime execution requires a shared boundary payload.'
+    );
   }
-  const keySource = readBoundaryMeta<PropertyKey | null>(payload, 'boundaryKey');
+  const keySource = readBoundaryMeta<PropertyKey | null>(
+    payload,
+    'boundaryKey'
+  );
   return {
     payload,
     key: String(keySource ?? 'default'),
@@ -196,9 +204,14 @@ export const resolveSuspenseOptions = (options: {
 }): ResolvedSuspenseRuntimeOptions => {
   const payload = readBoundaryPayload(options.payload, 'Suspense');
   if (!payload) {
-    throw new Error('Suspense runtime execution requires a shared boundary payload.');
+    throw new Error(
+      'Suspense runtime execution requires a shared boundary payload.'
+    );
   }
-  const keySource = readBoundaryMeta<PropertyKey | null>(payload, 'suspenseKey');
+  const keySource = readBoundaryMeta<PropertyKey | null>(
+    payload,
+    'suspenseKey'
+  );
   return {
     payload,
     key: String(keySource ?? 'default'),
@@ -315,7 +328,9 @@ export const runLazyLoad = <TValue>(options: {
   }
 
   if (!state.visible || observeWhileVisible) {
-    const target = state.visible ? observeVisibleTarget : observeInvisibleTarget;
+    const target = state.visible
+      ? observeVisibleTarget
+      : observeInvisibleTarget;
     if (target) {
       observeLazyTarget(
         state,
@@ -351,7 +366,8 @@ export const executeLazyBoundary = <TValue>(options: {
   const state = getLazyLoadState(runtimeOptions.key);
   const { host } = options;
   const observeInvisibleTarget = host.observeInvisibleTarget ?? state.sentinel;
-  const observeVisibleTarget = host.observeVisibleTarget ?? observeInvisibleTarget;
+  const observeVisibleTarget =
+    host.observeVisibleTarget ?? observeInvisibleTarget;
   return runLazyLoad({
     runtimeOptions,
     state,

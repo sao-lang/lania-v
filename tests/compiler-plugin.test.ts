@@ -75,7 +75,10 @@ function PluginHost() {
 }
 `.trim();
 
-    const moduleCode = compileFunctionComponentTsxToModule('PluginHost.tsx', source);
+    const moduleCode = compileFunctionComponentTsxToModule(
+      'PluginHost.tsx',
+      source
+    );
 
     expect(moduleCode).toContain('LazyHello = lazy(');
     expect(moduleCode).toContain('component: this.LazyHello');
@@ -94,12 +97,23 @@ function PluginHost() {
 `.trim();
 
     const compiled = compileFunctionComponentTsx('PluginHost.tsx', source);
-    const emitted = emitFunctionComponentTsxModule('PluginHost.tsx', source, compiled);
-    const moduleCode = compileFunctionComponentTsxToModule('PluginHost.tsx', source);
+    const emitted = emitFunctionComponentTsxModule(
+      'PluginHost.tsx',
+      source,
+      compiled
+    );
+    const moduleCode = compileFunctionComponentTsxToModule(
+      'PluginHost.tsx',
+      source
+    );
 
     expect(emitted.preambleCode).toContain("import helper from './helper';");
-    expect(emitted.preambleCode).not.toContain("from '@lania-v/runtime/reactivity'");
-    expect(emitted.moduleCode).toContain("import * as __lania from '@lania-v/runtime';");
+    expect(emitted.preambleCode).not.toContain(
+      "from '@lania-v/runtime/reactivity'"
+    );
+    expect(emitted.moduleCode).toContain(
+      "import * as __lania from '@lania-v/runtime';"
+    );
     expect(emitted.moduleCode).toContain('export default PluginHost;');
     expect(moduleCode).toBe(emitted.moduleCode);
   });

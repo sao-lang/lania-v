@@ -33,10 +33,7 @@ export const createActiveState = <
 };
 
 // 彻底清空 active state，本地状态和 bucket 状态解耦后都统一回到 null。
-export const resetActiveState = <
-  TEntry extends KeepAliveBucketEntry,
-  TValue,
->(
+export const resetActiveState = <TEntry extends KeepAliveBucketEntry, TValue>(
   state: KeepAliveActiveState<TEntry, TValue>
 ): void => {
   state.bucket = null;
@@ -133,7 +130,9 @@ export const createRuntimeState = <
 };
 
 // uncached 分支只需要记住“当前是否有一个未缓存实例在手上”。
-export const createUncachedState = <TInstance>(): KeepAliveUncachedState<TInstance> => {
+export const createUncachedState = <
+  TInstance,
+>(): KeepAliveUncachedState<TInstance> => {
   return {
     current: null,
   };
@@ -151,7 +150,8 @@ export const createBucketStore = <TEntry extends KeepAliveBucketEntry>(): Map<
 // 它放在 bucket helper 之后声明，避免初始化时触发 TDZ。
 export type SharedKeepAliveValue = readonly Node[];
 export type SharedKeepAliveInstance = KeepAliveInstance<SharedKeepAliveValue>;
-export type SharedKeepAliveEntry = KeepAliveInstanceEntry<SharedKeepAliveInstance>;
+export type SharedKeepAliveEntry =
+  KeepAliveInstanceEntry<SharedKeepAliveInstance>;
 
 const sharedKeepAliveRuntimeState = createRuntimeState<
   SharedKeepAliveValue,
@@ -160,7 +160,8 @@ const sharedKeepAliveRuntimeState = createRuntimeState<
 >();
 
 export const sharedKeepAliveBuckets = sharedKeepAliveRuntimeState.buckets;
-export const sharedKeepAliveEntryLifecycle = sharedKeepAliveRuntimeState.lifecycle;
+export const sharedKeepAliveEntryLifecycle =
+  sharedKeepAliveRuntimeState.lifecycle;
 
 export const __resetSharedKeepAliveStateForTests = (): void => {
   sharedKeepAliveRuntimeState.reset();
@@ -192,7 +193,9 @@ export const getKeepAliveBucket = <TEntry extends KeepAliveBucketEntry>(
 export const readKeepAliveActiveEntry = <TEntry extends KeepAliveBucketEntry>(
   bucket: KeepAliveBucket<TEntry>
 ): TEntry | null => {
-  return bucket.activeKey === null ? null : bucket.entries.get(bucket.activeKey) ?? null;
+  return bucket.activeKey === null
+    ? null
+    : (bucket.entries.get(bucket.activeKey) ?? null);
 };
 
 // touch 的实现很简单：删后再插，借助 Map 的插入顺序表达“最近使用”。

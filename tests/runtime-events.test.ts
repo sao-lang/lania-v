@@ -51,10 +51,18 @@ describe('runtime events', () => {
 
   it('keeps reserved modifiers off the keyboard-key fallback', () => {
     // 键盘事件上的普通词会被当作键位，但 once/immediate/鼠标键等必须保持原义。
-    expect(parseEventBindingName('keydown.immediate')?.modifiers).toEqual(['immediate']);
-    expect(parseEventBindingName('keydown.passive')?.modifiers).toEqual(['passive']);
-    expect(parseEventBindingName('keydown.right')?.modifiers).toEqual(['button:right']);
-    expect(parseEventBindingName('pointerdown.right')?.modifiers).toEqual(['button:right']);
+    expect(parseEventBindingName('keydown.immediate')?.modifiers).toEqual([
+      'immediate',
+    ]);
+    expect(parseEventBindingName('keydown.passive')?.modifiers).toEqual([
+      'passive',
+    ]);
+    expect(parseEventBindingName('keydown.right')?.modifiers).toEqual([
+      'button:right',
+    ]);
+    expect(parseEventBindingName('pointerdown.right')?.modifiers).toEqual([
+      'button:right',
+    ]);
   });
 
   it('applies stop and prevent modifiers before invoking the handler', () => {
@@ -89,13 +97,21 @@ describe('runtime events', () => {
     const selfHandler = vi.fn();
     const selfWrapped = withEventModifiers(selfHandler, ['self']);
     const currentTarget = document.createElement('button');
-    selfWrapped?.({ target: document.createElement('span'), currentTarget } as unknown as Event);
+    selfWrapped?.({
+      target: document.createElement('span'),
+      currentTarget,
+    } as unknown as Event);
     selfWrapped?.({ target: currentTarget, currentTarget } as unknown as Event);
 
     const keyHandler = vi.fn();
-    const keyWrapped = withEventModifiers(keyHandler, ['key:enter', 'system:ctrl']);
+    const keyWrapped = withEventModifiers(keyHandler, [
+      'key:enter',
+      'system:ctrl',
+    ]);
     keyWrapped?.(new KeyboardEvent('keydown', { key: 'Enter' }));
-    keyWrapped?.(new KeyboardEvent('keydown', { key: 'Escape', ctrlKey: true }));
+    keyWrapped?.(
+      new KeyboardEvent('keydown', { key: 'Escape', ctrlKey: true })
+    );
     keyWrapped?.(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }));
 
     expect(selfHandler).toHaveBeenCalledTimes(1);
@@ -120,11 +136,10 @@ describe('runtime events', () => {
 
     slot.write(vi.fn());
 
-    expect(addSpy).toHaveBeenCalledWith(
-      'click',
-      expect.any(Function),
-      { once: true, passive: true }
-    );
+    expect(addSpy).toHaveBeenCalledWith('click', expect.any(Function), {
+      once: true,
+      passive: true,
+    });
 
     slot.destroy();
     addSpy.mockRestore();
@@ -189,7 +204,9 @@ describe('runtime events', () => {
     slot.write(handler);
     button.click();
 
-    expect(addSpy).toHaveBeenCalledWith('click', expect.any(Function), { capture: true });
+    expect(addSpy).toHaveBeenCalledWith('click', expect.any(Function), {
+      capture: true,
+    });
     expect(handler).toHaveBeenCalledTimes(1);
 
     slot.destroy();
@@ -288,14 +305,18 @@ describe('runtime events', () => {
     vi.useFakeTimers();
     try {
       const debounced = vi.fn();
-      const debouncedHandler = withEventHint(debounced, 'debounce', [], { debounceMs: 20 })!;
+      const debouncedHandler = withEventHint(debounced, 'debounce', [], {
+        debounceMs: 20,
+      })!;
       debouncedHandler(new MouseEvent('input'));
       debouncedHandler(new MouseEvent('input'));
       vi.advanceTimersByTime(20);
       expect(debounced).toHaveBeenCalledTimes(1);
 
       const throttled = vi.fn();
-      const throttledHandler = withEventHint(throttled, 'throttle', [], { throttleMs: 20 })!;
+      const throttledHandler = withEventHint(throttled, 'throttle', [], {
+        throttleMs: 20,
+      })!;
       throttledHandler(new MouseEvent('input'));
       throttledHandler(new MouseEvent('input'));
       expect(throttled).toHaveBeenCalledTimes(1);
@@ -310,7 +331,9 @@ describe('runtime events', () => {
     vi.useFakeTimers();
     try {
       const handler = vi.fn();
-      const wrapped = withEventHint(handler, 'debounce', ['prevent'], { debounceMs: 10 })!;
+      const wrapped = withEventHint(handler, 'debounce', ['prevent'], {
+        debounceMs: 10,
+      })!;
       const preventDefault = vi.fn();
 
       wrapped({ preventDefault } as unknown as Event);

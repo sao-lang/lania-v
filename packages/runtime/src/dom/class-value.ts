@@ -59,7 +59,10 @@ export const normalizeClassValue = (value: unknown): string => {
   return tokens.join(' ');
 };
 
-export const mergeClassValues = (baseValue: unknown, dynamicValue: unknown): string => {
+export const mergeClassValues = (
+  baseValue: unknown,
+  dynamicValue: unknown
+): string => {
   return normalizeClassValue([baseValue, dynamicValue]);
 };
 

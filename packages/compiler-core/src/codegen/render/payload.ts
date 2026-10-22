@@ -25,13 +25,18 @@ export const collectChildPayloadHoists = (
   seen = new Set<string>()
 ): string[] => {
   const hoists: string[] = [];
-  const pushTemplateHoist = (name: string | undefined, html: string | undefined): void => {
+  const pushTemplateHoist = (
+    name: string | undefined,
+    html: string | undefined
+  ): void => {
     if (!name || typeof html !== 'string' || seen.has(name)) {
       return;
     }
     seen.add(name);
     // payload 子树引用到的静态模板也必须在组件类作用域中 hoist，否则运行时拿不到。
-    hoists.push(`const ${name} = createStaticTemplate(${JSON.stringify(html)});`);
+    hoists.push(
+      `const ${name} = createStaticTemplate(${JSON.stringify(html)});`
+    );
   };
 
   nodes.forEach((node) => {
@@ -41,7 +46,9 @@ export const collectChildPayloadHoists = (
         pushTemplateHoist(node.hoistName, node.templateHtml);
         pushTemplateHoist(node.fallbackHoistName, node.fallbackTemplateHtml);
         hoists.push(...collectChildPayloadHoists(node.children ?? [], seen));
-        hoists.push(...collectChildPayloadHoists(node.fallbackChildren ?? [], seen));
+        hoists.push(
+          ...collectChildPayloadHoists(node.fallbackChildren ?? [], seen)
+        );
         return;
       case 'ListIR':
         // 列表块的 item / keyed item / fallback 模板都可能在运行时被单独引用。
@@ -102,7 +109,9 @@ const matchesStoreBinding = (expression: string, binding: string): boolean => {
   }
 
   const accessPath = segments
-    .map((segment) => (typeof segment === 'number' ? `[${segment}]` : `.${segment}`))
+    .map((segment) =>
+      typeof segment === 'number' ? `[${segment}]` : `.${segment}`
+    )
     .join('');
   return expression.includes(`${target}${accessPath}`);
 };
@@ -142,12 +151,16 @@ export const collectChildPayloadDependencyKeys = (
       case 'IfIR':
         // 条件表达式和两个分支内部都可能继续访问响应式值。
         tryCollect(node.expression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
-          keys.add(key)
-        );
-        collectChildPayloadDependencyKeys(node.fallbackChildren ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
-          keys.add(key)
-        );
+        collectChildPayloadDependencyKeys(
+          node.children ?? [],
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
+        collectChildPayloadDependencyKeys(
+          node.fallbackChildren ?? [],
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
         return;
       case 'ListIR':
         // 列表块对子项模板的依赖不在这里展开；这里只关心 iterable 表达式本身。
@@ -156,32 +169,44 @@ export const collectChildPayloadDependencyKeys = (
       case 'DynamicIR':
         tryCollect(node.componentExpression);
         tryCollect(node.propsExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
-          keys.add(key)
-        );
+        collectChildPayloadDependencyKeys(
+          node.children ?? [],
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
         return;
       case 'BoundaryIR':
       case 'TransitionIR':
         tryCollect(node.payloadExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
-          keys.add(key)
-        );
+        collectChildPayloadDependencyKeys(
+          node.children ?? [],
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
         return;
       case 'TeleportIR':
         tryCollect(node.targetExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
-          keys.add(key)
-        );
+        collectChildPayloadDependencyKeys(
+          node.children ?? [],
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
         return;
       case 'KeepAliveIR':
         tryCollect(node.payloadExpression);
-        collectChildPayloadDependencyKeys(node.children ?? [], signalBindingMap, storeBindingMap).forEach((key) =>
-          keys.add(key)
-        );
+        collectChildPayloadDependencyKeys(
+          node.children ?? [],
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
         return;
       case 'ElementIR':
         // 普通元素自己没有 block payload，但其内部动态子节点仍可能继续引用依赖。
-        collectChildPayloadDependencyKeys(node.children, signalBindingMap, storeBindingMap).forEach((key) => keys.add(key));
+        collectChildPayloadDependencyKeys(
+          node.children,
+          signalBindingMap,
+          storeBindingMap
+        ).forEach((key) => keys.add(key));
         return;
       default:
         return;
@@ -192,7 +217,9 @@ export const collectChildPayloadDependencyKeys = (
 };
 
 // 把模板子树转换为一组“可序列化的绑定描述对象源码”，供 block payload 在运行时延迟回放。
-export const renderChildPayloadBindings = (nodes: readonly TemplateIRNode[]): string[] => {
+export const renderChildPayloadBindings = (
+  nodes: readonly TemplateIRNode[]
+): string[] => {
   return nodes.flatMap((node) => {
     switch (node.type) {
       case 'ExpressionIR':

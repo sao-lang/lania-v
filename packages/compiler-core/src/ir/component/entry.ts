@@ -4,9 +4,7 @@ import type {
   LifecycleCallbackDeclaration,
   SetupBindingDeclaration,
 } from '../../ast';
-import {
-  createEmptyDependencyAnalysis,
-} from '../../analysis/dependency';
+import { createEmptyDependencyAnalysis } from '../../analysis/dependency';
 import {
   generateRenderCode,
   type RenderCodegenResult,
@@ -146,14 +144,16 @@ export const lowerComponentDeclarationToIR = (
         body: callback.body,
       })
     ),
-    setupBindings: component.setupBindings.map((binding: SetupBindingDeclaration) => ({
-      name: binding.name,
-      kind: binding.kind,
-      params: binding.params,
-      body: binding.body,
-      initializer: binding.initializer,
-      order: binding.order,
-    })),
+    setupBindings: component.setupBindings.map(
+      (binding: SetupBindingDeclaration) => ({
+        name: binding.name,
+        kind: binding.kind,
+        params: binding.params,
+        body: binding.body,
+        initializer: binding.initializer,
+        order: binding.order,
+      })
+    ),
     formAssociated: component.formAssociated ?? false,
     optionsSource: component.optionsSource,
     template: {
@@ -186,9 +186,13 @@ export const lowerComponentDeclarationToIR = (
   };
 };
 
-export const lowerProgramToComponentIR = (program: CompilerProgram): ComponentIR[] => {
+export const lowerProgramToComponentIR = (
+  program: CompilerProgram
+): ComponentIR[] => {
   // 程序级 lowering 只是把每个组件声明独立映射为组件 IR，保持一对一关系。
-  return program.body.map((component) => lowerComponentDeclarationToIR(program, component));
+  return program.body.map((component) =>
+    lowerComponentDeclarationToIR(program, component)
+  );
 };
 
 export const generateComponentRenderCode = (

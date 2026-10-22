@@ -48,9 +48,13 @@ export interface ModelSourceBinding<T = unknown> {
   modifiers?: ModelModifierOptions;
 }
 
-export type ModelBinding<T = unknown> = ModelTargetBinding<T> | ModelSourceBinding<T>;
+export type ModelBinding<T = unknown> =
+  ModelTargetBinding<T> | ModelSourceBinding<T>;
 
-export interface DirectiveDef<T = unknown, TElement extends HTMLElement = HTMLElement> {
+export interface DirectiveDef<
+  T = unknown,
+  TElement extends HTMLElement = HTMLElement,
+> {
   mounted?(el: TElement, value: T): void;
   updated?(el: TElement, value: T, oldValue: T | undefined): void;
   unmounted?(el: TElement): void;
@@ -65,7 +69,9 @@ export const registerDirective = <T = unknown>(
   directiveRegistry.set(name, directive as DirectiveDef<unknown, HTMLElement>);
 };
 
-export const resolveDirective = <T = unknown>(name: string): DirectiveDef<T> | undefined => {
+export const resolveDirective = <T = unknown>(
+  name: string
+): DirectiveDef<T> | undefined => {
   return directiveRegistry.get(name) as DirectiveDef<T> | undefined;
 };
 
@@ -74,7 +80,8 @@ export const clearDirectiveRegistry = (): void => {
 };
 
 export const applyBoundValue = (
-  target: HTMLElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+  target:
+    HTMLElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
   prop: string,
   value: unknown
 ): void => {
@@ -97,7 +104,11 @@ export const normalizeModelValue = (
     next = next.trim();
   }
 
-  if (typeof next === 'string' && next.length === 0 && modifiers.includes('empty')) {
+  if (
+    typeof next === 'string' &&
+    next.length === 0 &&
+    modifiers.includes('empty')
+  ) {
     return undefined;
   }
 
@@ -189,13 +200,23 @@ export const readModelModifiers = (
     return [];
   }
 
-  const modifiers = (['trim', 'number', 'lazy', 'checked', 'boolean', 'empty', 'debounce'] as const).filter(
-    (name) => binding.modifiers?.[name] === true
-  ) as ModelModifier[];
+  const modifiers = (
+    [
+      'trim',
+      'number',
+      'lazy',
+      'checked',
+      'boolean',
+      'empty',
+      'debounce',
+    ] as const
+  ).filter((name) => binding.modifiers?.[name] === true) as ModelModifier[];
   const debounceMs = readModelDebounceMs(binding);
 
   // `debounceMs` 随修饰符一起透传，运行时才能据此确定等待时间。
-  return debounceMs === undefined ? modifiers : [...modifiers, `debounceMs:${debounceMs}`];
+  return debounceMs === undefined
+    ? modifiers
+    : [...modifiers, `debounceMs:${debounceMs}`];
 };
 
 /** 读取 `debounce` 自定义等待时间，未配置时返回 undefined。 */
@@ -203,7 +224,9 @@ export const readModelDebounceMs = (
   binding: Pick<ModelBinding, 'modifiers'> | null | undefined
 ): number | undefined => {
   const value = binding?.modifiers?.debounceMs;
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
 };
 
 /** 从编译期静态修饰符列表（形如 `['debounce', 'debounceMs:120']`）解析等待时间。 */
@@ -221,10 +244,7 @@ export const parseModelDebounceModifier = (
   return undefined;
 };
 
-export class DirectiveSlot<
-  TValue,
-  TElement extends HTMLElement = HTMLElement,
-> {
+export class DirectiveSlot<TValue, TElement extends HTMLElement = HTMLElement> {
   private initialized = false;
   private previousValue: TValue | undefined;
 

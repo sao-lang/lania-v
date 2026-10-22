@@ -38,7 +38,9 @@ import type { OptimizationPassIR } from './types';
  */
 
 // 这里重新序列化静态属性，主要服务于某些优化后重新生成静态模板片段的场景。
-const renderStaticAttributes = (attributes: Record<string, string | true>): string => {
+const renderStaticAttributes = (
+  attributes: Record<string, string | true>
+): string => {
   const pairs = Object.entries(attributes).map(([name, value]) => {
     return value === true ? name : `${name}="${value}"`;
   });
@@ -47,7 +49,9 @@ const renderStaticAttributes = (attributes: Record<string, string | true>): stri
 };
 
 // 收集模板子树里所有可能参与优化分析的表达式源码。
-export const collectTemplateExpressions = (nodes: TemplateIRNode[]): string[] => {
+export const collectTemplateExpressions = (
+  nodes: TemplateIRNode[]
+): string[] => {
   return nodes.flatMap((node) => {
     switch (node.type) {
       case 'ElementIR':
@@ -66,7 +70,9 @@ export const collectTemplateExpressions = (nodes: TemplateIRNode[]): string[] =>
         return [
           node.expression,
           ...(node.children ? collectTemplateExpressions(node.children) : []),
-          ...(node.fallbackChildren ? collectTemplateExpressions(node.fallbackChildren) : []),
+          ...(node.fallbackChildren
+            ? collectTemplateExpressions(node.fallbackChildren)
+            : []),
         ];
       case 'DynamicIR':
         return [
@@ -75,7 +81,10 @@ export const collectTemplateExpressions = (nodes: TemplateIRNode[]): string[] =>
           ...(node.children ? collectTemplateExpressions(node.children) : []),
         ];
       case 'TeleportIR':
-        return [node.targetExpression, ...(node.children ? collectTemplateExpressions(node.children) : [])];
+        return [
+          node.targetExpression,
+          ...(node.children ? collectTemplateExpressions(node.children) : []),
+        ];
       case 'KeepAliveIR':
         return [
           node.payloadExpression,
@@ -93,7 +102,10 @@ export const collectUsedSignalNames = (component: ComponentIR): Set<string> => {
     ...collectTemplateExpressions(component.template.roots),
     ...component.computed.map((computed) => computed.expression ?? ''),
     ...component.effects.map((effect) => effect.body),
-    ...component.lifecycleCallbacks.flatMap((callback) => [callback.body ?? '', callback.params]),
+    ...component.lifecycleCallbacks.flatMap((callback) => [
+      callback.body ?? '',
+      callback.params,
+    ]),
     ...component.setupBindings.flatMap((binding) => [
       binding.body ?? '',
       binding.initializer ?? '',
@@ -110,7 +122,9 @@ export const collectUsedSignalNames = (component: ComponentIR): Set<string> => {
       new RegExp(`\\b${signal.name}\\.set\\(`),
     ];
 
-    if (sources.some((source) => patterns.some((pattern) => pattern.test(source)))) {
+    if (
+      sources.some((source) => patterns.some((pattern) => pattern.test(source)))
+    ) {
       // 这里宁可多算少量“可能用到”的 signal，也不冒险把真实依赖漏掉。
       usedSignals.add(signal.name);
     }
@@ -133,7 +147,10 @@ export const optimizeTemplateNodes = (
   staticSignals: Record<string, string>,
   insideBlockTemplate = false
 ): TemplateIRNode[] => {
-  const optimizeChildren = (children: TemplateIRNode[], insideBlock = insideBlockTemplate) => {
+  const optimizeChildren = (
+    children: TemplateIRNode[],
+    insideBlock = insideBlockTemplate
+  ) => {
     return optimizeTemplateNodes(
       children,
       component,
@@ -156,7 +173,11 @@ export const optimizeTemplateNodes = (
         dynamicAttributes: node.dynamicAttributes.map((attribute) => ({
           ...attribute,
           expression: applyComputedInlineToExpression(
-            applyStaticSignalInlineToExpression(attribute.expression, staticSignals, optimization),
+            applyStaticSignalInlineToExpression(
+              attribute.expression,
+              staticSignals,
+              optimization
+            ),
             component,
             usedComputed
           ),
@@ -164,7 +185,11 @@ export const optimizeTemplateNodes = (
         directives: node.directives.map((directive) => ({
           ...directive,
           expression: applyComputedInlineToExpression(
-            applyStaticSignalInlineToExpression(directive.expression, staticSignals, optimization),
+            applyStaticSignalInlineToExpression(
+              directive.expression,
+              staticSignals,
+              optimization
+            ),
             component,
             usedComputed
           ),
@@ -193,7 +218,11 @@ export const optimizeTemplateNodes = (
               ? node.payloadExpression
               : node.expression;
     const inlinedExpression = applyComputedInlineToExpression(
-      applyStaticSignalInlineToExpression(expressionSource, staticSignals, optimization),
+      applyStaticSignalInlineToExpression(
+        expressionSource,
+        staticSignals,
+        optimization
+      ),
       component,
       usedComputed
     );
@@ -244,7 +273,9 @@ export const optimizeTemplateNodes = (
       return {
         ...node,
         targetExpression: inlinedExpression,
-        children: node.children ? optimizeChildren(node.children, true) : undefined,
+        children: node.children
+          ? optimizeChildren(node.children, true)
+          : undefined,
       };
     }
 
@@ -262,11 +293,17 @@ export const optimizeTemplateNodes = (
           usedComputed
         ),
         propsExpression: applyComputedInlineToExpression(
-          applyStaticSignalInlineToExpression(node.propsExpression, staticSignals, optimization),
+          applyStaticSignalInlineToExpression(
+            node.propsExpression,
+            staticSignals,
+            optimization
+          ),
           component,
           usedComputed
         ),
-        children: node.children ? optimizeChildren(node.children, true) : undefined,
+        children: node.children
+          ? optimizeChildren(node.children, true)
+          : undefined,
       };
     }
 
@@ -275,7 +312,9 @@ export const optimizeTemplateNodes = (
       return {
         ...node,
         payloadExpression: inlinedExpression,
-        children: node.children ? optimizeChildren(node.children, true) : undefined,
+        children: node.children
+          ? optimizeChildren(node.children, true)
+          : undefined,
       };
     }
 
@@ -292,7 +331,9 @@ export const optimizeTemplateNodes = (
       const ifNode: IfIR = {
         ...node,
         expression: inlinedExpression,
-        children: node.children ? optimizeChildren(node.children, true) : undefined,
+        children: node.children
+          ? optimizeChildren(node.children, true)
+          : undefined,
         fallbackChildren: node.fallbackChildren
           ? optimizeChildren(node.fallbackChildren, true)
           : undefined,
@@ -305,7 +346,10 @@ export const optimizeTemplateNodes = (
   });
 };
 
-export const collectUsedSlotIndices = (nodes: TemplateIRNode[], used = new Set<number>()): Set<number> => {
+export const collectUsedSlotIndices = (
+  nodes: TemplateIRNode[],
+  used = new Set<number>()
+): Set<number> => {
   nodes.forEach((node) => {
     if (
       node.type === 'ExpressionIR' ||
@@ -339,9 +383,13 @@ export const collectUsedSlotIndices = (nodes: TemplateIRNode[], used = new Set<n
   return used;
 };
 
-export const buildSlotPackingMap = (nodes: TemplateIRNode[]): Record<number, number> => {
+export const buildSlotPackingMap = (
+  nodes: TemplateIRNode[]
+): Record<number, number> => {
   // slot packing 会把稀疏 slot 索引压紧成连续区间，减少后续运行时表的空洞。
-  const used = [...collectUsedSlotIndices(nodes)].sort((left, right) => left - right);
+  const used = [...collectUsedSlotIndices(nodes)].sort(
+    (left, right) => left - right
+  );
 
   return Object.fromEntries(used.map((slotIndex, index) => [slotIndex, index]));
 };

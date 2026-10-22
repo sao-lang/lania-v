@@ -39,18 +39,15 @@ export type EnhancedComponentName = (typeof ENHANCED_COMPONENT_NAMES)[number];
 export type EnhancedWhenBranchComponentName = 'Then' | 'Else';
 export type EnhancedSwitchBranchComponentName = 'Case' | 'Match' | 'Default';
 export type EnhancedBranchComponentName =
-  | EnhancedWhenBranchComponentName
-  | EnhancedSwitchBranchComponentName;
+  EnhancedWhenBranchComponentName | EnhancedSwitchBranchComponentName;
 export type EnhancedWhenBranchKind = 'truthy' | 'fallback';
 // 这类组件 SSR 时只渲染子节点本身，不会额外留下结构包装壳。
-export type StructuralChildrenOnlyEnhancedComponentName = 'Transition' | 'TransitionGroup';
+export type StructuralChildrenOnlyEnhancedComponentName =
+  'Transition' | 'TransitionGroup';
 
 // 组件类别主要用于编译层做语义分组与诊断提示。
 export type EnhancedComponentCategory =
-  | 'syntax'
-  | 'structure'
-  | 'structure-lifecycle'
-  | 'boundary';
+  'syntax' | 'structure' | 'structure-lifecycle' | 'boundary';
 
 // IR kind 描述该增强组件最终会在编译流水线落到哪类中间表示。
 export type EnhancedComponentIrKind =
@@ -133,7 +130,8 @@ const registryEntries = [
     supportsHydration: true,
     staticRenderMode: 'preserve',
     metadataPropNames: ['value', 'mode'],
-    notes: 'Value switch: either value lookup via <Case when> / <Default>, or boolean branches via <Match>.',
+    notes:
+      'Value switch: either value lookup via <Case when> / <Default>, or boolean branches via <Match>.',
   },
   {
     name: 'Case',
@@ -144,7 +142,8 @@ const registryEntries = [
     supportsHydration: false,
     staticRenderMode: 'flatten',
     metadataPropNames: [],
-    notes: 'Branch marker consumed by <Switch> lowering; `when` is the expected value.',
+    notes:
+      'Branch marker consumed by <Switch> lowering; `when` is the expected value.',
   },
   {
     name: 'Default',
@@ -210,7 +209,8 @@ const registryEntries = [
     supportsHydration: true,
     staticRenderMode: 'preserve',
     metadataPropNames: ['name', 'fallback'],
-    notes: 'Projects caller children through native/custom slot semantics or runtime fallback rendering.',
+    notes:
+      'Projects caller children through native/custom slot semantics or runtime fallback rendering.',
   },
   {
     name: 'Dynamic',
@@ -242,7 +242,8 @@ const registryEntries = [
       'onCache',
       'onEvict',
     ],
-    notes: 'Draft target is block-instance caching rather than renderable-value caching.',
+    notes:
+      'Draft target is block-instance caching rather than renderable-value caching.',
   },
   {
     name: 'Transition',
@@ -253,7 +254,8 @@ const registryEntries = [
     supportsHydration: true,
     staticRenderMode: 'children-only',
     metadataPropNames: ['name', 'transitionKey'],
-    notes: 'Lowered through dedicated TransitionIR while continuing to reuse structural host scheduling.',
+    notes:
+      'Lowered through dedicated TransitionIR while continuing to reuse structural host scheduling.',
   },
   {
     name: 'TransitionGroup',
@@ -264,7 +266,8 @@ const registryEntries = [
     supportsHydration: true,
     staticRenderMode: 'children-only',
     metadataPropNames: ['name', 'groupKey', 'tag'],
-    notes: 'Lowered through dedicated TransitionIR while continuing to reuse structural host scheduling.',
+    notes:
+      'Lowered through dedicated TransitionIR while continuing to reuse structural host scheduling.',
   },
   {
     name: 'LazyLoad',
@@ -275,7 +278,8 @@ const registryEntries = [
     supportsHydration: true,
     staticRenderMode: 'children-only',
     metadataPropNames: ['lazyKey', 'rootMargin', 'once', 'observe'],
-    notes: 'Boundary-style visibility switching with hydration-facing metadata.',
+    notes:
+      'Boundary-style visibility switching with hydration-facing metadata.',
   },
   {
     name: 'ErrorBoundary',
@@ -308,7 +312,8 @@ const registryEntries = [
     supportsHydration: true,
     staticRenderMode: 'preserve',
     metadataPropNames: ['value', 'fallback', 'error', 'delay'],
-    notes: 'Promise-driven dynamic block; renders fallback until the value resolves.',
+    notes:
+      'Promise-driven dynamic block; renders fallback until the value resolves.',
   },
   {
     name: 'Virtual',
@@ -352,7 +357,10 @@ const registryEntries = [
 ] as const satisfies readonly EnhancedComponentRegistryEntry[];
 
 // 额外构建 name -> entry 的字典，避免调用方重复线性扫描列表。
-const registryRecord = {} as Record<EnhancedComponentName, EnhancedComponentRegistryEntry>;
+const registryRecord = {} as Record<
+  EnhancedComponentName,
+  EnhancedComponentRegistryEntry
+>;
 
 registryEntries.forEach((entry) => {
   // 入口对象在注册阶段冻结，保证后续只读消费不会意外改写共享元数据。
@@ -379,7 +387,9 @@ const hasOwn = <TKey extends PropertyKey>(
   return Object.prototype.hasOwnProperty.call(value, key);
 };
 
-export const isEnhancedComponentName = (name: string): name is EnhancedComponentName => {
+export const isEnhancedComponentName = (
+  name: string
+): name is EnhancedComponentName => {
   // 通过字典成员测试做运行时类型收窄。
   return hasOwn(ENHANCED_COMPONENT_REGISTRY, name);
 };
@@ -411,7 +421,9 @@ export const getEnhancedWhenBranchKind = (
   name: string
 ): EnhancedWhenBranchKind | null => {
   // 非法名字返回 null，方便调用方直接做空值分支处理。
-  return isWhenBranchEnhancedComponentName(name) ? ENHANCED_WHEN_BRANCH_KINDS[name] : null;
+  return isWhenBranchEnhancedComponentName(name)
+    ? ENHANCED_WHEN_BRANCH_KINDS[name]
+    : null;
 };
 
 export const getRequiredEnhancedParentComponentName = (
@@ -419,7 +431,9 @@ export const getRequiredEnhancedParentComponentName = (
 ): EnhancedComponentName | null => {
   // 分支型语法糖依赖直接父组件语义，这里统一给模板诊断与解析层复用。
   return hasOwn(ENHANCED_COMPONENT_PARENT_REQUIREMENTS, name)
-    ? ENHANCED_COMPONENT_PARENT_REQUIREMENTS[name as EnhancedBranchComponentName]
+    ? ENHANCED_COMPONENT_PARENT_REQUIREMENTS[
+        name as EnhancedBranchComponentName
+      ]
     : null;
 };
 
@@ -428,7 +442,9 @@ export const createEnhancedParentRequirementErrorMessage = (
 ): string | null => {
   // 错误文案保持单点生成，便于诊断逻辑与测试断言共用。
   const parentName = getRequiredEnhancedParentComponentName(name);
-  return parentName ? `<${name}> can only be used as a direct child of <${parentName}>.` : null;
+  return parentName
+    ? `<${name}> can only be used as a direct child of <${parentName}>.`
+    : null;
 };
 
 const escapeRegExp = (value: string): string => {
@@ -436,11 +452,15 @@ const escapeRegExp = (value: string): string => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
-export const isEnhancedParentRequirementErrorMessage = (message: string): boolean => {
+export const isEnhancedParentRequirementErrorMessage = (
+  message: string
+): boolean => {
   // 通过复用统一错误文案模板，识别是否属于父子约束类诊断。
   return ENHANCED_COMPONENT_NAMES.some((name) => {
     const expectedMessage = createEnhancedParentRequirementErrorMessage(name);
-    return expectedMessage ? new RegExp(`^${escapeRegExp(expectedMessage)}$`).test(message) : false;
+    return expectedMessage
+      ? new RegExp(`^${escapeRegExp(expectedMessage)}$`).test(message)
+      : false;
   });
 };
 
@@ -448,10 +468,14 @@ export const getEnhancedComponentRegistryEntry = (
   name: string
 ): EnhancedComponentRegistryEntry | null => {
   // 未命中保留名时返回 null，而不是抛错，方便解析器渐进式探测。
-  return isEnhancedComponentName(name) ? ENHANCED_COMPONENT_REGISTRY[name] : null;
+  return isEnhancedComponentName(name)
+    ? ENHANCED_COMPONENT_REGISTRY[name]
+    : null;
 };
 
-export const getEnhancedComponentMetadataPropNames = (name: string): readonly string[] => {
+export const getEnhancedComponentMetadataPropNames = (
+  name: string
+): readonly string[] => {
   // 元数据属性列表由注册表统一维护，避免多个编译阶段自行硬编码。
   return getEnhancedComponentRegistryEntry(name)?.metadataPropNames ?? [];
 };
@@ -461,18 +485,26 @@ export const getEnhancedEventBackedMetadataPropNames = (
 ): readonly EnhancedEventBackedMetadataPropName[] => {
   // 约定所有 `onXxx` 元数据都会被当作事件型回调属性处理。
   return getEnhancedComponentMetadataPropNames(name).filter(
-    (propName): propName is EnhancedEventBackedMetadataPropName => propName.startsWith('on')
+    (propName): propName is EnhancedEventBackedMetadataPropName =>
+      propName.startsWith('on')
   );
 };
 
 export const isFlattenedEnhancedComponentName = (name: string): boolean => {
   // `flatten` 模式代表组件标签本身不会保留在静态输出中。
-  return getEnhancedComponentRegistryEntry(name)?.staticRenderMode === 'flatten';
+  return (
+    getEnhancedComponentRegistryEntry(name)?.staticRenderMode === 'flatten'
+  );
 };
 
-export const shouldRenderEnhancedComponentChildrenOnly = (name: string): boolean => {
+export const shouldRenderEnhancedComponentChildrenOnly = (
+  name: string
+): boolean => {
   // `children-only` 常用于过渡/边界类组件，它们保留语义但不输出自身壳层。
-  return getEnhancedComponentRegistryEntry(name)?.staticRenderMode === 'children-only';
+  return (
+    getEnhancedComponentRegistryEntry(name)?.staticRenderMode ===
+    'children-only'
+  );
 };
 
 export const isStructuralChildrenOnlyEnhancedComponentName = (

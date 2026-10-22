@@ -55,7 +55,7 @@ export interface CompiledTsxFunctionComponent {
 export const compileFunctionComponentTsx = (
   fileName: string,
   source: string,
-  options: CompilerPluginOptions = {},
+  options: CompilerPluginOptions = {}
 ): CompiledTsxFunctionComponent => {
   try {
     // 先把 TSX 源码压成统一 Program，再交给 compiler-core 继续做 lowering/codegen。
@@ -63,7 +63,9 @@ export const compileFunctionComponentTsx = (
     const pipeline = runComponentCompilerPipeline(parsed.program, options);
 
     if (pipeline.components.length === 0) {
-      throw new Error('Compiler pipeline did not produce a component artifact.');
+      throw new Error(
+        'Compiler pipeline did not produce a component artifact.'
+      );
     }
 
     // 一个文件可以声明多个组件，每个组件都会落成独立的类产物。
@@ -77,7 +79,8 @@ export const compileFunctionComponentTsx = (
     const entryIndex = parsed.components.findIndex(
       (component) => component.name === parsed.component.name
     );
-    const entryArtifact = pipeline.components[entryIndex] ?? pipeline.components[0]!;
+    const entryArtifact =
+      pipeline.components[entryIndex] ?? pipeline.components[0]!;
     const entryClass = componentClasses[entryIndex] ?? componentClasses[0]!;
 
     return {

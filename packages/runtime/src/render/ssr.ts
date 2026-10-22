@@ -182,7 +182,11 @@ const renderSSRTemplateHtml = (
     switch (binding.kind) {
       case 'text': {
         // 复用 DOM 渲染层的节点解析逻辑，避免 SSR 与 CSR 在路径含义上分叉。
-        const node = resolveTextSlotNode(mounted, binding.slotIndex, binding.path);
+        const node = resolveTextSlotNode(
+          mounted,
+          binding.slotIndex,
+          binding.path
+        );
         node.data = ssrEscapeHtml(evaluate(...args));
         return;
       }
@@ -194,9 +198,17 @@ const renderSSRTemplateHtml = (
         const nextValue = evaluate(...args);
         // `attr` 分支保留“属性语义”，不会像 prop 分支那样尝试模拟浏览器运行时 property 行为。
         if (binding.name === 'class') {
-          writeClassAttribute(node, nextValue, node.getAttribute('class') ?? '');
+          writeClassAttribute(
+            node,
+            nextValue,
+            node.getAttribute('class') ?? ''
+          );
         } else if (binding.name === 'style') {
-          writeStyleAttribute(node, nextValue, node.getAttribute('style') ?? '');
+          writeStyleAttribute(
+            node,
+            nextValue,
+            node.getAttribute('style') ?? ''
+          );
         } else if (nextValue == null || nextValue === false) {
           node.removeAttribute(binding.name);
         } else {
@@ -219,7 +231,10 @@ const renderSSRTemplateHtml = (
         }
         const nextValue = evaluate(...args);
         const suffix = binding.unit ?? '';
-        node.style.setProperty(binding.name, nextValue == null ? '' : `${String(nextValue)}${suffix}`);
+        node.style.setProperty(
+          binding.name,
+          nextValue == null ? '' : `${String(nextValue)}${suffix}`
+        );
         return;
       }
       case 'prop': {
@@ -230,7 +245,10 @@ const renderSSRTemplateHtml = (
         const nextValue = evaluate(...args);
         // prop 序列化只覆盖对 HTML 首屏有意义的少数属性，避免伪造浏览器完整 property 副作用。
         if (binding.name === 'value') {
-          node.setAttribute('value', nextValue == null ? '' : String(nextValue));
+          node.setAttribute(
+            'value',
+            nextValue == null ? '' : String(nextValue)
+          );
         } else if (binding.name === 'checked' || binding.name === 'selected') {
           if (nextValue) {
             node.setAttribute(binding.name, '');
@@ -256,7 +274,9 @@ const mergeBoundaryMeta = (
   metadataPatch: Record<string, unknown>
 ): unknown => {
   if (isEnhancedBlockPayload(payloadOrMetadata)) {
-    const baseMetadata = isRecord(payloadOrMetadata.metadata) ? payloadOrMetadata.metadata : {};
+    const baseMetadata = isRecord(payloadOrMetadata.metadata)
+      ? payloadOrMetadata.metadata
+      : {};
 
     return {
       ...payloadOrMetadata,
@@ -295,7 +315,11 @@ export const ssrRenderForSlot = (
       // 这种 keyed payload 直接复用调用方提供的 render 函数，不再走静态模板挂载桥。
       const html =
         items.length > 0
-          ? items.map((item, index) => ssrNormalizeOutput(value.render(item, index))).join('')
+          ? items
+              .map((item, index) =>
+                ssrNormalizeOutput(value.render(item, index))
+              )
+              .join('')
           : fallback;
       return ssrRenderBlockSlot(slotIndex, html, 'for');
     }
@@ -305,7 +329,12 @@ export const ssrRenderForSlot = (
       items.length > 0
         ? items
             .map((item, index) => {
-              const rendered = renderSSRTemplateHtml(value.template, value.bindings, item, index);
+              const rendered = renderSSRTemplateHtml(
+                value.template,
+                value.bindings,
+                item,
+                index
+              );
               // keyed-slots 需要给每个条目再包一层 for marker，便于 hydration 区分条目边界。
               return value.__lania_for === 'keyed-slots'
                 ? `<!--lania-for:start-->${rendered}<!--lania-for:end-->`
@@ -316,15 +345,23 @@ export const ssrRenderForSlot = (
     return ssrRenderBlockSlot(slotIndex, html, 'for');
   }
 
-  const html = Array.isArray(value) ? value.map((entry) => ssrNormalizeOutput(entry)).join('') : ssrNormalizeOutput(value);
+  const html = Array.isArray(value)
+    ? value.map((entry) => ssrNormalizeOutput(entry)).join('')
+    : ssrNormalizeOutput(value);
   return ssrRenderBlockSlot(slotIndex, html || fallback, 'for');
 };
 
-export const ssrRenderTextSlot = (slotIndex: number, value: unknown): string => {
+export const ssrRenderTextSlot = (
+  slotIndex: number,
+  value: unknown
+): string => {
   return ssrRenderBlockSlot(slotIndex, ssrEscapeHtml(value), 'text');
 };
 
-export const ssrRenderHtmlSlot = (slotIndex: number, value: unknown): string => {
+export const ssrRenderHtmlSlot = (
+  slotIndex: number,
+  value: unknown
+): string => {
   void slotIndex;
   return resolveHtmlBindingText(value);
 };
@@ -355,13 +392,11 @@ export const createSSRRenderContext = (): SSRRenderContext => {
       return `b${boundaryCounter}`;
     },
     registerTeleport(target, slotIndex, html) {
-      const record =
-        teleportContainers.get(target) ??
-        {
-          target,
-          htmlParts: [],
-          slotIndices: [],
-        };
+      const record = teleportContainers.get(target) ?? {
+        target,
+        htmlParts: [],
+        slotIndices: [],
+      };
       record.htmlParts.push(html);
       record.slotIndices.push(slotIndex);
       teleportContainers.set(target, record);
@@ -380,7 +415,9 @@ const resolveSSRRenderContext = (
   ctx: Record<string, unknown> | undefined
 ): SSRRenderContext | null => {
   const candidate = ctx?.[SSR_RENDER_CONTEXT_KEY];
-  return candidate && typeof candidate === 'object' ? (candidate as SSRRenderContext) : null;
+  return candidate && typeof candidate === 'object'
+    ? (candidate as SSRRenderContext)
+    : null;
 };
 
 export const attachSSRRenderContext = (
@@ -402,7 +439,9 @@ export const ssrRenderTeleportSlot = (
   metadata: Record<string, unknown> = {}
 ): string => {
   const normalizedTarget =
-    typeof target === 'string' && target.trim().length > 0 ? target.trim() : String(target ?? '');
+    typeof target === 'string' && target.trim().length > 0
+      ? target.trim()
+      : String(target ?? '');
   const renderContext = resolveSSRRenderContext(ctx);
   const slotMetadata = {
     ...metadata,
@@ -430,7 +469,9 @@ export const ssrRenderTeleportContainer = (
 ): string => {
   const renderContext = resolveSSRRenderContext(ctx);
   // 同一 target 的多个 teleport 片段在服务端按注册顺序拼接，保证输出顺序与渲染顺序一致。
-  return renderContext?.teleportContainers.get(target)?.htmlParts.join('') ?? '';
+  return (
+    renderContext?.teleportContainers.get(target)?.htmlParts.join('') ?? ''
+  );
 };
 
 export const ssrRenderAllTeleportContainers = (
@@ -459,8 +500,12 @@ export const ssrRenderSuspenseBoundary = (
 ): string => {
   const renderContext = resolveSSRRenderContext(ctx);
   const inputMetadata = isEnhancedBlockPayload(metadata)
-    ? (isRecord(metadata.metadata) ? metadata.metadata : {})
-    : (isRecord(metadata) ? metadata : {});
+    ? isRecord(metadata.metadata)
+      ? metadata.metadata
+      : {}
+    : isRecord(metadata)
+      ? metadata
+      : {};
   const boundaryId = inputMetadata.boundaryId
     ? String(inputMetadata.boundaryId)
     : (renderContext?.nextBoundaryId() ?? `b${slotIndex}`);
@@ -554,7 +599,9 @@ export const ssrDrainSuspenseChunks = async (
     return [];
   }
 
-  const settled = await Promise.all(renderContext.pendingSuspenseChunks.splice(0));
+  const settled = await Promise.all(
+    renderContext.pendingSuspenseChunks.splice(0)
+  );
   return settled.map((chunk) => {
     // drain 后返回的 patch 仍然包着独立 marker，客户端可以按 boundaryId 定位并局部替换。
     return [
@@ -568,7 +615,10 @@ export const ssrDrainSuspenseChunks = async (
 export const applySSRChunk = (root: Node, chunk: string): boolean => {
   const template = document.createElement('template');
   template.innerHTML = chunk;
-  const patchRecord = collectCommentBoundedNodes(template.content, SUSPENSE_PATCH_PATTERN)[0];
+  const patchRecord = collectCommentBoundedNodes(
+    template.content,
+    SUSPENSE_PATCH_PATTERN
+  )[0];
 
   if (!patchRecord) {
     return false;
@@ -593,16 +643,21 @@ export const applySSRChunk = (root: Node, chunk: string): boolean => {
 
   [...patchRecord.start.parentNode!.childNodes]
     .slice(
-      [...patchRecord.start.parentNode!.childNodes].indexOf(patchRecord.start) + 1,
+      [...patchRecord.start.parentNode!.childNodes].indexOf(patchRecord.start) +
+        1,
       [...patchRecord.start.parentNode!.childNodes].indexOf(patchRecord.end)
     )
     .forEach((node) => {
       // 这里 clone 一次，确保 patch 模板内容可安全复用于当前文档树。
-      boundaryRecord.end.parentNode?.insertBefore(node.cloneNode(true), boundaryRecord.end);
+      boundaryRecord.end.parentNode?.insertBefore(
+        node.cloneNode(true),
+        boundaryRecord.end
+      );
     });
 
   const boundaryMetadata = patchRecord.metadata;
-  const component = parseBoundaryMarker(boundaryRecord.start.data)?.component ?? 'Suspense';
+  const component =
+    parseBoundaryMarker(boundaryRecord.start.data)?.component ?? 'Suspense';
   // patch 应用完成后，顺手把 boundary 自己的 start/end marker metadata 也更新到最新状态。
   boundaryRecord.start.data = renderBoundaryMarker(
     patchRecord.id,
@@ -619,7 +674,10 @@ export const applySSRChunk = (root: Node, chunk: string): boolean => {
   return true;
 };
 
-export const ssrEvaluate = (expression: string, ctx: Record<string, unknown> = {}): unknown => {
+export const ssrEvaluate = (
+  expression: string,
+  ctx: Record<string, unknown> = {}
+): unknown => {
   // SSR 表达式求值沿用模板运行时的 `with (ctx)` 约定，保持编译输出可直接复用。
   const evaluator = new Function(
     'ctx',

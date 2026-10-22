@@ -31,7 +31,13 @@ import {
 import { applyHtml } from '../../html-value';
 import { queueRefWrite, type RefBinding } from '../../ref';
 import { warning } from '../../../core/debug';
-import { ClassSlot, EventSlot, FAST_DOM_PROPERTY_RESET_VALUES, StyleSlot, type Slot } from '../core';
+import {
+  ClassSlot,
+  EventSlot,
+  FAST_DOM_PROPERTY_RESET_VALUES,
+  StyleSlot,
+  type Slot,
+} from '../core';
 import type { RetainedSlotLifecycle } from '../template/template-types';
 
 export interface DynamicEventBinding {
@@ -48,7 +54,16 @@ export interface DynamicEventBinding {
 }
 
 export interface DynamicDirectiveBinding {
-  kind: 'bind' | 'model' | 'html' | 'class' | 'style' | 'use' | 'ref' | 'unknown' | 'if';
+  kind:
+    | 'bind'
+    | 'model'
+    | 'html'
+    | 'class'
+    | 'style'
+    | 'use'
+    | 'ref'
+    | 'unknown'
+    | 'if';
   name: string;
   value: unknown;
   modifiers: readonly string[];
@@ -60,7 +75,9 @@ export interface UseDirectiveBindingValue {
   value: unknown;
 }
 
-const looksLikeDirectiveDef = (value: unknown): value is DirectiveDef<unknown, HTMLElement> => {
+const looksLikeDirectiveDef = (
+  value: unknown
+): value is DirectiveDef<unknown, HTMLElement> => {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -79,12 +96,16 @@ const looksLikeDirectiveDef = (value: unknown): value is DirectiveDef<unknown, H
 };
 
 // 编译期约定的动态事件数组挂在私有字段上，运行时这里只做安全读取。
-export const readDynamicEvents = (props: Record<string, unknown>): DynamicEventBinding[] => {
+export const readDynamicEvents = (
+  props: Record<string, unknown>
+): DynamicEventBinding[] => {
   const value = props.__lania_events;
   return Array.isArray(value) ? (value as DynamicEventBinding[]) : [];
 };
 
-export const readDynamicDirectives = (props: Record<string, unknown>): DynamicDirectiveBinding[] => {
+export const readDynamicDirectives = (
+  props: Record<string, unknown>
+): DynamicDirectiveBinding[] => {
   const value = props.__lania_directives;
   // 与动态事件同理，私有字段只作为编译产物到运行时之间的内部协议，不暴露额外解析语义。
   return Array.isArray(value) ? (value as DynamicDirectiveBinding[]) : [];
@@ -171,11 +192,7 @@ export class UseDirectiveSlot implements Slot<unknown>, RetainedSlotLifecycle {
 
     if (definitionChanged) {
       this.inner?.destroy();
-      this.inner = new RawDirectiveSlot(
-        this.node,
-        this.currentDef,
-        this.index
-      );
+      this.inner = new RawDirectiveSlot(this.node, this.currentDef, this.index);
     }
 
     if (!this.inner) {
@@ -255,7 +272,10 @@ export class UseDirectiveSlot implements Slot<unknown>, RetainedSlotLifecycle {
     }
 
     if (binding.value && typeof binding.value === 'object') {
-      warning('Inline use directive definition is invalid. Expected a DirectiveDef with mounted/updated/unmounted handlers.', false);
+      warning(
+        'Inline use directive definition is invalid. Expected a DirectiveDef with mounted/updated/unmounted handlers.',
+        false
+      );
     }
 
     return null;
@@ -362,12 +382,19 @@ export class ModelBindingSlot implements Slot<unknown> {
     const prop = binding.prop ?? this.name;
     const modifiers = readModelModifiers(binding);
     // 运行时修饰符优先读 binding 自带配置；没有时再回退到编译期静态 modifiers。
-    const mergedModifiers = modifiers.length > 0 ? modifiers : [...this.modifiers];
+    const mergedModifiers =
+      modifiers.length > 0 ? modifiers : [...this.modifiers];
     // 运行时没显式配置时，回退到编译期静态的 `debounceMs`。
-    const debounceMs = readModelDebounceMs(binding) ?? parseModelDebounceModifier(mergedModifiers);
+    const debounceMs =
+      readModelDebounceMs(binding) ??
+      parseModelDebounceModifier(mergedModifiers);
     const eventName = this.resolveEventName(prop, mergedModifiers);
 
-    if ('target' in binding && typeof binding.target === 'function' && 'set' in binding.target) {
+    if (
+      'target' in binding &&
+      typeof binding.target === 'function' &&
+      'set' in binding.target
+    ) {
       return {
         get: binding.target,
         set: binding.target.set,
@@ -398,8 +425,13 @@ export class ModelBindingSlot implements Slot<unknown> {
   }
 
   /** 由最终 prop 与修饰符推导监听事件：`checked` / `lazy` 用 `change`，其余用 `input`。 */
-  private resolveEventName(prop: string, modifiers: readonly ModelModifier[]): string {
-    return prop === 'checked' || modifiers.includes('lazy') ? 'change' : 'input';
+  private resolveEventName(
+    prop: string,
+    modifiers: readonly ModelModifier[]
+  ): string {
+    return prop === 'checked' || modifiers.includes('lazy')
+      ? 'change'
+      : 'input';
   }
 
   private getModelEventHandler(binding: {
@@ -477,7 +509,11 @@ export class DirectiveBindingSlot implements Slot<unknown> {
     }
 
     // 对常见 DOM property 走 property 写入，可同步保留 attribute 的清理语义。
-    applyBoundValue(this.node, this.name, value == null || value === false ? resetValue : value);
+    applyBoundValue(
+      this.node,
+      this.name,
+      value == null || value === false ? resetValue : value
+    );
     if (value == null || value === false) {
       this.node.removeAttribute(this.name);
     }
@@ -530,7 +566,9 @@ export class DirectiveBindingSlot implements Slot<unknown> {
   }
 }
 
-export class RefSlot<T> implements Slot<RefBinding<T> | null | undefined>, RetainedSlotLifecycle {
+export class RefSlot<T>
+  implements Slot<RefBinding<T> | null | undefined>, RetainedSlotLifecycle
+{
   readonly type = 'ref';
   readonly frequency = 'low';
   private currentRef: RefBinding<T> | null | undefined;

@@ -7,9 +7,7 @@
 
 /** 输入源码的来源类型。 */
 export type CompilerSourceKind =
-  | 'tsx-class-component'
-  | 'tsx-function-component'
-  | 'sfc';
+  'tsx-class-component' | 'tsx-function-component' | 'sfc';
 
 /** 单个源码文件的顶层编译结果。 */
 export interface CompilerProgram {

@@ -40,7 +40,9 @@ const toApiError = (error: unknown): ApiError => {
 
   // 只有真正没有拿到响应（DNS / 连接被拒 / 超时）才提示“连不上”，
   // 否则优先透出后端返回的 msg，避免把 500 误报成网络故障。
-  const isNetworkFailure = !err.response && (err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED');
+  const isNetworkFailure =
+    !err.response &&
+    (err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED');
   const message =
     (typeof envelope?.msg === 'string' && envelope.msg.trim()) ||
     (isNetworkFailure ? networkMessage : err.message || '请求失败，请稍后重试');
@@ -76,7 +78,11 @@ const client = new AxiosWrapper(
         throw new ApiError('响应格式异常', res.status, res.status);
       }
       if (!envelope.success) {
-        throw new ApiError(envelope.msg || '请求失败', envelope.code, envelope.code);
+        throw new ApiError(
+          envelope.msg || '请求失败',
+          envelope.code,
+          envelope.code
+        );
       }
       res.data = envelope.data;
       return res;

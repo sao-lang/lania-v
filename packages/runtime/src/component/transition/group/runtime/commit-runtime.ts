@@ -8,10 +8,7 @@
  *
  * 因为 snapshot 与 dom-host 共享很多“提交外壳”，这里主要做的是流程编排而不是具体渲染。
  */
-import {
-  type BasePrevApplier,
-} from '../../runtime';
-import type { GroupHookContext } from '../../registry';
+import { type BasePrevApplier } from '../../runtime';
 import { getTransitionGroupState } from '../state/store';
 import {
   createDomInput,
@@ -20,7 +17,6 @@ import {
 } from '../state/state';
 import {
   createDisplayInput,
-  createPrevCommitResult,
   createLeavingCommitInput,
   createCommitPublishContext,
   createCommitPublishInput,
@@ -34,9 +30,7 @@ import {
   renderDomResult,
 } from '../render/visible';
 import {
-  type GroupCommitInput,
   type GroupDomHostRuntime,
-  type GroupLeavingSnapshot,
   type GroupPhaseEnabled,
   type GroupPhaseHooks,
   type GroupSnapshotRuntime,
@@ -152,7 +146,10 @@ export const createSnapDisplay = <TRenderable>(
 
 export const createSnapPrevDisplay = <TRenderable>(options: {
   context: GroupPrevCommitContext<TRenderable>;
-  state: Pick<TransitionGroupState<TRenderable>, 'snapshots' | 'leavingSnapshots'>;
+  state: Pick<
+    TransitionGroupState<TRenderable>,
+    'snapshots' | 'leavingSnapshots'
+  >;
 }): GroupDisplayInput<TRenderable> => {
   const { context, state } = options;
   return createDisplayInput({
@@ -174,7 +171,10 @@ export const createSnapLeavingDisplay = <TRenderable>(
 export const commitSnapshotLeaving = <TRenderable>(options: {
   runtime: Pick<
     GroupSnapshotRuntime<TRenderable>,
-    'getPrevious' | 'scheduleLeavingSnapshots' | 'publishState' | 'renderDisplay'
+    | 'getPrevious'
+    | 'scheduleLeavingSnapshots'
+    | 'publishState'
+    | 'renderDisplay'
   >;
 }): TRenderable[] | HTMLElement | null => {
   const { runtime } = options;
@@ -189,10 +189,12 @@ export const commitSnapshotLeaving = <TRenderable>(options: {
     keys: [],
     nextLeavingSnapshots: new Map(previous.leavingSnapshots),
   });
-  const next = runtime.publishState(createLeavingCommitInput({
-    previous,
-    leavingSnapshots: nextLeavingSnapshots,
-  }));
+  const next = runtime.publishState(
+    createLeavingCommitInput({
+      previous,
+      leavingSnapshots: nextLeavingSnapshots,
+    })
+  );
   return runtime.renderDisplay(createSnapLeavingDisplay(next));
 };
 
@@ -260,9 +262,7 @@ export const createDomCommit = <TRenderable>(options: {
 export const commitPrevByKind = <TRenderable, TResult>(options: {
   stateKey: string;
   kind: GroupPrevCommitKind;
-  commitPreviousContext(
-    context: GroupPrevCommitContext<TRenderable>
-  ): TResult;
+  commitPreviousContext(context: GroupPrevCommitContext<TRenderable>): TResult;
 }): TResult | null => {
   const { stateKey, kind, commitPreviousContext } = options;
   const previous = getTransitionGroupState<TRenderable>(stateKey);
@@ -281,7 +281,9 @@ export const commitPrevForStateKey = <TRenderable, TResult>(options: {
   stateKey: string;
   kind: GroupPrevCommitKind;
   runtime: {
-    commitPreviousContext(context: GroupPrevCommitContext<TRenderable>): TResult;
+    commitPreviousContext(
+      context: GroupPrevCommitContext<TRenderable>
+    ): TResult;
   };
 }): TResult | null => {
   const { stateKey, kind, runtime } = options;
@@ -377,7 +379,9 @@ export const bindPrevCommitRuntime = <TRenderable, TResult>(options: {
     TResult
   > & {
     commitHidden?(): TResult | null;
-    commitPreviousContext(context: GroupPrevCommitContext<TRenderable>): TResult;
+    commitPreviousContext(
+      context: GroupPrevCommitContext<TRenderable>
+    ): TResult;
   };
 }): void => {
   const { stateKey, runtime } = options;
@@ -385,7 +389,8 @@ export const bindPrevCommitRuntime = <TRenderable, TResult>(options: {
     return commitPrevByKind<TRenderable, TResult>({
       stateKey,
       kind: 'hidden',
-      commitPreviousContext: (context) => runtime.commitPreviousContext(context),
+      commitPreviousContext: (context) =>
+        runtime.commitPreviousContext(context),
     });
   };
 };

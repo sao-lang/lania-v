@@ -60,9 +60,7 @@ const isPotentialDomEventName = (name: string): boolean => {
   return /^[a-z][a-z0-9:-]*$/.test(name);
 };
 
-export const getJsxAttributeNameText = (
-  name: ts.JsxAttributeName
-): string => {
+export const getJsxAttributeNameText = (name: ts.JsxAttributeName): string => {
   if (ts.isIdentifier(name)) {
     return name.text;
   }
@@ -72,7 +70,9 @@ export const getJsxAttributeNameText = (
 
 /** 将点号转义成占位符，便于先通过 TSX 词法解析。 */
 export const escapeBindingNameForTsxParser = (name: string): string => {
-  return name.includes('.') ? name.replace(/\./g, TSX_BINDING_DOT_ESCAPE) : name;
+  return name.includes('.')
+    ? name.replace(/\./g, TSX_BINDING_DOT_ESCAPE)
+    : name;
 };
 
 /** 将预处理阶段的占位符恢复为真实点号。 */
@@ -163,9 +163,10 @@ export const analyzeTsxBindingName = (
     const descriptor = sourceName.slice(2);
     const [eventNamePart, ...trailingModifiers] = descriptor.split('.');
     const eventName = eventNamePart ?? '';
-    const componentEventName = eventName.length > 0
-      ? eventName[0]!.toLowerCase() + eventName.slice(1)
-      : eventName;
+    const componentEventName =
+      eventName.length > 0
+        ? eventName[0]!.toLowerCase() + eventName.slice(1)
+        : eventName;
     const domEventName = eventName.toLowerCase();
     const modifiers = trailingModifiers
       .filter((modifier) => modifier.length > 0)
@@ -193,7 +194,9 @@ export const analyzeTsxBindingName = (
     return {
       kind: DOM_EVENT_NAMES.has(domEventName) ? 'dom-event' : 'component-event',
       sourceName,
-      bindingName: DOM_EVENT_NAMES.has(domEventName) ? domEventName : componentEventName,
+      bindingName: DOM_EVENT_NAMES.has(domEventName)
+        ? domEventName
+        : componentEventName,
       modifiers,
     };
   }
@@ -201,10 +204,7 @@ export const analyzeTsxBindingName = (
   // DOM 事件支持 `click.stop.prevent` 这类修饰符后缀。
   const [eventCandidate, ...eventModifiers] = sourceName.split('.');
 
-  if (
-    eventModifiers.length > 0 &&
-    isPotentialDomEventName(eventCandidate)
-  ) {
+  if (eventModifiers.length > 0 && isPotentialDomEventName(eventCandidate)) {
     // 例如 `click.stop.prevent` 会被还原为 DOM 事件 + 修饰符列表。
     return {
       kind: 'dom-event',

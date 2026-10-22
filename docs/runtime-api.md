@@ -103,16 +103,19 @@ export default defineComponent(function Counter(props: { title: string }) {
 第二个参数可以声明 prop 的 attribute / reflect / 转换规则和事件名单：
 
 ```tsx
-export default defineComponent(function FancyInput(props: FancyInputProps) {
-  return <div>{props.count}</div>;
-}, {
-  props: {
-    count: { type: Number, reflect: true, default: 0 },
-    userName: { type: String, attribute: 'user-name' },
-    onSelect: { attribute: false },
+export default defineComponent(
+  function FancyInput(props: FancyInputProps) {
+    return <div>{props.count}</div>;
   },
-  emits: ['select'],
-});
+  {
+    props: {
+      count: { type: Number, reflect: true, default: 0 },
+      userName: { type: String, attribute: 'user-name' },
+      onSelect: { attribute: false },
+    },
+    emits: ['select'],
+  }
+);
 ```
 
 完整选项见 `prop-options.md`。
@@ -271,7 +274,7 @@ const slots = bindSlots();
 return <div>{slots.renderDefault('empty', item)}</div>;
 
 // 父组件
-<Child>{(item: string) => <span>{item}</span>}</Child>
+<Child>{(item: string) => <span>{item}</span>}</Child>;
 ```
 
 当 slot 内容是函数时，额外参数会按位置透传；`<Slot props={item} />` 使用同一套语义。
@@ -446,7 +449,12 @@ type CardProps = {
 
 export default defineComponent(function Card(props: CardProps) {
   const { title, count: total } = props;
-  return <div>{title}{total}</div>;
+  return (
+    <div>
+      {title}
+      {total}
+    </div>
+  );
 });
 ```
 
@@ -461,7 +469,11 @@ export default defineComponent(function Card(props: CardProps) {
 支持的形态：
 
 ```tsx
-const { title = 'fallback', user: { name, age = 0 }, ...rest } = props;
+const {
+  title = 'fallback',
+  user: { name, age = 0 },
+  ...rest
+} = props;
 ```
 
 - 默认值：`(this.title ?? 'fallback')`；prop 选项的 `default` 会在信号初始化时先落地，

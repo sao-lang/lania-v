@@ -226,10 +226,12 @@ export const Virtual = defineEnhancedComponent(
       const item = props.value[row.itemIndex];
 
       return typeof props.children === 'function'
-        ? (props.children as (item: unknown, index: number) => EnhancedRenderable)(
-            item,
-            row.itemIndex
-          )
+        ? (
+            props.children as (
+              item: unknown,
+              index: number
+            ) => EnhancedRenderable
+          )(item, row.itemIndex)
         : (asRenderable(props.children) as EnhancedRenderable);
     };
 
@@ -264,10 +266,12 @@ export const Virtual = defineEnhancedComponent(
     };
 
     const collectRenderedRows = (): RenderedRow[] =>
-      [...spacer.querySelectorAll<HTMLElement>('[data-row]')].map((element) => ({
-        element,
-        rowIndex: Number(element.dataset.row),
-      }));
+      [...spacer.querySelectorAll<HTMLElement>('[data-row]')].map(
+        (element) => ({
+          element,
+          rowIndex: Number(element.dataset.row),
+        })
+      );
 
     const measureRows = (rendered: readonly RenderedRow[]): void => {
       for (const { element, rowIndex } of rendered) {
@@ -402,7 +406,9 @@ export const Virtual = defineEnhancedComponent(
     const render = (): void => {
       if (rows.length === 0) {
         spacer.style.height = '0px';
-        spacer.querySelectorAll('[data-row]').forEach((element) => element.remove());
+        spacer
+          .querySelectorAll('[data-row]')
+          .forEach((element) => element.remove());
         stickyLayer.replaceChildren();
         stickyGroup = null;
         fallbackHost.replaceChildren();

@@ -14,10 +14,7 @@ import {
   type DomHostBlockRecord,
   type DomHostTarget,
 } from '../../../host/function-component';
-import {
-  deleteLeaveEntry,
-  resolveLeaveEntry,
-} from '../../registry';
+import { deleteLeaveEntry, resolveLeaveEntry } from '../../registry';
 import type {
   GroupDomHostRuntime,
   GroupLeaveEntry,
@@ -27,8 +24,6 @@ import type {
 } from '../types';
 import {
   createDomInput,
-  createGroupState,
-  publishGroupState,
   publishGroupStateRaw,
   type GroupCommitPublishInput,
 } from './state-runtime';
@@ -36,10 +31,14 @@ import {
 // 默认 key 会优先读取元素标识，否则退回字符串/数字值本身。
 export const resolveGroupKeyIdentity = (value: unknown): PropertyKey | null => {
   if (value instanceof Element) {
-    return value.getAttribute('data-key') ?? value.id ?? value.tagName.toLowerCase();
+    return (
+      value.getAttribute('data-key') ?? value.id ?? value.tagName.toLowerCase()
+    );
   }
 
-  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : null;
 };
 
 export const resolveGroupKeys = <TRenderable>(options: {
@@ -106,7 +105,9 @@ export const createDomStatePublisher = <TRenderable>(options: {
   stateKey: string;
   runtime: GroupDomHostRuntime<TRenderable>;
   transitionTag: string;
-}): ((input: GroupCommitPublishInput<TRenderable>) => TransitionGroupState<TRenderable>) => {
+}): ((
+  input: GroupCommitPublishInput<TRenderable>
+) => TransitionGroupState<TRenderable>) => {
   const { stateKey, runtime, transitionTag } = options;
   // 这里返回闭包发布器，便于 runtime 在绑定阶段把宿主信息提前封装进去。
   return (input) =>
@@ -119,7 +120,10 @@ export const createDomStatePublisher = <TRenderable>(options: {
 };
 
 export const createDomRenderTarget = <TRenderable>(
-  runtime: Pick<GroupDomHostRuntime<TRenderable>, 'container' | 'activeAnchor' | 'owner'>
+  runtime: Pick<
+    GroupDomHostRuntime<TRenderable>,
+    'container' | 'activeAnchor' | 'owner'
+  >
 ): DomHostTarget => {
   return {
     parent: runtime.container,
@@ -149,7 +153,9 @@ export const publishDomBootstrap = <TRenderable>(options: {
 export const createSnapPublisher = <TRenderable>(options: {
   stateKey: string;
   transitionTag?: string;
-}): ((input: GroupCommitPublishInput<TRenderable>) => TransitionGroupState<TRenderable>) => {
+}): ((
+  input: GroupCommitPublishInput<TRenderable>
+) => TransitionGroupState<TRenderable>) => {
   const { stateKey, transitionTag } = options;
   return (input) => {
     // 允许调用方只传增量 leaving 集合，版本号由发布阶段统一兜底抬升。
@@ -180,7 +186,10 @@ export const publishSnapshotState = <TRenderable>(options: {
     snapshots,
     container,
     transitionTag,
-    leavingSnapshots = new Map<PropertyKey, GroupLeavingSnapshot<TRenderable>>(),
+    leavingSnapshots = new Map<
+      PropertyKey,
+      GroupLeavingSnapshot<TRenderable>
+    >(),
     leaveVersion = 0,
   } = options;
 
@@ -227,7 +236,10 @@ export const pruneLeavingSnapshots = <TRenderable>(
   }
 
   const activeKeySet = new Set(activeKeys);
-  let nextSnapshots: Map<PropertyKey, GroupLeavingSnapshot<TRenderable>> | null = null;
+  let nextSnapshots: Map<
+    PropertyKey,
+    GroupLeavingSnapshot<TRenderable>
+  > | null = null;
 
   leavingSnapshots.forEach((_entry, key) => {
     if (!activeKeySet.has(key)) {
@@ -287,10 +299,7 @@ export const createLeavingSnapshot = <TRenderable>(
   };
 };
 
-export const pruneLeavingState = <
-  TState,
-  TRenderable,
->(
+export const pruneLeavingState = <TState, TRenderable>(
   current: TState,
   activeKeys: readonly PropertyKey[],
   selectLeavingSnapshots: (
@@ -302,7 +311,10 @@ export const pruneLeavingState = <
   ) => TState
 ): TState => {
   const currentSnapshots = selectLeavingSnapshots(current);
-  const nextLeavingSnapshots = pruneLeavingSnapshots(currentSnapshots, activeKeys);
+  const nextLeavingSnapshots = pruneLeavingSnapshots(
+    currentSnapshots,
+    activeKeys
+  );
   if (nextLeavingSnapshots === currentSnapshots) {
     // 没有发生实际裁剪时复用原状态引用，减少无意义重建。
     return current;
@@ -340,7 +352,8 @@ export const resolveSnapshots = <TRenderable>(options: {
     const previousSnapshot =
       previousIndex === -1 ? undefined : previousSnapshots[previousIndex];
     // 只要 key 稳定且旧节点仍在文档里，就优先复用旧 snapshot 身份，让依赖引用稳定的 host/runtime 得到更少扰动。
-    return previousSnapshot !== undefined && isReusableSnapshot(previousSnapshot)
+    return previousSnapshot !== undefined &&
+      isReusableSnapshot(previousSnapshot)
       ? previousSnapshot
       : renderedSnapshots[index]!;
   });
