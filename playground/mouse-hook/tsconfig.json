@@ -7,7 +7,6 @@
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@lania-v/runtime",
-    "baseUrl": ".",
     "paths": {
       "@lania-v/vite-plugin": ["../../packages/vite-plugin/src/index.ts"],
       "@lania-v/runtime": ["../../packages/runtime/src/index.ts"],
