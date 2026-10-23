@@ -5,24 +5,25 @@ import { describe, expect, it } from 'vitest';
 import {
   ReactiveElement,
   SimpleUpdater,
-  Slot,
   TextSlot,
   bindSlots,
-  createSelector,
-  createEffect,
-  createMemo,
-  createScope,
-  createSignal,
   createUniqueId,
   defineComponent,
   emitDevtoolsEvent,
   renderToStream,
   renderToString,
+} from '@lania-v/runtime';
+import {
+  createSelector,
+  createEffect,
+  createMemo,
+  createScope,
+  createSignal,
   startTransition,
   tick,
   useTransition,
-} from '@lania-v/runtime';
-import { Slot } from '../packages/advanced/src/index';
+} from '@lania-v/runtime/reactivity';
+import { Slot } from '@lania-v/runtime/advanced';
 import { jsx } from '../packages/runtime/src/entry/jsx-runtime';
 import { installDevtoolsOverlay } from '../packages/runtime/src/core/devtools';
 

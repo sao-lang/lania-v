@@ -4,18 +4,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ReactiveElement,
-  Scheduler,
   clearRuntimeDebugHooks,
   clearRuntimePlugins,
-  createSignal,
   SimpleUpdater,
   TextSlot,
   registerRuntimeDebugHooks,
-  setDevEnvironmentOverride,
   useRuntimePlugin,
   warning,
   assert,
 } from '@lania-v/runtime';
+import {
+  Scheduler,
+  createSignal,
+  setDevEnvironmentOverride,
+} from '@lania-v/runtime/reactivity';
 
 const flushMicrotasks = async (times = 2): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

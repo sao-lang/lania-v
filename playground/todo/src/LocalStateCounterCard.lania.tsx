@@ -1,4 +1,5 @@
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function LocalStateCounterCard() {
   const localCount = createSignal(0);

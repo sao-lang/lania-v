@@ -4,7 +4,7 @@
  * 设计原则：中间件都是**纯函数包装**，不改变 atom 的读写语义，
  * 只是在 `set` 前后插入一条链路，因此可以任意组合。
  */
-import { batch, watch } from '@lania-v/reactivity';
+import { batch, watch } from '@lania-v/runtime/reactivity';
 import type { Atom } from './atom';
 import { bindStore, getStore, type StoreSnapshot } from './store';
 

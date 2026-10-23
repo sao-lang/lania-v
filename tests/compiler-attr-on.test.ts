@@ -6,7 +6,8 @@ const compile = (body: string): string =>
   compileFunctionComponentTsxToModule(
     '/virtual/AttrOn.lania.tsx',
     `
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function Demo() {
   const alt = createSignal('a');

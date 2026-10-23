@@ -1,13 +1,16 @@
 /**
- * 暴露高级响应式调试入口。
+ * `@lania-v/runtime/advanced` 公共入口。
  *
- * 这里仅做二次导出，方便外部按需引入信号追踪能力。
+ * 提供增强组件（When/Each/KeepAlive/Transition/Virtual/Await...）以及
+ * 信号追踪相关的调试能力。这些能力依赖 runtime 的 host / slot / lifecycle
+ * 基础设施，因此不进入 runtime 一级入口。
  */
+export * from '../advanced';
 export {
   isTracking,
   linkTrackedSignals,
   trackSignals,
-} from '@lania-v/reactivity/internal';
+} from '../reactivity/internal';
 export {
   installDevtoolsOverlay,
   type DevtoolsOverlayOptions,

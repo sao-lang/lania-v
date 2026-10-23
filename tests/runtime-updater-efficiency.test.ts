@@ -5,11 +5,10 @@ import { describe, expect, it } from 'vitest';
 import {
   EffectUpdater,
   ReactiveElement,
-  Scheduler,
   SimpleUpdater,
   TextSlot,
-  createSignal,
 } from '@lania-v/runtime';
+import { Scheduler, createSignal } from '@lania-v/runtime/reactivity';
 
 const flushMicrotasks = async (times = 3): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

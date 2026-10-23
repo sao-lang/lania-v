@@ -209,7 +209,8 @@ export default Card;
 
   it('lowers useFormValidity into a form-associated effect', () => {
     const code = compile(`
-import { createSignal, defineComponent, useFormValidity } from '@lania-v/runtime';
+import { defineComponent, useFormValidity } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 export default defineComponent(function Field() {
   const valid = createSignal(false);
   useFormValidity(() => valid.value ? true : { valid: false, message: 'required' });
@@ -230,7 +231,8 @@ export default defineComponent(function Field() {
     compileFunctionComponentTsx(
       '/virtual/Report.lania.tsx',
       `
-import { defineComponent, createSignal } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 export default defineComponent(function Report(props: { title: string }) {
   const count = createSignal(0);
   return <section>{props.title}{count.value}</section>;

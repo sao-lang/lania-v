@@ -1,12 +1,11 @@
 import {
-  createMemo,
   defineComponent,
   onCleanup,
   onMount,
   useFormValue,
-  watch,
 } from '@lania-v/runtime';
-import { Case, Default, Switch, When } from '@lania-v/advanced';
+import { createMemo, watch } from '@lania-v/runtime/reactivity';
+import { Case, Default, Switch, When } from '@lania-v/runtime/advanced';
 import { createAtom } from '@lania-v/store';
 import {
   ApiError,

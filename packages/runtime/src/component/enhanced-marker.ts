@@ -2,7 +2,7 @@
  * 增强组件标记的运行时判定。
  *
  * 运行时（slot 层）需要在不解剖组件实现的前提下判断「这是不是一个增强组件」，
- * 因此把标记符号与判定函数放在 runtime；`@lania-v/advanced` 在定义组件时打上同一个标记。
+ * 因此把标记符号与判定函数放在 runtime；`@lania-v/runtime/advanced` 在定义组件时打上同一个标记。
  */
 export const ENHANCED_COMPONENT_KIND = Symbol.for('lania.enhanced-component');
 

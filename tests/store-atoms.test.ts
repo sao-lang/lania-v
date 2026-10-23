@@ -12,7 +12,7 @@ import {
   resetRootStore,
   runWithStore,
 } from '@lania-v/store';
-import { createEffect, createScope, watch } from '@lania-v/runtime';
+import { createEffect, createScope, watch } from '@lania-v/runtime/reactivity';
 
 const flush = async (times = 3): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

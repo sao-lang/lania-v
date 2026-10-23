@@ -4,21 +4,23 @@
  * 这里既包含 JSX 运行时可识别的渲染值，也包含 KeepAlive、Transition、Boundary
  * 等高阶组件的 props 契约，属于增强组件子系统的类型汇总入口。
  */
+import type {
+  BoundaryPayload,
+  CachePayload,
+  TransitionPayload,
+} from '@lania-v/shared';
+
 import {
   ENHANCED_COMPONENT_KIND,
-  type BoundaryPayload,
-  type CachePayload,
-  type TransitionPayload,
-} from '@lania-v/runtime';
-
-import type { EnhancedRenderable } from '@lania-v/runtime';
+  type EnhancedRenderable,
+} from '../../component/renderable-types';
 
 export type { EnhancedRenderable };
-import type { KeepAliveKeyPattern } from '@lania-v/runtime/component/lifecycle';
+import type { KeepAliveKeyPattern } from '../../component/lifecycle';
 
 export type { KeepAliveKeyPattern };
 
-export { ENHANCED_COMPONENT_KIND } from '@lania-v/runtime';
+export { ENHANCED_COMPONENT_KIND } from '../../component/renderable-types';
 
 // 所有增强组件定义都会打上运行时标记，便于在 JSX 阶段识别。
 export interface EnhancedComponentDefinition<

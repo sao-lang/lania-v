@@ -108,8 +108,9 @@ function PluginHost() {
     );
 
     expect(emitted.preambleCode).toContain("import helper from './helper';");
-    expect(emitted.preambleCode).not.toContain(
-      "from '@lania-v/runtime/reactivity'"
+    // 二级入口的用户导入会被分流到对应的绑定块，不再出现在 preamble 里。
+    expect(emitted.moduleCode).toContain(
+      "import * as __laniaReactivity from '@lania-v/runtime/reactivity';"
     );
     expect(emitted.moduleCode).toContain(
       "import * as __lania from '@lania-v/runtime';"

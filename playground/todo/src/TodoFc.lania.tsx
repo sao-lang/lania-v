@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { createMemo, createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createMemo, createSignal } from '@lania-v/runtime/reactivity';
 
 import type { TodoFilter, TodoItem } from './todo-shared';
 import { createTodoId } from './todo-shared';

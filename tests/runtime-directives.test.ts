@@ -13,13 +13,15 @@ import {
   applyBoundValue,
   clearDirectiveRegistry,
   createModelEventHandler,
-  createSignal,
   html,
   registerDirective,
   ssrRenderHtmlSlot,
-  setDevEnvironmentOverride,
   UseDirectiveSlot,
 } from '@lania-v/runtime';
+import {
+  createSignal,
+  setDevEnvironmentOverride,
+} from '@lania-v/runtime/reactivity';
 
 describe('runtime directives', () => {
   it('warns in dev mode when a named use directive is missing', () => {

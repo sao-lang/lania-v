@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
+import * as reactivityNs from '@lania-v/runtime/reactivity';
+import * as runtimeInternalNs from '@lania-v/runtime/internal';
 import * as advanced from '@lania-v/runtime/advanced';
 import {
   SSR_HYDRATED_ATTRIBUTE,
@@ -47,6 +49,12 @@ const loadModule = (source: string): Record<string, any> => {
     }
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
+    }
+    if (id === '@lania-v/runtime/reactivity') {
+      return reactivityNs;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternalNs;
     }
     throw new Error(`Unexpected import: ${id}`);
   };

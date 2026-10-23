@@ -5,7 +5,7 @@ import {
   watch,
   type Scheduler,
   type WatchStopHandle,
-} from '@lania-v/runtime';
+} from '@lania-v/runtime/reactivity';
 
 const flush = async (times = 3): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

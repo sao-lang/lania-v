@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
+import * as reactivityNs from '@lania-v/runtime/reactivity';
+import * as runtimeInternalNs from '@lania-v/runtime/internal';
 import * as advanced from '@lania-v/runtime/advanced';
 import * as runtimeInternal from '@lania-v/runtime/internal';
 import * as store from '@lania-v/store';
@@ -40,6 +42,12 @@ const loadComponent = (source: string): any => {
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
     }
+    if (id === '@lania-v/runtime/reactivity') {
+      return reactivityNs;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternalNs;
+    }
     if (id === '@lania-v/runtime/internal') {
       return runtimeInternal;
     }
@@ -61,7 +69,8 @@ const loadComponent = (source: string): any => {
 describe('compiled component runtime integration', () => {
   it('promotes object destructured setup bindings to instance fields', async () => {
     const DestructuredSetup = loadComponent(`
-import { defineComponent, createSignal, useTransition } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal, useTransition } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function DestructuredSetup() {
   const { pending } = useTransition();
@@ -140,7 +149,8 @@ export default defineComponent(function CardAliasView(props: CardAliasProps & Ca
 
   it('updates signals returned from a composable', async () => {
     const CardComposable = loadComponent(`
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 export default defineComponent(function CardComposable() {
   const useCounter = () => createSignal(0);
   const count = useCounter();
@@ -204,12 +214,7 @@ export default defineComponent(function StoreView() {
 
   it('keeps bindProps, bindHandlers and bindSlots live in compiled components', async () => {
     const BindingPanel = loadComponent(`
-import {
-  bindHandlers,
-  bindProps,
-  bindSlots,
-  defineComponent,
-} from '@lania-v/runtime';
+import { bindHandlers, bindProps, bindSlots, defineComponent } from '@lania-v/runtime';
 
 type BindingPanelProps = {
   title: string;

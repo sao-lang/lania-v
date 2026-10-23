@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
+import * as reactivityNs from '@lania-v/runtime/reactivity';
+import * as runtimeInternalNs from '@lania-v/runtime/internal';
 import * as advanced from '@lania-v/runtime/advanced';
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
@@ -37,6 +39,12 @@ const loadComponent = (source: string): any => {
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
     }
+    if (id === '@lania-v/runtime/reactivity') {
+      return reactivityNs;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternalNs;
+    }
     throw new Error(`Unexpected import: ${id}`);
   };
 
@@ -54,7 +62,9 @@ describe('compiled transition', () => {
     const moduleCode = compileFunctionComponentTsxToModule(
       '/virtual/TransitionBinding.lania.tsx',
       `
-import { createSignal, defineComponent, Transition } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
+import { Transition } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function Demo() {
   const visible = createSignal(true);
@@ -75,7 +85,9 @@ export default defineComponent(function Demo() {
 
   it('fires enter and leave hooks', async () => {
     const Demo = loadComponent(`
-import { createSignal, defineComponent, Transition, When } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
+import { Transition, When } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function Demo() {
   const visible = createSignal(true);
@@ -125,7 +137,9 @@ export default defineComponent(function Demo() {
 
   it('removes every leaving snapshot after the transition settles', async () => {
     const Demo = loadComponent(`
-import { createSignal, defineComponent, Transition, When } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
+import { Transition, When } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function LeaveCleanupDemo() {
   const visible = createSignal(true);

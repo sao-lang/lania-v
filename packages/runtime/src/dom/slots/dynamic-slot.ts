@@ -68,11 +68,11 @@ type DynamicSlotValue = {
   childBindings?: readonly TemplateBindingPayload[];
 };
 
-// 编译产物里某些保留字符串会映射到增强组件，但对应实现位于 `@lania-v/advanced`。
+// 编译产物里某些保留字符串会映射到增强组件，但对应实现位于 `@lania-v/runtime/advanced`。
 // runtime 不能反向依赖 advanced，因此这里把映射交给宿主侧注册。
 const enhancedConstructors = new Map<string, unknown>();
 
-/** 由 `@lania-v/advanced` 在加载时注册增强组件构造器（Slot / Transition / Await...）。 */
+/** 由 `@lania-v/runtime/advanced` 在加载时注册增强组件构造器（Slot / Transition / Await...）。 */
 export const registerEnhancedConstructor = (
   name: string,
   component: unknown

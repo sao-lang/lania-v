@@ -5,8 +5,8 @@ import {
 } from '../../core/debug';
 import { isComponentHmrEnabled } from '../../dev/hmr';
 import type { PropOptionsMap } from './prop-options';
-import type { Signal } from '@lania-v/reactivity';
-import { HIGH, defaultScheduler, type Scheduler } from '@lania-v/reactivity';
+import type { Signal } from '../../reactivity';
+import { HIGH, defaultScheduler, type Scheduler } from '../../reactivity';
 import { SlotTable } from '../../dom/slot-table';
 import {
   adoptStyles,

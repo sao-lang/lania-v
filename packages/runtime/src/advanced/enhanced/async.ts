@@ -12,7 +12,7 @@ import {
   createLazyBoundaryHost,
   createSuspenseBoundaryHost,
   readContextBoundaryHost,
-} from '@lania-v/runtime/component/lifecycle';
+} from '../../component/lifecycle';
 import {
   ENHANCED_CONTRACT_PROTOCOL,
   ENHANCED_CONTRACT_VERSION,
@@ -23,7 +23,7 @@ import {
   executeLazyBoundary,
   executeSuspenseBoundary,
   resolveErrorBoundaryFallback,
-} from '@lania-v/runtime/component/lifecycle';
+} from '../../component/lifecycle';
 import { defineEnhancedComponent } from './utils/factory';
 import {
   asRenderable,

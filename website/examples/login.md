@@ -98,7 +98,7 @@ import {
   onMount,
   useFormValue,
 } from '@lania-v/runtime';
-import { When } from '@lania-v/advanced';
+import { When } from '@lania-v/runtime/advanced';
 
 type LoginStatus = 'idle' | 'submitting' | 'success';
 

@@ -1,9 +1,5 @@
-import {
-  createMemo,
-  createSignal,
-  defineComponent,
-  html,
-} from '@lania-v/runtime';
+import { defineComponent, html } from '@lania-v/runtime';
+import { createMemo, createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function BindingCasesDemo() {
   const modelTitle = createSignal('Lania Binding Demo');

@@ -252,7 +252,7 @@ import {
   createResource,
   defineComponent,
 } from '@lania-v/runtime';
-import { ErrorBoundary, When } from '@lania-v/advanced';
+import { ErrorBoundary, When } from '@lania-v/runtime/advanced';
 
 const UserCard = defineComponent(function UserCard(props: { id: string }) {
   const id = createMemo(() => props.id);

@@ -28,7 +28,7 @@ import {
   LazyLoad,
   Await,
   Virtual,
-} from '@lania-v/advanced';
+} from '@lania-v/runtime/advanced';
 ```
 
 ## 公共类型

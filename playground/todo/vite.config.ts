@@ -47,15 +47,15 @@ export default defineConfig({
         ),
       },
       {
-        find: '@lania-v/advanced',
+        find: '@lania-v/runtime/advanced',
         replacement: fileURLToPath(
-          new URL('../../packages/advanced/src', import.meta.url)
+          new URL('../../packages/runtime/src/advanced', import.meta.url)
         ),
       },
       {
-        find: '@lania-v/reactivity',
+        find: '@lania-v/runtime/reactivity',
         replacement: fileURLToPath(
-          new URL('../../packages/reactivity/src', import.meta.url)
+          new URL('../../packages/runtime/src/reactivity', import.meta.url)
         ),
       },
       {

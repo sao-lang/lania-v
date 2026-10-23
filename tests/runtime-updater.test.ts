@@ -2,8 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { Scheduler } from '@lania-v/runtime';
-import { createSignal } from '@lania-v/runtime';
+import { Scheduler } from '@lania-v/runtime/reactivity';
+import { createSignal } from '@lania-v/runtime/reactivity';
 import { SlotTable } from '@lania-v/runtime';
 import { IfSlot, TextSlot } from '@lania-v/runtime';
 import {

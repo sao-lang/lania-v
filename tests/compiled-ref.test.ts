@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
+import * as reactivityNs from '@lania-v/runtime/reactivity';
+import * as runtimeInternalNs from '@lania-v/runtime/internal';
 import * as advanced from '@lania-v/runtime/advanced';
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
@@ -37,6 +39,12 @@ const loadComponent = (source: string): any => {
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
     }
+    if (id === '@lania-v/runtime/reactivity') {
+      return reactivityNs;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternalNs;
+    }
     throw new Error(`Unexpected import: ${id}`);
   };
 
@@ -60,7 +68,8 @@ afterEach(() => {
 describe('compiled createRef bindings', () => {
   it('assigns the DOM element directly to the ref field', async () => {
     const ElementRef = loadComponent(`
-import { createRef, createSignal, defineComponent } from '@lania-v/runtime';
+import { createRef, defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function ElementRef() {
   const inputRef = createRef<HTMLInputElement>();
@@ -98,7 +107,8 @@ export default defineComponent(function ElementRef() {
 
   it('keeps legacy .current reads working for compiled refs', async () => {
     const LegacyRef = loadComponent(`
-import { createRef, createSignal, defineComponent } from '@lania-v/runtime';
+import { createRef, defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function LegacyRef() {
   const inputRef = createRef<HTMLInputElement>();
@@ -126,7 +136,8 @@ export default defineComponent(function LegacyRef() {
 
   it('delivers the exposed surface for component refs', async () => {
     const Parent = loadComponent(`
-import { createRef, createSignal, defineComponent, createExpose } from '@lania-v/runtime';
+import { createRef, defineComponent, createExpose } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 const Child = defineComponent(function Child(props: { ref?: { focus(): string } }) {
   createExpose(props, { focus: () => 'focused' });

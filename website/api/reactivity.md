@@ -1,6 +1,6 @@
 # 响应式 API
 
-响应式核心位于独立包 `@lania-v/reactivity`：
+响应式核心位于 `@lania-v/runtime/reactivity` 二级入口：
 
 ```ts
 import {
@@ -8,7 +8,7 @@ import {
   createMemo,
   createEffect,
   watch,
-} from '@lania-v/reactivity';
+} from '@lania-v/runtime/reactivity';
 ```
 
 `@lania-v/runtime` 会整体再导出它，所以 `from '@lania-v/runtime'` 同样可用；框架内部（组件宿主、slot updater、SSR）也统一从这里取用。

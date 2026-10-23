@@ -6,9 +6,9 @@ import {
   ReactiveElement,
   createComponentElement,
   css,
-  setDevEnvironmentOverride,
   useFormValue,
 } from '@lania-v/runtime';
+import { setDevEnvironmentOverride } from '@lania-v/runtime/reactivity';
 
 afterEach(() => {
   setDevEnvironmentOverride(null);

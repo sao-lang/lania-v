@@ -1,9 +1,11 @@
 /**
  * `@lania-v/runtime` 公共入口。
  *
- * 这里主要负责：
- * - 汇总导出各子模块（core/component/dom/reactivity/render）；
- * - 额外提供 reactivity/signal 的“顶层 re-export”，让用户 import 更顺手。
+ * 这里主要负责汇总导出 core/component/dom/render 等基础能力。
+ *
+ * 响应式 API（Signal/Effect/Computed/...）与增强组件位于二级入口：
+ * - `@lania-v/runtime/reactivity`
+ * - `@lania-v/runtime/advanced`
  */
 export * from '@lania-v/shared';
 export * from './core';
@@ -40,9 +42,8 @@ export type { Slot as DomSlot, SlotFrequency, SlotType } from './dom/slots';
 export * from './dom/style-value';
 export * from './dom/updaters';
 // 增强组件构造器注册表：runtime 的动态 slot 用它解析保留字符串，
-// `@lania-v/advanced` 在加载时把真实构造器注册进来。
+// `@lania-v/runtime/advanced` 在加载时把真实构造器注册进来。
 export { registerEnhancedConstructor } from './dom/slots/dynamic-slot';
-export * from '@lania-v/reactivity';
 // core 也导出同名调试入口与 `isDevEnvironment`，这里显式让 core 的实现优先，
 // 避免两个包各自维护一份 dev 判定导致行为分叉。
 export {
@@ -53,7 +54,7 @@ export {
 } from './core';
 export * from './render';
 
-// 增强组件（When/Each/KeepAlive/Transition...）已拆分到 @lania-v/advanced；
+// 增强组件（When/Each/KeepAlive/Transition...）已拆分到 @lania-v/runtime/advanced；
 // runtime 只保留它们的公共类型契约，避免类型层断裂。
 export type {
   EnhancedRenderable,
@@ -69,61 +70,3 @@ export type {
   LaniaJsxElement,
   LaniaNativeIntrinsicElements,
 } from './entry/jsx-runtime';
-import {
-  watch as reactiveWatch,
-  type WatchCallback,
-  type WatchOptions,
-  type WatchSource,
-  type WatchStopHandle,
-} from '@lania-v/reactivity';
-export {
-  createComputedAccessor,
-  createDeferred,
-  createEffect,
-  createMemo,
-  createSignal,
-  readonly,
-  untrack,
-  type ComputedAccessor,
-  type DeferredOptions,
-  type EffectCallback,
-  type EffectCleanup,
-  type ReadonlySignal,
-  type Signal,
-  type SignalSetter,
-  type SignalSource,
-  type WatchCallback,
-  type WatchOptions,
-  type WatchSource,
-  type WatchStopHandle,
-} from '@lania-v/reactivity';
-export function watch<T, Immediate extends boolean = false>(
-  source: WatchSource<T>,
-  callback: WatchCallback<T, Immediate>,
-  options?: WatchOptions & { immediate?: Immediate },
-  scheduler?: import('@lania-v/reactivity').Scheduler
-): WatchStopHandle;
-export function watch<
-  T extends readonly unknown[],
-  Immediate extends boolean = false,
->(
-  sources: { [K in keyof T]: WatchSource<T[K]> },
-  callback: WatchCallback<T, Immediate>,
-  options?: WatchOptions & { immediate?: Immediate },
-  scheduler?: import('@lania-v/reactivity').Scheduler
-): WatchStopHandle;
-export function watch(
-  sourceOrSourceKey: WatchSource<unknown> | readonly WatchSource<unknown>[],
-  callback:
-    | ((current: unknown, previous: unknown | undefined) => void)
-    | ((current: unknown[], previous: unknown[] | undefined) => void),
-  options?: WatchOptions,
-  scheduler?: import('@lania-v/reactivity').Scheduler
-): WatchStopHandle {
-  return reactiveWatch(
-    sourceOrSourceKey as never,
-    callback as never,
-    options,
-    scheduler
-  );
-}

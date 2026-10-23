@@ -1,9 +1,9 @@
-import { trackSignals, type Signal } from '@lania-v/reactivity/internal';
+import { trackSignals, type Signal } from '../reactivity/internal';
 import {
   type JobPriority,
   defaultScheduler,
   type Scheduler,
-} from '@lania-v/reactivity';
+} from '../reactivity';
 import { SlotTable } from './slot-table';
 import type { Slot } from './slots';
 import {

@@ -276,7 +276,7 @@ devtools.snapshot('after-add');
 ```tsx
 import { createAction, createAtom, createDerivedAtom } from '@lania-v/store';
 import { defineComponent } from '@lania-v/runtime';
-import { Each, When } from '@lania-v/advanced';
+import { Each, When } from '@lania-v/runtime/advanced';
 
 type Todo = { id: string; text: string; done: boolean };
 
@@ -357,5 +357,5 @@ export default defineComponent(function TodoApp() {
 ## 下一步
 
 - [响应式 API](/api/reactivity)：Signal / Memo / watch 的完整签名。
-- [包与导出入口](/api/packages)：`@lania-v/runtime` 与 `@lania-v/store` / `@lania-v/advanced` 的分工。
+- [包与导出入口](/api/packages)：`@lania-v/runtime` 与 `@lania-v/store` / `@lania-v/runtime/advanced` 的分工。
 - [增强组件 API](/api/enhanced-components)：`When` / `Each` / `KeepAlive` 等组件的入口位置。

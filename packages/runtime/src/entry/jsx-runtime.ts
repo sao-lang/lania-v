@@ -710,7 +710,7 @@ const createIntrinsicElement = (
 
 /**
  * Fragment 的占位实现：不产生宿主节点，`jsx()` 会直接透传 children。
- * 真正的 Fragment 组件在 `@lania-v/advanced`，两者语义一致。
+ * 真正的 Fragment 组件在 `@lania-v/runtime/advanced`，两者语义一致。
  */
 export const Fragment = RuntimeFragment;
 

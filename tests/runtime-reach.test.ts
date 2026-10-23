@@ -2,8 +2,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { Reach } from '../packages/advanced/src/index';
-import { REACH_SENTINEL_ATTRIBUTE } from '../packages/advanced/src/enhanced/reach';
+import { Reach } from '@lania-v/runtime/advanced';
+import { REACH_SENTINEL_ATTRIBUTE } from '../packages/runtime/src/advanced/enhanced/reach';
 
 describe('Reach', () => {
   it('renders children plus a sentinel', () => {

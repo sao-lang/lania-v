@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createSignal, watch } from '@lania-v/runtime';
+import { createSignal, watch } from '@lania-v/runtime/reactivity';
 import { createAtom } from '@lania-v/store';
 
 const flush = async (times = 3): Promise<void> => {

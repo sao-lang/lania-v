@@ -13,7 +13,7 @@ export type KeepAliveKeyPattern = readonly string[] | RegExp | null | undefined;
  * 增强组件的公共类型契约。
  *
  * 这些类型描述的是「渲染值形态 + props 契约」，不包含任何运行时代码，
- * 因此由 runtime 提供，`@lania-v/advanced` 与 JSX 运行时共同复用。
+ * 因此由 runtime 提供，`@lania-v/runtime/advanced` 与 JSX 运行时共同复用。
  */
 // 统一描述增强组件允许返回的渲染值，后续兼容层会继续展开函数和数组。
 export type EnhancedRenderable =

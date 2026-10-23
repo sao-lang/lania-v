@@ -32,25 +32,19 @@ export interface CompiledTsxModule {
 const RUNTIME_IMPORT_PATTERN = /^['"]@lania-v\/runtime(?:\/[^'"]+)?['"]$/;
 // `@lania-v/store` 是生态包而非 runtime 内部模块：它的具名导入必须原样保留在产物里。
 const STORE_IMPORT_PATTERN = /^['"]@lania-v\/store(?:\/[^'"]+)?['"]$/;
-// `@lania-v/reactivity` 是独立的响应式核心包：其具名导入同样需要保留，
+// `@lania-v/runtime/reactivity` 是 runtime 的响应式二级入口：其具名导入需要原样保留，
 // 但其中的信号工厂仍参与编译期声明识别。
-const REACTIVITY_IMPORT_PATTERN = /^['"]@lania-v\/reactivity(?:\/[^'"]+)?['"]$/;
+const REACTIVITY_IMPORT_PATTERN =
+  /^['"]@lania-v\/runtime\/reactivity(?:\/[^'"]+)?['"]$/;
+// advanced 二级入口同理：增强组件由编译器按需注入，用户显式导入需保留。
+const ADVANCED_IMPORT_PATTERN =
+  /^['"]@lania-v\/runtime\/advanced(?:\/[^'"]+)?['"]$/;
 
 // 运行时能力按“组件基类/响应式 API/模板 slot/SSR 辅助”混合列举，
 // 目的是让生成代码始终可以从单一入口稳定解构，而不是按需拼出多条 import。
 // 这里显式列出模板代码生成阶段可能引用的运行时能力，统一从模块前导中解构出来。
 const TSX_RUNTIME_BINDINGS = [
   'ReactiveElement',
-  'createSignal',
-  'createMemo',
-  'createComputedAccessor',
-  'createEffect',
-  'batch',
-  'watch',
-  'readonly',
-  'untrack',
-  'createDeferred',
-  'createResource',
   'lazy',
   'onMount',
   'onMounted',
@@ -77,17 +71,6 @@ const TSX_RUNTIME_BINDINGS = [
   'applyPropAttributes',
   'ssrRenderIslandSlot',
   'registerDirective',
-  'When',
-  'Each',
-  'Fragment',
-  'Dynamic',
-  'Teleport',
-  'KeepAlive',
-  'Transition',
-  'TransitionGroup',
-  'LazyLoad',
-  'ErrorBoundary',
-  'Suspense',
   'createStaticTemplate',
   'createSSRRenderContext',
   'attachSSRRenderContext',
@@ -139,12 +122,43 @@ const TSX_RUNTIME_BINDINGS = [
   'createKeyedEventHandlers',
 ] as const;
 
-// 少量高级追踪 API 只在生成代码真正引用到时才会从 advanced 入口解构出来。
+// 响应式 API 位于 `@lania-v/runtime/reactivity` 二级入口，生成代码按需从该路径解构。
+const TSX_REACTIVITY_RUNTIME_BINDINGS = [
+  'createSignal',
+  'createMemo',
+  'createComputedAccessor',
+  'createEffect',
+  'batch',
+  'watch',
+  'readonly',
+  'untrack',
+  'createDeferred',
+  'createResource',
+] as const;
+
+const REACTIVITY_BINDING_NAMES = new Set<string>(
+  TSX_REACTIVITY_RUNTIME_BINDINGS
+);
+
+// 增强组件与高级追踪 API 只在生成代码真正引用到时才会从 advanced 入口解构出来。
 const TSX_ADVANCED_RUNTIME_BINDINGS = [
+  'When',
+  'Each',
+  'Fragment',
+  'Dynamic',
+  'Teleport',
+  'KeepAlive',
+  'Transition',
+  'TransitionGroup',
+  'LazyLoad',
+  'ErrorBoundary',
+  'Suspense',
   'trackSignals',
   'linkTrackedSignals',
   'isTracking',
 ] as const;
+
+const ADVANCED_BINDING_NAMES = new Set<string>(TSX_ADVANCED_RUNTIME_BINDINGS);
 
 // 编译器产物专用的内部能力：不走公共 API，避免把实现细节写进用户可见的导入面。
 const TSX_INTERNAL_RUNTIME_BINDINGS = ['getAtomDependency'] as const;
@@ -186,7 +200,7 @@ const createRuntimeBindingBlock = (
 const collectUserRuntimeBindings = (
   fileName: string,
   source: string
-): { root: string[]; advanced: string[] } => {
+): { root: string[]; advanced: string[]; reactivity: string[] } => {
   const sourceFile = ts.createSourceFile(
     fileName,
     source,
@@ -196,6 +210,7 @@ const collectUserRuntimeBindings = (
   );
   const root: string[] = [];
   const advanced: string[] = [];
+  const reactivity: string[] = [];
 
   sourceFile.statements.forEach((stmt) => {
     if (
@@ -208,10 +223,10 @@ const collectUserRuntimeBindings = (
 
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
     // 只有 runtime 自身的具名导入需要并入统一前导；`@lania-v/store` 会原样保留。
+    // 二级入口（reactivity / advanced）也属于 runtime，但会分流到各自的绑定块。
     if (
       !RUNTIME_IMPORT_PATTERN.test(specifier) ||
-      STORE_IMPORT_PATTERN.test(specifier) ||
-      REACTIVITY_IMPORT_PATTERN.test(specifier)
+      STORE_IMPORT_PATTERN.test(specifier)
     ) {
       return;
     }
@@ -227,17 +242,33 @@ const collectUserRuntimeBindings = (
     }
 
     const moduleName = specifier.slice(1, -1);
-    // advanced 入口不在 runtime 根导出里，必须各自走对应模块。
-    const target = moduleName === '@lania-v/runtime/advanced' ? advanced : root;
+    // 二级入口不在 runtime 根导出里，必须各自走对应模块。
+    const target =
+      moduleName === '@lania-v/runtime/advanced'
+        ? advanced
+        : moduleName === '@lania-v/runtime/reactivity'
+          ? reactivity
+          : root;
     namedBindings.elements.forEach((element) => {
       if (element.isTypeOnly) {
         return;
       }
-      target.push(element.name.text);
+      const name = element.name.text;
+      // 从 runtime 根入口导入的响应式 API / 增强组件已迁到二级入口，
+      // 这里自动重定向，避免旧写法在运行期拿到 undefined。
+      if (target === root && REACTIVITY_BINDING_NAMES.has(name)) {
+        reactivity.push(name);
+        return;
+      }
+      if (target === root && ADVANCED_BINDING_NAMES.has(name)) {
+        advanced.push(name);
+        return;
+      }
+      target.push(name);
     });
   });
 
-  return { root, advanced };
+  return { root, advanced, reactivity };
 };
 
 const mergeBindingNames = (
@@ -264,7 +295,8 @@ const createLaniaTsxModuleCode = (
   classCode: string,
   classNames: readonly string[],
   runtimeBindings: readonly string[] = TSX_RUNTIME_BINDINGS,
-  advancedBindings: readonly string[] = TSX_ADVANCED_RUNTIME_BINDINGS
+  advancedBindings: readonly string[] = TSX_ADVANCED_RUNTIME_BINDINGS,
+  reactivityBindings: readonly string[] = TSX_REACTIVITY_RUNTIME_BINDINGS
 ): string => {
   const exportedNames = classNames.length > 0 ? classNames : [className];
   // 仅当生成代码真的引用了内部能力时才注入对应 import，避免每个产物都多一条无用依赖。
@@ -274,6 +306,11 @@ const createLaniaTsxModuleCode = (
 
   return [
     createRuntimeBindingBlock('__lania', '@lania-v/runtime', runtimeBindings),
+    createRuntimeBindingBlock(
+      '__laniaReactivity',
+      '@lania-v/runtime/reactivity',
+      reactivityBindings
+    ),
     createRuntimeBindingBlock(
       '__laniaAdvanced',
       '@lania-v/runtime/advanced',
@@ -481,10 +518,12 @@ const extractNonRuntimeImports = (fileName: string, source: string): string => {
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
     // 运行时依赖由编译器统一注入，避免与用户源码中的导入重复。
     // `@lania-v/store` 属于生态包，编译器不接管它的导入，必须原样保留。
+    // 二级入口（reactivity / advanced）的具名导入由绑定块统一注入，这里同样跳过。
     if (
       RUNTIME_IMPORT_PATTERN.test(specifier) &&
       !STORE_IMPORT_PATTERN.test(specifier) &&
-      !REACTIVITY_IMPORT_PATTERN.test(specifier)
+      !REACTIVITY_IMPORT_PATTERN.test(specifier) &&
+      !ADVANCED_IMPORT_PATTERN.test(specifier)
     ) {
       return;
     }
@@ -523,6 +562,10 @@ export const emitFunctionComponentTsxModule = (
       mergeBindingNames(
         TSX_ADVANCED_RUNTIME_BINDINGS,
         userRuntimeBindings.advanced
+      ),
+      mergeBindingNames(
+        TSX_REACTIVITY_RUNTIME_BINDINGS,
+        userRuntimeBindings.reactivity
       )
     ),
     preservedCode.after,

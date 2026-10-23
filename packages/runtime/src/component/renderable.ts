@@ -2,7 +2,7 @@
  * 渲染值归一化工具（renderable helpers）。
  *
  * 这些函数把函数、数组、Fragment 与文本统一拍平成可操作的节点集合，
- * host 与 slot 层内部依赖它们；`@lania-v/advanced` 也会复用同一份实现。
+ * host 与 slot 层内部依赖它们；`@lania-v/runtime/advanced` 也会复用同一份实现。
  */
 export interface RenderableValue {
   readonly [key: string]: unknown;

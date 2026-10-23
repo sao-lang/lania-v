@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { Scheduler, batch } from '@lania-v/runtime';
-import { createComputedAccessor, createSignal } from '@lania-v/runtime';
+import { Scheduler, batch } from '@lania-v/runtime/reactivity';
+import {
+  createComputedAccessor,
+  createSignal,
+} from '@lania-v/runtime/reactivity';
 
 const flushMicrotasks = async (times = 1): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

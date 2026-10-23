@@ -1,12 +1,9 @@
+import { css, defineComponent, onCleanup, onMount } from '@lania-v/runtime';
 import {
   createEffect,
   createSignal,
-  css,
-  defineComponent,
-  onCleanup,
-  onMount,
   type Signal,
-} from '@lania-v/runtime';
+} from '@lania-v/runtime/reactivity';
 import {
   createMouseSnapshot,
   initialMouseSnapshot,

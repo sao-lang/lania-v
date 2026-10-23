@@ -38,5 +38,20 @@ export {
 } from '../component/host/function-component';
 
 // 编译器产物用它把 atom 的精确订阅直接挂到 updater 的 deps 上。
-// atom 本身就是 Signal 形态，实现位于 `@lania-v/store` 的内部入口。
-export { getAtomDependency } from '@lania-v/store/internal';
+// atom 本身是 Signal 形态（`value` getter + `updaters`），这里只做结构校验，
+// 因此不需要反向依赖 `@lania-v/store`。
+export const getAtomDependency = (
+  atom: unknown
+): { readonly value: unknown; updaters: Set<() => void> } => {
+  if (
+    atom === null ||
+    (typeof atom !== 'object' && typeof atom !== 'function') ||
+    !('updaters' in (atom as object))
+  ) {
+    throw new TypeError(
+      'getAtomDependency() expects an atom created by @lania-v/store.'
+    );
+  }
+
+  return atom as { readonly value: unknown; updaters: Set<() => void> };
+};

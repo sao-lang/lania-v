@@ -50,7 +50,8 @@ const readUpdaterDependencies = (
 describe('compiler tsx module output', () => {
   it('keeps component body declaration order for signal initializers', () => {
     const moduleCode = compile(`
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 import { readSeed } from './seed';
 
 export default defineComponent(function OrderHost() {
@@ -94,7 +95,8 @@ export default defineComponent(function AtomHost() {
 
   it('tracks unary negation reads as updater dependencies', () => {
     const moduleCode = compile(`
-import { createMemo, createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createMemo, createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function NegationHost() {
   const ready = createSignal(false);
@@ -110,7 +112,8 @@ export default defineComponent(function NegationHost() {
 
   it('expands nested computed chains down to leaf signals', () => {
     const moduleCode = compile(`
-import { createMemo, createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createMemo, createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function NestedComputedHost() {
   const count = createSignal(0);
@@ -127,12 +130,8 @@ export default defineComponent(function NestedComputedHost() {
 
   it('rewrites signal and computed references in lifecycle callbacks', () => {
     const moduleCode = compile(`
-import {
-  createMemo,
-  createSignal,
-  defineComponent,
-  onMount,
-} from '@lania-v/runtime';
+import { defineComponent, onMount } from '@lania-v/runtime';
+import { createMemo, createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function LifecycleBindingsHost() {
   const account = createSignal('');
@@ -155,12 +154,8 @@ export default defineComponent(function LifecycleBindingsHost() {
 
   it('rewrites two-arg provideContext to the current component host', () => {
     const moduleCode = compile(`
-import {
-  createContext,
-  createSignal,
-  defineComponent,
-  provideContext,
-} from '@lania-v/runtime';
+import { createContext, defineComponent, provideContext } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 const ThemeContext = createContext<'light' | 'dark'>('light');
 
@@ -179,7 +174,8 @@ export default defineComponent(function ProviderHost() {
 
   it('keeps computed call syntax and nested computed chains', () => {
     const moduleCode = compile(`
-import { createMemo, createSignal, defineComponent, onMount } from '@lania-v/runtime';
+import { defineComponent, onMount } from '@lania-v/runtime';
+import { createMemo, createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function ComputedParityHost() {
   const count = createSignal(0);

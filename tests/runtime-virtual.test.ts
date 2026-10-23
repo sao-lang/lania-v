@@ -2,9 +2,9 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { Virtual, type VirtualHost } from '../packages/advanced/src/index';
-import { buildRowModel } from '../packages/advanced/src/enhanced/virtual/row-model';
-import { VirtualSizeCache } from '../packages/advanced/src/enhanced/virtual/size-cache';
+import { Virtual, type VirtualHost } from '@lania-v/runtime/advanced';
+import { buildRowModel } from '../packages/runtime/src/advanced/enhanced/virtual/row-model';
+import { VirtualSizeCache } from '../packages/runtime/src/advanced/enhanced/virtual/size-cache';
 
 const makeItems = (count: number): { id: string }[] =>
   Array.from({ length: count }, (_, index) => ({ id: `item-${index}` }));

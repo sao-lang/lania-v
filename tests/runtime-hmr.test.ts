@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
+import * as reactivityNs from '@lania-v/runtime/reactivity';
+import * as runtimeInternalNs from '@lania-v/runtime/internal';
 import * as advanced from '@lania-v/runtime/advanced';
 import {
   applyComponentHmrUpdate,
@@ -49,6 +51,12 @@ const loadComponent = (
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
     }
+    if (id === '@lania-v/runtime/reactivity') {
+      return reactivityNs;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternalNs;
+    }
     throw new Error(`Unexpected import: ${id}`);
   };
 
@@ -62,7 +70,8 @@ const loadComponent = (
 };
 
 const cardSource = (label: string, name = 'HmrCard'): string => `
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 const ${name} = defineComponent(function ${name}(props: { title: string }) {
   const count = createSignal(0);
   return (
@@ -78,7 +87,8 @@ export default ${name};
 
 // dev 产物：多一个新的 setup 状态 + 改模板，用于验证 HMR 能补建新状态且保留旧值。
 const cardWithExtraStateSource = (name = 'HmrSetupCard'): string => `
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 const ${name} = defineComponent(function ${name}(props: { title: string }) {
   const count = createSignal(0);
   const note = createSignal('fresh');
@@ -94,7 +104,8 @@ export default ${name};
 `;
 
 const cardWithoutExtraStateSource = (name = 'HmrSetupCard'): string => `
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 const ${name} = defineComponent(function ${name}(props: { title: string }) {
   const count = createSignal(0);
   return (

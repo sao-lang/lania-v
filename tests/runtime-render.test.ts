@@ -9,7 +9,6 @@ import {
   TextSlot,
   applySSRChunk,
   attachSSRRenderContext,
-  createSignal,
   createSSRRenderContext,
   createStaticTemplate,
   mountStaticTemplate,
@@ -21,6 +20,7 @@ import {
   ssrRenderTeleportContainer,
   ssrRenderTeleportSlot,
 } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 const flushMicrotasks = async (times = 2): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

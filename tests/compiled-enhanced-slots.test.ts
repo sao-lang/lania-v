@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 
 import * as runtime from '@lania-v/runtime';
+import * as reactivityNs from '@lania-v/runtime/reactivity';
+import * as runtimeInternalNs from '@lania-v/runtime/internal';
 import * as advanced from '@lania-v/runtime/advanced';
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
@@ -40,6 +42,12 @@ const loadComponent = (source: string): any => {
     }
     if (id === '@lania-v/runtime/advanced') {
       return advanced;
+    }
+    if (id === '@lania-v/runtime/reactivity') {
+      return reactivityNs;
+    }
+    if (id === '@lania-v/runtime/internal') {
+      return runtimeInternalNs;
     }
     throw new Error(`Unexpected import: ${id}`);
   };
@@ -81,7 +89,9 @@ export default defineComponent(function CustomElementParent() {
 
   it('mounts a top-level KeepAlive through KeepAliveSlot', async () => {
     const source = `
-import { defineComponent, createSignal, KeepAlive } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
+import { KeepAlive } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function KeepAliveParent() {
   const key = createSignal('a');

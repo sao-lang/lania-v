@@ -95,10 +95,16 @@
 
 增强组件不是普通函数组件：编译器会把它们下沉成专门的 IR 节点，运行时按渲染计划执行。
 
-它们位于独立包 `@lania-v/advanced`，使用前需要显式导入：
+它们位于 `@lania-v/runtime/advanced` 二级入口，使用前需要显式导入：
 
 ```ts
-import { Each, KeepAlive, Suspense, Transition, When } from '@lania-v/advanced';
+import {
+  Each,
+  KeepAlive,
+  Suspense,
+  Transition,
+  When,
+} from '@lania-v/runtime/advanced';
 ```
 
 | 组件                                      | 作用                                            | 文档                                                |

@@ -26,7 +26,7 @@ import {
   type KeepAliveInstanceEntry,
   type KeepAliveNodeFactory,
   updateQueueableEntryNodes,
-} from '@lania-v/runtime/component/lifecycle';
+} from '../../component/lifecycle';
 import { defineEnhancedComponent } from './utils/factory';
 import {
   asRenderable,

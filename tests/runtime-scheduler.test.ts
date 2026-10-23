@@ -8,9 +8,9 @@ import {
   defaultScheduler,
   schedule,
   scheduleIdle,
-  tick,
   supportsRequestIdleCallback,
-} from '@lania-v/runtime';
+  tick,
+} from '@lania-v/runtime/reactivity';
 
 const flushMicrotasks = async (times = 1): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

@@ -4,10 +4,10 @@ import {
   bindSlots,
   createExpose,
   createRef,
-  createSignal,
   defineComponent,
 } from '@lania-v/runtime';
-import { Each } from '@lania-v/advanced';
+import { createSignal } from '@lania-v/runtime/reactivity';
+import { Each } from '@lania-v/runtime/advanced';
 
 type BindingPanelExpose = {
   focusInput(): void;

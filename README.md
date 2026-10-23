@@ -35,10 +35,11 @@ Integration       Vite Plugin / Playground / Debug / HMR
 lania-v/
 ├── packages/
 │   ├── runtime/           运行时核心
-│   │   ├── reactivity/    Signal、Computed、Effect、Store、Resource
+│   │   ├── reactivity/    Signal、Computed、Effect、Resource（`/reactivity` 入口）
+│   │   ├── advanced/      增强组件：When、Each、KeepAlive、Transition（`/advanced` 入口）
 │   │   ├── dom/           Slot、Updater、指令、样式绑定
 │   │   ├── render/        DOM 渲染、SSR 渲染
-│   │   ├── component/     组件宿主、增强组件、生命周期、Transition
+│   │   ├── component/     组件宿主、生命周期、Transition 基础设施
 │   │   └── core/          Context、Debug、环境
 │   ├── compiler-core/     编译器核心（协议无关）
 │   │   ├── ast/           统一 AST 结构

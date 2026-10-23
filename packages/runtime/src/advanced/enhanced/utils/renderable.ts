@@ -14,5 +14,5 @@ export {
   invokeRenderable,
   resolveRenderableIdentity,
   toRenderableArray,
-} from '@lania-v/runtime';
+} from '../../../component/renderable';
 export type { EnhancedRenderable } from '../types';

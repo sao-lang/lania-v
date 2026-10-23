@@ -11,13 +11,12 @@ import {
   RefSlot,
   SimpleUpdater,
   createContext,
-  createSignal,
   provideContext,
   useContext,
   setRef,
   type RefObject,
-  type Signal,
 } from '@lania-v/runtime';
+import { createSignal, type Signal } from '@lania-v/runtime/reactivity';
 
 const flushMicrotasks = async (times = 2): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

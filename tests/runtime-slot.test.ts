@@ -36,7 +36,7 @@ import {
   KeepAlive,
   TransitionGroup,
   When,
-} from '../packages/advanced/src/index';
+} from '@lania-v/runtime/advanced';
 import { withContextHost } from '../packages/runtime/src/component/host/function-component';
 import { resetRuntimeTestState } from '../packages/runtime/src/entry/testing';
 import { resolveBlockPayload } from '../packages/runtime/src/component/lifecycle/keepalive-registry';

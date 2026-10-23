@@ -8,7 +8,8 @@ const compile = (source: string): string =>
 describe('compiler form value support', () => {
   it('emits formAssociated and a synchronized effect updater', () => {
     const moduleCode = compile(`
-import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+import { defineComponent, useFormValue } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function FormField() {
   const value = createSignal('seed');
@@ -31,7 +32,8 @@ export default defineComponent(function FormField() {
 
   it('does not treat useFormValue as a setup field', () => {
     const moduleCode = compile(`
-import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+import { defineComponent, useFormValue } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function FormField() {
   const value = createSignal('seed');
@@ -46,7 +48,8 @@ export default defineComponent(function FormField() {
 
   it('supports the variable declaration form', () => {
     const moduleCode = compile(`
-import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+import { defineComponent, useFormValue } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function FormField() {
   const value = createSignal(1);
@@ -61,7 +64,8 @@ export default defineComponent(function FormField() {
 
   it('skips form association when useFormValue is absent', () => {
     const moduleCode = compile(`
-import { createSignal, defineComponent } from '@lania-v/runtime';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function PlainField() {
   const value = createSignal('seed');
@@ -76,7 +80,8 @@ export default defineComponent(function PlainField() {
   it('rejects getters with more than one expression', () => {
     expect(() =>
       compile(`
-import { createSignal, defineComponent, useFormValue } from '@lania-v/runtime';
+import { defineComponent, useFormValue } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 
 export default defineComponent(function FormField() {
   const value = createSignal('seed');

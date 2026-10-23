@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { type ChangedProps, ReactiveElement } from '@lania-v/runtime';
-import { createSignal } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
 import { AttrSlot, ClassSlot, StyleSlot, TextSlot } from '@lania-v/runtime';
 
 const flushMicrotasks = async (times = 2): Promise<void> => {

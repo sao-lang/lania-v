@@ -28,14 +28,15 @@ packages/
 | `@lania-v/runtime/dev`                  | 强制开启调试                                | 开发 / 测试  |
 | `@lania-v/runtime/prod`                 | 强制关闭调试                                | 生产验证     |
 | `@lania-v/runtime/core`                 | Context / Debug / Env / UniqueId            | 上下文、调试 |
-| `@lania-v/runtime/reactivity`           | 兼容入口，转发 `@lania-v/reactivity`        | 旧路径       |
+| `@lania-v/runtime/reactivity`           | Signal / Memo / Effect / watch / Scheduler  | 响应式 API   |
+| `@lania-v/runtime/advanced`             | 增强组件（When / Each / KeepAlive / ...）   | 增强组件     |
 | `@lania-v/runtime/component`            | 组件宿主 / 样式 / 事件 / 渲染值类型         | 组件层       |
 | `@lania-v/runtime/dom`                  | Slot / Updater / 指令 / class / style / ref | DOM 绑定     |
 | `@lania-v/runtime/render`               | DOM 渲染 / SSR / DSD / Hydration            | 渲染与 SSR   |
 | `@lania-v/runtime/jsx-runtime`          | JSX 运行时与类型                            | 类型声明     |
 | `@lania-v/runtime/component/transition` | Transition 宿主与注册表                     | 增强组件基建 |
 | `@lania-v/runtime/component/lifecycle`  | Boundary / KeepAlive 注册表                 | 增强组件基建 |
-| `@lania-v/runtime/advanced`             | 信号追踪 / devtools overlay                 | 高级调试     |
+| `@lania-v/runtime/advanced`             | 增强组件 / 信号追踪 / devtools overlay      | 增强组件     |
 | `@lania-v/runtime/internal`             | 内部辅助入口                                | 集成层       |
 | `@lania-v/runtime/testing`              | 测试状态重置                                | 单元测试     |
 
@@ -55,12 +56,18 @@ export * from './dom/slot-table';
 export * from './dom/slots';
 export * from './dom/style-value';
 export * from './dom/updaters';
-export * from '@lania-v/reactivity';
 export * from './render';
 export * from './dev/hmr';
 ```
 
-根入口还包括 `createSignal` / `createMemo` / `createEffect` / `watch` 等显式 re-export。
+根入口**只包含** core / component / dom / render 四类基础能力。响应式 API 与增强组件
+分别位于 `@lania-v/runtime/reactivity` 与 `@lania-v/runtime/advanced` 二级入口：
+
+```ts
+import { defineComponent, createRoot } from '@lania-v/runtime';
+import { createSignal, createEffect } from '@lania-v/runtime/reactivity';
+import { When, Each } from '@lania-v/runtime/advanced';
+```
 
 `createStore` / `produce` 已移除；对象型状态请使用 `@lania-v/store` 的 `createAtom()`。
 
@@ -112,13 +119,13 @@ import {
 - 环境判断；
 - 唯一 ID。
 
-### `reactivity`（兼容入口）
+### `reactivity`
 
 ```ts
 import { createSignal } from '@lania-v/runtime/reactivity';
 ```
 
-响应式核心已独立为 `@lania-v/reactivity`，这里只是转发，便于旧代码平滑迁移。
+响应式核心随 runtime 一起分发，但**不从一级入口导出**，必须显式按此子路径引入。
 
 ### `component`
 
@@ -139,7 +146,7 @@ import {
 - 样式工具；
 - 渲染值类型契约（`EnhancedRenderable` 等）。
 
-增强组件（`When` / `Each` / `Suspense` / `KeepAlive` / `Transition`）已拆分到 `@lania-v/advanced`。
+增强组件（`When` / `Each` / `Suspense` / `KeepAlive` / `Transition`）位于 `@lania-v/runtime/advanced` 二级入口。
 
 ### `dom`
 
@@ -236,19 +243,25 @@ afterEach(() => resetRuntimeTestState());
 - Boundary 状态；
 - Transition 注册表。
 
-## `@lania-v/advanced`
+## `@lania-v/runtime/advanced`
 
-增强组件包。`When` / `Each` / `Switch` / `Suspense` / `KeepAlive` / `Transition` 等都从这里导入。
+增强组件入口。`When` / `Each` / `Switch` / `Suspense` / `KeepAlive` / `Transition` 等都从这里导入。
 
 ```tsx
-import { Each, KeepAlive, Suspense, Transition, When } from '@lania-v/advanced';
+import {
+  Each,
+  KeepAlive,
+  Suspense,
+  Transition,
+  When,
+} from '@lania-v/runtime/advanced';
 ```
 
-依赖 `@lania-v/runtime`，并把自身构造器注册到 runtime 的动态 slot 中，因此：
+这些组件依赖 runtime 的 host / slot / lifecycle 基础设施，因此**不进入 runtime 一级入口**：
 
-- 使用增强组件时，请确保模块里 import 了 `@lania-v/advanced`；
-- runtime 本身不再携带这些组件，核心包体积更小；
-- SSR 的 `ssrRenderEnhancedBoundary` 等底层能力仍留在 runtime。
+- 使用增强组件时，从 `@lania-v/runtime/advanced` 导入即可，无需额外安装包；
+- runtime 一级入口保持精简，只携带基础能力；
+- SSR 的 `ssrRenderEnhancedBoundary` 等底层能力留在 runtime 内部。
 
 ## `@lania-v/store`
 
@@ -283,9 +296,9 @@ import {
 
 `@lania-v/store/internal` 只暴露编译器产物使用的 `getAtomDependency`，不面向业务代码。
 
-## `@lania-v/reactivity`
+## `@lania-v/runtime/reactivity`
 
-响应式核心，独立于框架运行时，可用于纯状态/副作用场景。
+响应式核心，随 runtime 分发，但**独立于 runtime 一级入口**。
 
 ```ts
 import {
@@ -299,16 +312,16 @@ import {
   startTransition,
   createScope,
   defaultScheduler,
-} from '@lania-v/reactivity';
+} from '@lania-v/runtime/reactivity';
 ```
 
-| 子路径                         | 内容                                                                          |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| `@lania-v/reactivity`          | Signal / Memo / Effect / watch / Scheduler / Resource / Selector              |
-| `@lania-v/reactivity/internal` | `trackSignals` / `linkTrackedSignals` / `isTracking`（编译器与 updater 使用） |
+| 子路径                        | 内容                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `@lania-v/runtime/reactivity` | Signal / Memo / Effect / watch / Scheduler / Resource / Selector              |
+| `@lania-v/runtime/internal`   | `trackSignals` / `linkTrackedSignals` / `isTracking`（编译器与 updater 使用） |
 
-- 该包不依赖 `@lania-v/runtime`，可单独使用；
-- `@lania-v/runtime` 会整体再导出它，因此既有的 `from '@lania-v/runtime'` 导入不受影响；
+- 该入口**不从 runtime 一级导出**，必须显式 `import { ... } from '@lania-v/runtime/reactivity'`；
+- `@lania-v/runtime` 一级入口只保留 core / component / dom / render；
 - dev/prod 判定通过 `setDevEnvironmentOverride()` 与 runtime 保持同步。
 
 ## `@lania-v/shared`

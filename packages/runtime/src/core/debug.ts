@@ -1,9 +1,9 @@
-import type { SchedulerPriority } from '@lania-v/reactivity';
+import type { SchedulerPriority } from '../reactivity';
 import {
   addPrimitiveDebugHooks,
   isDevEnvironment as reactiveIsDevEnvironment,
   setDevEnvironmentOverride as setReactiveDevEnvironmentOverride,
-} from '@lania-v/reactivity';
+} from '../reactivity';
 
 /**
  * 运行时调试与插件系统。
@@ -91,7 +91,7 @@ export const isDevEnvironment = (): boolean => {
  * - `index.dev.ts` 会强制设为 true
  * - `index.prod.ts` 会强制设为 false
  *
- * 同时把结果同步给 `@lania-v/reactivity`，保证信号/调度器的调试短路行为一致。
+ * 同时把结果同步给 `../reactivity/index.js`，保证信号/调度器的调试短路行为一致。
  */
 export const setDevEnvironmentOverride = (value: boolean | null): void => {
   devEnvironmentOverride = value;

@@ -131,7 +131,7 @@ describe('runtime bundling', () => {
 
   it('tree-shakes unrelated runtime modules when only createSignal is imported', async () => {
     const entryImport = toAbsoluteImportPath(
-      path.join(workspaceRoot, 'packages/runtime/src/index.ts')
+      path.join(workspaceRoot, 'packages/runtime/src/reactivity/index.ts')
     );
     const bundle = await buildBundle(
       `import { createSignal } from ${JSON.stringify(entryImport)};\nconst count = createSignal(0);\ncount.set(1);\nexport default count.value;\n`
@@ -141,5 +141,41 @@ describe('runtime bundling', () => {
     expect(bundle).not.toContain('IntersectionObserver');
     expect(bundle).not.toContain('lania.enhanced-component');
     expect(bundle).not.toContain('data-laniaLazy');
+  });
+
+  it('does not expose reactivity APIs from the runtime root entry', async () => {
+    globalThis.HTMLElement = class {} as typeof HTMLElement;
+    const root = (await import('@lania-v/runtime')) as Record<string, unknown>;
+    const reactivity = (await import('@lania-v/runtime/reactivity')) as Record<
+      string,
+      unknown
+    >;
+
+    for (const api of [
+      'createSignal',
+      'createEffect',
+      'createMemo',
+      'readonly',
+      'untrack',
+      'batch',
+      'watch',
+    ]) {
+      expect(root[api]).toBeUndefined();
+      expect(typeof reactivity[api]).toBe('function');
+    }
+  });
+
+  it('exposes enhanced components only from the advanced subpath', async () => {
+    globalThis.HTMLElement = class {} as typeof HTMLElement;
+    const root = (await import('@lania-v/runtime')) as Record<string, unknown>;
+    const advanced = (await import('@lania-v/runtime/advanced')) as Record<
+      string,
+      unknown
+    >;
+
+    for (const api of ['When', 'Each', 'KeepAlive', 'Transition']) {
+      expect(root[api]).toBeUndefined();
+      expect(advanced[api]).toBeDefined();
+    }
   });
 });

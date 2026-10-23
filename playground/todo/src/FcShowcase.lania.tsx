@@ -9,7 +9,7 @@ import {
   untrack,
   useTransition,
   watch,
-} from '@lania-v/reactivity';
+} from '@lania-v/runtime/reactivity';
 import {
   lazy,
   onCleanup,
@@ -34,7 +34,7 @@ import {
   Transition,
   TransitionGroup,
   When,
-} from '@lania-v/advanced';
+} from '@lania-v/runtime/advanced';
 import { createContext, provideContext } from '@lania-v/runtime/core';
 import {
   isTracking,

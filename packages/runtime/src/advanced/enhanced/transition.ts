@@ -12,9 +12,9 @@ import {
   ENHANCED_CONTRACT_VERSION,
   type TransitionPayload,
 } from '@lania-v/shared';
-import { renderGroup } from '@lania-v/runtime/component/transition';
-import { renderTransition } from '@lania-v/runtime/component/transition';
-import { getTransitionState } from '@lania-v/runtime/component/transition';
+import { renderGroup } from '../../component/transition';
+import { renderTransition } from '../../component/transition';
+import { getTransitionState } from '../../component/transition';
 import { defineEnhancedComponent } from './utils/factory';
 import { readCompatUpdateHost } from './utils/compat';
 import {

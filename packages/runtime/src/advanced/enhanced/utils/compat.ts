@@ -4,7 +4,10 @@
  * 这里把 `When`、`Each`、`Dynamic`、`Slot` 等声明式 props
  * 翻译成真实可挂载的 renderable，并在需要时读取当前运行时作用域。
  */
-import { getCurrentRuntimeScope, withRuntimeScope } from '@lania-v/runtime';
+import {
+  getCurrentRuntimeScope,
+  withRuntimeScope,
+} from '../../../component/host/function-component';
 import type {
   DynamicProps,
   EachProps,

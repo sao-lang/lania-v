@@ -16,7 +16,8 @@ const storePathKeys = (source: string): string[] => {
 describe('boundary and transition dependencies', () => {
   it('keeps store reads from the Suspense children subtree', () => {
     const keys = storePathKeys(`
-import { createStore, defineComponent, Suspense } from '@lania-v/runtime';
+import { createStore, defineComponent } from '@lania-v/runtime';
+import { Suspense } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function SuspenseChildHost() {
   const form = createStore({ status: 'idle', account: '' });
@@ -32,7 +33,8 @@ export default defineComponent(function SuspenseChildHost() {
 
   it('keeps store reads from the Transition children subtree', () => {
     const keys = storePathKeys(`
-import { createStore, defineComponent, Transition } from '@lania-v/runtime';
+import { createStore, defineComponent } from '@lania-v/runtime';
+import { Transition } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function TransitionHost() {
   const form = createStore({ mode: 'idle' });
@@ -48,7 +50,8 @@ export default defineComponent(function TransitionHost() {
 
   it('keeps store reads referenced only from an ErrorBoundary fallback expression', () => {
     const keys = storePathKeys(`
-import { createStore, defineComponent, ErrorBoundary } from '@lania-v/runtime';
+import { createStore, defineComponent } from '@lania-v/runtime';
+import { ErrorBoundary } from '@lania-v/runtime/advanced';
 
 export default defineComponent(function ErrorBoundaryHost() {
   const form = createStore({ message: 'boom' });

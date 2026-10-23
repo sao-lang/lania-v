@@ -1,5 +1,5 @@
 /**
- * `@lania-v/advanced` 公共入口。
+ * `@lania-v/runtime/advanced` 公共入口。
  *
  * 这里提供运行时的“增强能力”：控制流组件、异步边界、KeepAlive、Transition 等。
  * 它们依赖 runtime 的 host / slot / lifecycle 基础设施，因此 runtime 保持精简，
@@ -69,7 +69,7 @@ export type {
   WhenProps,
 } from './enhanced/types';
 
-import { registerEnhancedConstructor } from '@lania-v/runtime';
+import { registerEnhancedConstructor } from '../dom/slots/dynamic-slot';
 import {
   Await as AwaitComponent,
   Slot as SlotComponent,

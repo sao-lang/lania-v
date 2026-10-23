@@ -1,5 +1,6 @@
-import { createSignal, defineComponent } from '@lania-v/runtime';
-import { Each, When } from '@lania-v/advanced';
+import { defineComponent } from '@lania-v/runtime';
+import { createSignal } from '@lania-v/runtime/reactivity';
+import { Each, When } from '@lania-v/runtime/advanced';
 
 import {
   type BenchItem,

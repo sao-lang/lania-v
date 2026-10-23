@@ -1,5 +1,6 @@
-import { createSignal, onMount, untrack, watch } from '@lania-v/runtime';
-import { Each, When } from '@lania-v/advanced';
+import { onMount } from '@lania-v/runtime';
+import { createSignal, untrack, watch } from '@lania-v/runtime/reactivity';
+import { Each, When } from '@lania-v/runtime/advanced';
 import { createAtom } from '@lania-v/store';
 import {
   ApiError,

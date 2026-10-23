@@ -17,7 +17,7 @@ import {
   Transition as TransitionComponent,
   TransitionGroup as TransitionGroupComponent,
   When,
-} from '../packages/advanced/src/index';
+} from '@lania-v/runtime/advanced';
 import {
   bindHandlers,
   bindProps,
@@ -37,7 +37,7 @@ import {
   readonly,
   untrack,
   watch,
-} from '@lania-v/runtime';
+} from '@lania-v/runtime/reactivity';
 import { isTracking, trackSignals } from '@lania-v/runtime/advanced';
 import {
   createErrorBoundaryHost,
@@ -65,7 +65,7 @@ import {
   LazyLoad as LazyLoadInternalComponent,
   Suspense as SuspenseInternalComponent,
   TransitionGroup as TransitionGroupInternalComponent,
-} from '../packages/advanced/src/index';
+} from '@lania-v/runtime/advanced';
 import { resolveLazyOptions } from '../packages/runtime/src/component/lifecycle/boundary-registry';
 import {
   bootstrapSnapshotRuntime,
