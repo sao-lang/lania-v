@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/runtime",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -14,10 +14,10 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@lania-v/shared": "^0.0.1",
+    "@lania-v/shared": "^0.0.3",
     "csstype": "^3.2.3",
-    "@lania-v/reactivity": "^0.0.1",
-    "@lania-v/store": "^0.0.1"
+    "@lania-v/reactivity": "^0.0.3",
+    "@lania-v/store": "^0.0.3"
   },
   "files": [
     "src",
@@ -28,59 +28,73 @@
       "types": "./dist/index.d.ts",
       "development": "./dist/entry/index.dev.js",
       "production": "./dist/entry/index.prod.js",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./dev": {
       "types": "./dist/entry/index.dev.d.ts",
-      "import": "./dist/entry/index.dev.js"
+      "import": "./dist/entry/index.dev.js",
+      "default": "./dist/entry/index.dev.js"
     },
     "./prod": {
       "types": "./dist/entry/index.prod.d.ts",
-      "import": "./dist/entry/index.prod.js"
+      "import": "./dist/entry/index.prod.js",
+      "default": "./dist/entry/index.prod.js"
     },
     "./core": {
       "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.js"
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
     },
     "./reactivity": {
       "types": "./dist/reactivity/index.d.ts",
-      "import": "./dist/reactivity/index.js"
+      "import": "./dist/reactivity/index.js",
+      "default": "./dist/reactivity/index.js"
     },
     "./component": {
       "types": "./dist/component/index.d.ts",
-      "import": "./dist/component/index.js"
+      "import": "./dist/component/index.js",
+      "default": "./dist/component/index.js"
     },
     "./dom": {
       "types": "./dist/dom/index.d.ts",
-      "import": "./dist/dom/index.js"
+      "import": "./dist/dom/index.js",
+      "default": "./dist/dom/index.js"
     },
     "./render": {
       "types": "./dist/render/index.d.ts",
-      "import": "./dist/render/index.js"
+      "import": "./dist/render/index.js",
+      "default": "./dist/render/index.js"
     },
     "./jsx-runtime": {
       "types": "./dist/entry/jsx-runtime.d.ts",
-      "import": "./dist/entry/jsx-runtime.js"
+      "import": "./dist/entry/jsx-runtime.js",
+      "default": "./dist/entry/jsx-runtime.js"
     },
     "./advanced": {
       "types": "./dist/entry/advanced.d.ts",
-      "import": "./dist/entry/advanced.js"
+      "import": "./dist/entry/advanced.js",
+      "default": "./dist/entry/advanced.js"
     },
     "./internal": {
       "types": "./dist/entry/internal.d.ts",
-      "import": "./dist/entry/internal.js"
+      "import": "./dist/entry/internal.js",
+      "default": "./dist/entry/internal.js"
     },
     "./testing": {
       "types": "./dist/entry/testing.d.ts",
-      "import": "./dist/entry/testing.js"
+      "import": "./dist/entry/testing.js",
+      "default": "./dist/entry/testing.js"
     },
     "./component/transition": {
       "types": "./dist/component/transition/index.d.ts",
-      "import": "./dist/component/transition/index.js"
+      "import": "./dist/component/transition/index.js",
+      "default": "./dist/component/transition/index.js"
     },
     "./component/lifecycle": {
       "types": "./dist/component/lifecycle/index.d.ts",
-      "import": "./dist/component/lifecycle/index.js"
+      "import": "./dist/component/lifecycle/index.js",
+      "default": "./dist/component/lifecycle/index.js"
     }
   },
   "sideEffects": [

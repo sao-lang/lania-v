@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/vite-plugin",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -15,9 +15,9 @@
   },
   "dependencies": {
     "@rollup/pluginutils": "^5.1.4",
-    "@lania-v/compiler-core": "^0.0.1",
-    "@lania-v/compiler-tsx": "^0.0.1",
-    "@lania-v/runtime": "^0.0.1",
+    "@lania-v/compiler-core": "^0.0.3",
+    "@lania-v/compiler-tsx": "^0.0.3",
+    "@lania-v/runtime": "^0.0.3",
     "chokidar": "^4.0.3",
     "debug": "^4.4.1",
     "typescript": "^5.8.3"
@@ -29,7 +29,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "sideEffects": false

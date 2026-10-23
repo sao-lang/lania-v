@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/compiler-tsx",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -14,8 +14,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@lania-v/compiler-core": "^0.0.1",
-    "@lania-v/shared": "^0.0.1",
+    "@lania-v/compiler-core": "^0.0.3",
+    "@lania-v/shared": "^0.0.3",
     "@rollup/pluginutils": "^5.1.4",
     "magic-string": "^0.30.18",
     "typescript": "^5.8.3"
@@ -27,7 +27,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "sideEffects": false

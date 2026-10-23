@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/shared",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -20,7 +20,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "sideEffects": false

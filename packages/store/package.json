@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/store",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -14,7 +14,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@lania-v/reactivity": "^0.0.1"
+    "@lania-v/reactivity": "^0.0.3"
   },
   "files": [
     "src",
@@ -23,11 +23,13 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./internal": {
       "types": "./dist/internal.d.ts",
-      "import": "./dist/internal.js"
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
     }
   },
   "sideEffects": false
