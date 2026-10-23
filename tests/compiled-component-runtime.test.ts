@@ -6,7 +6,7 @@ import ts from 'typescript';
 import * as runtime from '@lania-v/runtime';
 import * as advanced from '@lania-v/runtime/advanced';
 import * as runtimeInternal from '@lania-v/runtime/internal';
-import * as store from '@lania/store';
+import * as store from '@lania-v/store';
 import { mountComponent } from '@lania-v/runtime';
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
@@ -43,7 +43,7 @@ const loadComponent = (source: string): any => {
     if (id === '@lania-v/runtime/internal') {
       return runtimeInternal;
     }
-    if (id === '@lania/store') {
+    if (id === '@lania-v/store') {
       return store;
     }
     throw new Error(`Unexpected import: ${id}`);
@@ -165,7 +165,7 @@ export default defineComponent(function CardComposable() {
 
   it('updates compiled atom paths through atom.set', async () => {
     const StoreView = loadComponent(`
-import { createAtom } from '@lania/store';
+import { createAtom } from '@lania-v/store';
 import { defineComponent } from '@lania-v/runtime';
 export default defineComponent(function StoreView() {
   const store = createAtom({

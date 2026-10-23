@@ -46,7 +46,7 @@ export const SIGNAL_FACTORIES = new Set([
   'createSignal',
   'readonly',
   'createDeferred',
-  // `@lania/store` 的 atom 与派生 atom 都是 Signal 形态，可直接参与模板订阅。
+  // `@lania-v/store` 的 atom 与派生 atom 都是 Signal 形态，可直接参与模板订阅。
   'createAtom',
   'createDerivedAtom',
 ]);

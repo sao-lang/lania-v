@@ -739,7 +739,7 @@ export const createSignal = <T>(
       return trackValue();
     },
     set: setSignal,
-    // 供 @lania/store 之类的外层封装使用：写入整棵新树，但按指定路径精确通知。
+    // 供 @lania-v/store 之类的外层封装使用：写入整棵新树，但按指定路径精确通知。
     setValueWithPath: (
       nextValue: T,
       changedPath: readonly (string | number)[]

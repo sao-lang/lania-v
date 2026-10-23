@@ -1,7 +1,7 @@
 /**
  * Store 作用域（scope）。
  *
- * `@lania/store` 的 atom 本身就是 Signal，所以“这一段代码读写哪一份状态”由
+ * `@lania-v/store` 的 atom 本身就是 Signal，所以“这一段代码读写哪一份状态”由
  * 同步执行上下文栈决定，而不是隐式树形派发：
  *
  * - 没有显式作用域时，所有 atom 落到模块级默认 store；

@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/compiler-tsx",
-  "version": "0.0.0",
+  "version": "0.0.2",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -14,10 +14,11 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@lania-v/compiler-core": "^0.0.0",
-    "@lania-v/shared": "^0.0.0",
+    "@lania-v/compiler-core": "^0.0.1",
+    "@lania-v/shared": "^0.0.1",
     "@rollup/pluginutils": "^5.1.4",
-    "magic-string": "^0.30.18"
+    "magic-string": "^0.30.18",
+    "typescript": "^5.8.3"
   },
   "files": [
     "src",

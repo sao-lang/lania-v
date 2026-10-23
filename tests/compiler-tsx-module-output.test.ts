@@ -71,9 +71,9 @@ export default defineComponent(function OrderHost() {
     );
   });
 
-  it('treats @lania/store atoms as signal dependencies', () => {
+  it('treats @lania-v/store atoms as signal dependencies', () => {
     const moduleCode = compile(`
-import { createAtom } from '@lania/store';
+import { createAtom } from '@lania-v/store';
 import { defineComponent } from '@lania-v/runtime';
 
 export default defineComponent(function AtomHost() {
@@ -86,7 +86,7 @@ export default defineComponent(function AtomHost() {
 });
 `);
 
-    expect(moduleCode).toContain('@lania/store');
+    expect(moduleCode).toContain('@lania-v/store');
     expect(moduleCode).toContain("this.user.set('name', 'Grace')");
     // atom 是信号形态，直接作为依赖加入 updater，而不是走 store 路径解析。
     expect(moduleCode).not.toContain('getAtomDependency(this.user');

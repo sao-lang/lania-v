@@ -3,9 +3,9 @@
 `lania-v` 把状态分成两层：
 
 - **响应式原语**（`@lania-v/runtime`）：`createSignal()` / `createMemo()` / `watch()`，是框架内部与组件局部状态的基础；
-- **状态管理包**（`@lania/store`）：在 Signal 之上做**原子化（atom）**建模，提供派生、动作、原子族与作用域快照。
+- **状态管理包**（`@lania-v/store`）：在 Signal 之上做**原子化（atom）**建模，提供派生、动作、原子族与作用域快照。
 
-局部状态用 `createSignal()` 就够；需要跨组件共享、按字段精确订阅、需要派生与批量写入时，用 `@lania/store`。
+局部状态用 `createSignal()` 就够；需要跨组件共享、按字段精确订阅、需要派生与批量写入时，用 `@lania-v/store`。
 
 ## Signal 还是 Atom
 
@@ -22,7 +22,7 @@
 ## 安装与引入
 
 ```bash
-npm install @lania/store
+npm install @lania-v/store
 ```
 
 ```ts
@@ -34,10 +34,10 @@ import {
   createStore,
   runWithStore,
   bindStore,
-} from '@lania/store';
+} from '@lania-v/store';
 ```
 
-`@lania/store` 的 atom 在运行时就是 Signal，因此编译器会像识别 `createSignal()` 一样把 `createAtom()` 声明提升为组件实例字段，模板里的 `count.value` 直接进入 `updater.deps`，不需要额外订阅代码。
+`@lania-v/store` 的 atom 在运行时就是 Signal，因此编译器会像识别 `createSignal()` 一样把 `createAtom()` 声明提升为组件实例字段，模板里的 `count.value` 直接进入 `updater.deps`，不需要额外订阅代码。
 
 ## `createAtom()`
 
@@ -201,7 +201,7 @@ todoOf('a') === todoOf('a'); // true
 默认情况下所有 atom 落在**模块级默认 store**，因此在组件内外写法完全一致。需要隔离（SSR 每请求、测试、多实例）时显式创建：
 
 ```ts
-import { createStore, runWithStore } from '@lania/store';
+import { createStore, runWithStore } from '@lania-v/store';
 
 const isolated = createStore();
 
@@ -240,7 +240,7 @@ const settings = createAtom({ theme: 'dark' }, { key: 'settings' });
 ### `persist()`
 
 ```ts
-import { createAtom, persist } from '@lania/store';
+import { createAtom, persist } from '@lania-v/store';
 
 const settings = persist(createAtom({ theme: 'dark' }), {
   key: 'app.settings',
@@ -274,7 +274,7 @@ devtools.snapshot('after-add');
 ## 组合示例
 
 ```tsx
-import { createAction, createAtom, createDerivedAtom } from '@lania/store';
+import { createAction, createAtom, createDerivedAtom } from '@lania-v/store';
 import { defineComponent } from '@lania-v/runtime';
 import { Each, When } from '@lania-v/advanced';
 
@@ -341,7 +341,7 @@ export default defineComponent(function TodoApp() {
 
 ## 从 `createStore` 迁移
 
-`createStore` 已从 runtime 移除，能力由 `@lania/store` 承接：
+`createStore` 已从 runtime 移除，能力由 `@lania-v/store` 承接：
 
 | 旧 API                      | 新写法                                        |
 | --------------------------- | --------------------------------------------- |
@@ -357,5 +357,5 @@ export default defineComponent(function TodoApp() {
 ## 下一步
 
 - [响应式 API](/api/reactivity)：Signal / Memo / watch 的完整签名。
-- [包与导出入口](/api/packages)：`@lania-v/runtime` 与 `@lania/store` / `@lania-v/advanced` 的分工。
+- [包与导出入口](/api/packages)：`@lania-v/runtime` 与 `@lania-v/store` / `@lania-v/advanced` 的分工。
 - [增强组件 API](/api/enhanced-components)：`When` / `Each` / `KeepAlive` 等组件的入口位置。

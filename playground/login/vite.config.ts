@@ -66,7 +66,7 @@ export default defineConfig({
         ),
       },
       {
-        find: '@lania/store',
+        find: '@lania-v/store',
         replacement: fileURLToPath(
           new URL('../../packages/store/src', import.meta.url)
         ),

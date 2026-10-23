@@ -14,7 +14,7 @@ export const getAtomDependency = (
     !('updaters' in (atom as object))
   ) {
     throw new TypeError(
-      'getAtomDependency() expects an atom created by @lania/store.'
+      'getAtomDependency() expects an atom created by @lania-v/store.'
     );
   }
 

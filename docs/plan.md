@@ -626,8 +626,8 @@
 
 ### 14.3 数据与异步 API
 
-- [x] 支持 `createStore`（已迁出：由 `@lania/store` 的 `createAtom` 承接）
-- [x] 新增 `packages/store`（`@lania/store`）：原子化状态、派生、动作、原子族、作用域快照与中间件
+- [x] 支持 `createStore`（已迁出：由 `@lania-v/store` 的 `createAtom` 承接）
+- [x] 新增 `packages/store`（`@lania-v/store`）：原子化状态、派生、动作、原子族、作用域快照与中间件
 - [x] 深层响应式
 - [x] 支持 `createResource`
 - [x] 支持 `createDeferred`

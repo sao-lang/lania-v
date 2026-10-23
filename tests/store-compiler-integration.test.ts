@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { compileFunctionComponentTsxToModule } from '@lania-v/compiler-tsx';
 
-describe('@lania/store compiler integration', () => {
-  it('keeps @lania/store imports and lifts atoms into instance fields', () => {
+describe('@lania-v/store compiler integration', () => {
+  it('keeps @lania-v/store imports and lifts atoms into instance fields', () => {
     const moduleCode = compileFunctionComponentTsxToModule(
       'Counter.lania.tsx',
       `
-import { createAtom, createDerivedAtom } from '@lania/store';
+import { createAtom, createDerivedAtom } from '@lania-v/store';
 import { defineComponent } from '@lania-v/runtime';
 
 export default defineComponent(function Counter() {
@@ -28,6 +28,6 @@ export default defineComponent(function Counter() {
     expect(moduleCode).toContain('this.count');
     expect(moduleCode).toContain('this.doubled');
     // 用户写下的 store 导入必须原样保留，否则产物里没有 createAtom。
-    expect(moduleCode).toContain('@lania/store');
+    expect(moduleCode).toContain('@lania-v/store');
   });
 });

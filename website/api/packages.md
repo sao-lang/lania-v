@@ -62,7 +62,7 @@ export * from './dev/hmr';
 
 根入口还包括 `createSignal` / `createMemo` / `createEffect` / `watch` 等显式 re-export。
 
-`createStore` / `produce` 已移除；对象型状态请使用 `@lania/store` 的 `createAtom()`。
+`createStore` / `produce` 已移除；对象型状态请使用 `@lania-v/store` 的 `createAtom()`。
 
 ### 为什么有 `dev` / `prod`
 
@@ -250,7 +250,7 @@ import { Each, KeepAlive, Suspense, Transition, When } from '@lania-v/advanced';
 - runtime 本身不再携带这些组件，核心包体积更小；
 - SSR 的 `ssrRenderEnhancedBoundary` 等底层能力仍留在 runtime。
 
-## `@lania/store`
+## `@lania-v/store`
 
 原子化状态管理。
 
@@ -266,7 +266,7 @@ import {
   persist,
   withHistory,
   withDevtools,
-} from '@lania/store';
+} from '@lania-v/store';
 ```
 
 | API                                         | 作用                                                   |
@@ -281,7 +281,7 @@ import {
 | `withHistory(atom)`                         | undo / redo                                            |
 | `withDevtools(options)`                     | 调试快照                                               |
 
-`@lania/store/internal` 只暴露编译器产物使用的 `getAtomDependency`，不面向业务代码。
+`@lania-v/store/internal` 只暴露编译器产物使用的 `getAtomDependency`，不面向业务代码。
 
 ## `@lania-v/reactivity`
 

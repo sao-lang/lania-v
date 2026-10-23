@@ -11,7 +11,7 @@ import {
   getStore,
   resetRootStore,
   runWithStore,
-} from '@lania/store';
+} from '@lania-v/store';
 import { createEffect, createScope, watch } from '@lania-v/runtime';
 
 const flush = async (times = 3): Promise<void> => {

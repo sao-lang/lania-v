@@ -1,5 +1,5 @@
 /**
- * `@lania/store` 公共入口。
+ * `@lania-v/store` 公共入口。
  *
  * 概念只有三层：
  * - **atom**：`createAtom()` 返回可读写句柄，`createDerivedAtom()` 返回派生只读句柄；

@@ -33,7 +33,7 @@
       ],
       "@lania-v/shared": ["../../packages/shared/src/index.ts"],
       "@lania-v/advanced": ["../../packages/advanced/src/index.ts"],
-      "@lania/store": ["../../packages/store/src/index.ts"]
+      "@lania-v/store": ["../../packages/store/src/index.ts"]
     },
     "noEmit": true
   },

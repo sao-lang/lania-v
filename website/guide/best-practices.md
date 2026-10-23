@@ -52,7 +52,7 @@ export default defineComponent(function Card(props: CardProps) {
 | -------------- | ------------------------------------------- |
 | 只影响当前组件 | 组件内 `createSignal()`                     |
 | 多个组件共享   | 提升到共同父组件，通过 props / context 传递 |
-| 复杂嵌套对象   | `createAtom()`（`@lania/store`）            |
+| 复杂嵌套对象   | `createAtom()`（`@lania-v/store`）          |
 | 异步数据       | `createResource()`                          |
 | 列表选中态     | `createSelector()`                          |
 | 跨页面缓存     | `KeepAlive` 或外部 store                    |

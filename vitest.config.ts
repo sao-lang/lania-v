@@ -77,7 +77,7 @@ export default defineConfig({
         ),
       },
       {
-        find: '@lania/store/internal',
+        find: '@lania-v/store/internal',
         replacement: fileURLToPath(
           new URL('./packages/store/src/internal.ts', import.meta.url)
         ),
@@ -101,7 +101,7 @@ export default defineConfig({
         ),
       },
       {
-        find: '@lania/store',
+        find: '@lania-v/store',
         replacement: fileURLToPath(
           new URL('./packages/store/src/index.ts', import.meta.url)
         ),

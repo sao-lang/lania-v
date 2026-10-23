@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createSignal, watch } from '@lania-v/runtime';
-import { createAtom } from '@lania/store';
+import { createAtom } from '@lania-v/store';
 
 const flush = async (times = 3): Promise<void> => {
   for (let index = 0; index < times; index += 1) {

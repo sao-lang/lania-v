@@ -18,7 +18,7 @@ count.set((value) => value + 1); // 2
 
 读取 `count.value` 时，如果当前存在依赖收集上下文，当前 Signal 会被记录为依赖。
 
-对象型 signal 支持嵌套路径写入，并且**按路径精确订阅**（`@lania/store` 的 atom 复用同一套机制）：
+对象型 signal 支持嵌套路径写入，并且**按路径精确订阅**（`@lania-v/store` 的 atom 复用同一套机制）：
 
 ```ts
 const user = createSignal({ name: 'Ada', profile: { city: 'Paris' } });

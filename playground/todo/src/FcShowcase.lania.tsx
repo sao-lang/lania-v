@@ -42,7 +42,7 @@ import {
   trackSignals,
 } from '@lania-v/runtime/advanced';
 import { createRef } from '@lania-v/runtime/dom';
-import { createAtom } from '@lania/store';
+import { createAtom } from '@lania-v/store';
 import ShowcaseCard from './ShowcaseCard.lania.tsx';
 import TodoFc from './TodoFc.lania.tsx';
 
@@ -526,7 +526,7 @@ function FcShowcase() {
     });
   };
 
-  // 2) Atom（@lania/store）
+  // 2) Atom（@lania-v/store）
   const store = createAtom({
     user: { name: 'lania', clicks: 0 },
     nested: { counter: 0 },
@@ -995,7 +995,7 @@ function FcShowcase() {
 
         <When value={tab.value === 'store'}>
           <div className="item">
-            <p className="summary">@lania/store 原子读写链路</p>
+            <p className="summary">@lania-v/store 原子读写链路</p>
             <p>store.value.user.name: {storeUserName.value}</p>
             <p>store.value.user.clicks: {storeUserClicks.value}</p>
             <p>store.value.nested.counter: {storeNestedCounter.value}</p>

@@ -1,6 +1,6 @@
 {
-  "name": "@lania/store",
-  "version": "0.0.0",
+  "name": "@lania-v/store",
+  "version": "0.0.1",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -14,7 +14,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@lania-v/reactivity": "^0.0.0"
+    "@lania-v/reactivity": "^0.0.1"
   },
   "files": [
     "src",

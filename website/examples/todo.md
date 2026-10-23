@@ -244,7 +244,7 @@ __laniaCompile.TodoFc.renderPlan.runtimeUpdaters;
 
 ## 可以继续练习
 
-1. 把 `todos` 换成 `@lania/store` 的 `createAtom`，按路径更新；
+1. 把 `todos` 换成 `@lania-v/store` 的 `createAtom`，按路径更新；
 2. 用 `createSelector` 优化选中态；
 3. 给 `Each` 加 `TransitionGroup` 做增删动画；
 4. 用 `createResource` 从接口加载初始数据。

@@ -1,13 +1,13 @@
 ---
 '@lania-v/reactivity': major
-'@lania/store': minor
+'@lania-v/store': minor
 '@lania-v/runtime': major
 '@lania-v/advanced': major
 '@lania-v/compiler-core': minor
 '@lania-v/compiler-tsx': minor
 ---
 
-新增原子化状态管理包 `@lania/store`，把响应式核心提取为 `@lania-v/reactivity`，
+新增原子化状态管理包 `@lania-v/store`，把响应式核心提取为 `@lania-v/reactivity`，
 并把 runtime 的增强组件拆到 `@lania-v/advanced`。
 
 ### `@lania-v/reactivity`
@@ -17,7 +17,7 @@
 - `@lania-v/reactivity/internal` 暴露 `trackSignals` / `linkTrackedSignals` / `isTracking`；
 - 自带 dev 判定与调试事件通道，runtime 通过 `setDevEnvironmentOverride()` 保持同步。
 
-### `@lania/store`
+### `@lania-v/store`
 
 - `createAtom()`：原子即 Signal，`atom.value` 读取、`atom.set()` 写入；对象 atom 支持路径级精确订阅；
 - `set` 支持链式调用（`atom.set('a', 1).set('b', 2)`）与不可变的路径写入；
@@ -44,6 +44,6 @@
 
 ### 编译器
 
-- `@lania/store` 的 `createAtom` / `createDerivedAtom` 被识别为信号声明，直接生成实例字段；
-- `@lania/store` 的 import 不再被 runtime 前导合并，原样保留在产物中；
+- `@lania-v/store` 的 `createAtom` / `createDerivedAtom` 被识别为信号声明，直接生成实例字段；
+- `@lania-v/store` 的 import 不再被 runtime 前导合并，原样保留在产物中；
 - 生成代码改用 `getAtomDependency()` 替代已移除的 `getStorePathSignal()`。

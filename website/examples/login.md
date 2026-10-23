@@ -380,7 +380,7 @@ Scheduler.flush-end
 
 ## 可以继续练习
 
-1. 用 `@lania/store` 的 `createAtom` 替代多个 Signal；
+1. 用 `@lania-v/store` 的 `createAtom` 替代多个 Signal；
 2. 用 `useFormValidity` 把校验接入原生表单；
 3. 用 `Await` 模拟真实登录请求；
 4. 用 `ErrorBoundary` 捕获请求错误；

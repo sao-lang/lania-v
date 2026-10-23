@@ -12,7 +12,7 @@
     "@lania-v/compiler-tsx": "0.0.0",
     "@lania-v/runtime": "0.0.0",
     "@lania-v/advanced": "0.0.0",
-    "@lania/store": "0.0.0",
+    "@lania-v/store": "0.0.0",
     "@lania-v/vite-plugin": "0.0.0"
   },
   "files": [

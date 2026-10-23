@@ -1,6 +1,6 @@
 {
   "name": "@lania-v/advanced",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -14,9 +14,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@lania-v/runtime": "^0.0.0",
-    "@lania-v/shared": "^0.0.0",
-    "@lania-v/reactivity": "^0.0.0"
+    "@lania-v/runtime": "^0.0.1",
+    "@lania-v/shared": "^0.0.1",
+    "@lania-v/reactivity": "^0.0.1"
   },
   "files": [
     "src",

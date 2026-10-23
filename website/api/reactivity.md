@@ -683,7 +683,7 @@ pending(); // boolean
 
 `pending` 是全局标志：多个 transition 同时存在时使用计数管理，最后一个结束后回落。
 
-## 原子状态（`@lania/store`）
+## 原子状态（`@lania-v/store`）
 
 ### 为什么需要 atom
 
@@ -692,7 +692,7 @@ pending(); // boolean
 1. 修改深层字段需要手动展开；
 2. 读取任意字段都可能订阅整个对象。
 
-`@lania/store` 的 `createAtom()` 用「原子 + 路径 + 版本 Signal」解决：
+`@lania-v/store` 的 `createAtom()` 用「原子 + 路径 + 版本 Signal」解决：
 
 - atom 本身是稳定的身份对象，可以组合派生与动作；
 - 读取 `atom.value.user.name` 订阅 `['user', 'name']`；
@@ -706,7 +706,7 @@ createAtom<T>(initialValue: T, options?: AtomOptions<T>): Atom<T>
 ```
 
 ```ts
-import { createAtom } from '@lania/store';
+import { createAtom } from '@lania-v/store';
 
 const state = createAtom({
   user: { name: 'Ada', age: 36 },
@@ -813,7 +813,7 @@ watch(
 ### 作用域
 
 ```ts
-import { createStore, runWithStore, bindStore } from '@lania/store';
+import { createStore, runWithStore, bindStore } from '@lania-v/store';
 
 const scope = createStore();
 const count = runWithStore(scope, () => createAtom(0, { key: 'count' }));

@@ -72,7 +72,7 @@ export const analyzeComponentDependencies = (
       }
       const callee = parsed.expression;
       // `createStore()` 已迁出 runtime，这里只保留对旧产物的兼容识别；
-      // 新的原子状态由 `@lania/store` 的 `createAtom` 提供，编译器把它当信号处理。
+      // 新的原子状态由 `@lania-v/store` 的 `createAtom` 提供，编译器把它当信号处理。
       return (
         (ts.isIdentifier(callee) && callee.text === 'createStore') ||
         (ts.isPropertyAccessExpression(callee) &&

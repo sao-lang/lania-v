@@ -30,8 +30,8 @@ export interface CompiledTsxModule {
 }
 
 const RUNTIME_IMPORT_PATTERN = /^['"]@lania-v\/runtime(?:\/[^'"]+)?['"]$/;
-// `@lania/store` 是生态包而非 runtime 内部模块：它的具名导入必须原样保留在产物里。
-const STORE_IMPORT_PATTERN = /^['"]@lania\/store(?:\/[^'"]+)?['"]$/;
+// `@lania-v/store` 是生态包而非 runtime 内部模块：它的具名导入必须原样保留在产物里。
+const STORE_IMPORT_PATTERN = /^['"]@lania-v\/store(?:\/[^'"]+)?['"]$/;
 // `@lania-v/reactivity` 是独立的响应式核心包：其具名导入同样需要保留，
 // 但其中的信号工厂仍参与编译期声明识别。
 const REACTIVITY_IMPORT_PATTERN = /^['"]@lania-v\/reactivity(?:\/[^'"]+)?['"]$/;
@@ -207,7 +207,7 @@ const collectUserRuntimeBindings = (
     }
 
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
-    // 只有 runtime 自身的具名导入需要并入统一前导；`@lania/store` 会原样保留。
+    // 只有 runtime 自身的具名导入需要并入统一前导；`@lania-v/store` 会原样保留。
     if (
       !RUNTIME_IMPORT_PATTERN.test(specifier) ||
       STORE_IMPORT_PATTERN.test(specifier) ||
@@ -480,7 +480,7 @@ const extractNonRuntimeImports = (fileName: string, source: string): string => {
     }
     const specifier = stmt.moduleSpecifier.getText(sourceFile);
     // 运行时依赖由编译器统一注入，避免与用户源码中的导入重复。
-    // `@lania/store` 属于生态包，编译器不接管它的导入，必须原样保留。
+    // `@lania-v/store` 属于生态包，编译器不接管它的导入，必须原样保留。
     if (
       RUNTIME_IMPORT_PATTERN.test(specifier) &&
       !STORE_IMPORT_PATTERN.test(specifier) &&
