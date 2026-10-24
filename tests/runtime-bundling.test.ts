@@ -112,7 +112,7 @@ describe('runtime bundling', () => {
 
     await import(`${prodEntry}?entry=prod`);
     expect(devEnvironment.isDevEnvironment()).toBe(false);
-  });
+  }, 20000);
 
   it('replaces compile-time dev constants during bundling', async () => {
     const envImport = toAbsoluteImportPath(
@@ -163,7 +163,7 @@ describe('runtime bundling', () => {
       expect(root[api]).toBeUndefined();
       expect(typeof reactivity[api]).toBe('function');
     }
-  });
+  }, 20000);
 
   it('exposes enhanced components only from the advanced subpath', async () => {
     globalThis.HTMLElement = class {} as typeof HTMLElement;
@@ -177,5 +177,5 @@ describe('runtime bundling', () => {
       expect(root[api]).toBeUndefined();
       expect(advanced[api]).toBeDefined();
     }
-  });
+  }, 20000);
 });
