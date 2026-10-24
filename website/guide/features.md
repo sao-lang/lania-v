@@ -71,7 +71,7 @@
 | 自定义指令            | `use={ { name: value } }` + `registerDirective()`                                                      | [模板与绑定](/guide/templates#自定义指令)       |
 | 条件与列表            | `<When>`、`<Each>`、`<Switch>`                                                                         | [条件与列表](/guide/control-flow)               |
 
-完整的属性清单、表达式规则与语法模式对照见 [语法参考](/guide/syntax)。
+完整的属性清单与表达式规则见 [语法参考](/guide/syntax)。
 
 ## 组件模型
 
@@ -136,16 +136,15 @@ import {
 
 ## 工程化
 
-| 能力           | 入口                                                            | 文档                                              |
-| -------------- | --------------------------------------------------------------- | ------------------------------------------------- |
-| Vite 插件      | `laniaFcVitePlugin(options)`                                    | [Vite 插件](/api/plugin)                          |
-| 文件过滤       | `tsxInclude` / `tsxExclude`                                     | [Vite 插件](/api/plugin#tsxinclude-tsxexclude)    |
-| 语法模式       | `tsxTemplateSyntaxMode: 'jsx-standard' \| 'directive-extended'` | [语法参考](/guide/syntax#两种语法模式)            |
-| 编译快照       | `debug: true` + `globalThis.__laniaCompile`                     | [开发与调试](/guide/dev-and-debug#编译快照)       |
-| 运行时调试钩子 | `registerRuntimeDebugHooks()`                                   | [开发与调试](/guide/dev-and-debug#运行时调试钩子) |
-| 更新高亮       | devtools overlay                                                | [开发与调试](/guide/dev-and-debug#更新高亮)       |
-| 测试辅助       | `resetRuntimeTestState()`                                       | [包与导出入口](/api/packages)                     |
-| 环境覆盖       | `@lania-v/runtime/dev` / `@lania-v/runtime/prod`                | [工程配置](/guide/configuration#环境与调试开关)   |
+| 能力           | 入口                                             | 文档                                              |
+| -------------- | ------------------------------------------------ | ------------------------------------------------- |
+| Vite 插件      | `laniaFcVitePlugin(options)`                     | [Vite 插件](/api/plugin)                          |
+| 文件过滤       | `tsxInclude` / `tsxExclude`                      | [Vite 插件](/api/plugin#tsxinclude-tsxexclude)    |
+| 编译快照       | `debug: true` + `globalThis.__laniaCompile`      | [开发与调试](/guide/dev-and-debug#编译快照)       |
+| 运行时调试钩子 | `registerRuntimeDebugHooks()`                    | [开发与调试](/guide/dev-and-debug#运行时调试钩子) |
+| 更新高亮       | devtools overlay                                 | [开发与调试](/guide/dev-and-debug#更新高亮)       |
+| 测试辅助       | `resetRuntimeTestState()`                        | [包与导出入口](/api/packages)                     |
+| 环境覆盖       | `@lania-v/runtime/dev` / `@lania-v/runtime/prod` | [工程配置](/guide/configuration#环境与调试开关)   |
 
 ## 内置、需自行集成、明确不做
 

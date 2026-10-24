@@ -1,6 +1,6 @@
 # 语法参考
 
-这一页是 `.lania.tsx` 的**语法清单**：文件规则、表达式规则、全部属性形态、两种语法模式的对照，以及编译器会直接拒绝的写法。
+这一页是 `.lania.tsx` 的**语法清单**：文件规则、表达式规则、全部属性形态，以及编译器会直接拒绝的写法。
 
 各项绑定的运行时语义（例如 class 的归一化顺序、style 的覆盖规则、指令的生命周期）见 [模板与绑定](/guide/templates)。
 
@@ -255,35 +255,33 @@ import Card from './Card.lania.tsx';
 
 完整清单与每个组件的 props 见 [增强组件 API](/api/enhanced-components)。
 
-## 两种语法模式
+## 不支持的指令写法
 
-`tsxTemplateSyntaxMode` 决定编译器接受的属性写法。默认是 `jsx-standard`。
+`lania-v` 的属性语法是标准 JSX，外加 `onClick.stop` 这类事件名后缀修饰符。旧式指令写法会在编译期抛出 `Legacy TSX directive syntax "..." is not supported in standard TSX mode`，按下表改写：
 
-| 能力       | `jsx-standard`（默认）               | `directive-extended`                                                               |
-| ---------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
-| 双向绑定   | `model={ { target, modifiers } }`    | `model={ { ... } }`、`model:value.trim={x}`、`model:checked={x}`、`bind:value={x}` |
-| 类名开关   | `class={ { active: cond } }`         | `class={ { ... } }`、`class:active={cond}`                                         |
-| 单条样式   | `style={ { width: ... } }`           | `style={ { ... } }`、`style:width.px={n}`                                          |
-| 自定义指令 | `use={ { name: value } }`            | `use={ { ... } }`、`use:name={value}`                                              |
-| 事件修饰符 | `onClick={ { handler, modifiers } }` | 同上，另有 `click.stop={fn}`                                                       |
-| 组件事件   | `onClose={fn}`                       | 另有 `on:close={fn}`                                                               |
-| 条件       | `<When>`                             | 另有 `if={cond}`                                                                   |
-
-两种模式**不能混用在同一套配置里**：`jsx-standard` 会主动拦截上面所有旧式指令写法，并给出明确的编译错误。新项目建议保持默认。
+| 旧写法                                    | 替代写法                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `model:value.trim={x}` / `bind:value={x}` | `model={ { target: x, modifiers: { trim: true } } }` 或 `value={x}` + `onInput` |
+| `class:active={cond}`                     | `class={ { active: cond } }`                                                    |
+| `style:width.px={n}`                      | `style={ { width: n + 'px' } }`                                                 |
+| `use:name={value}`                        | `use={ { name: value } }`                                                       |
+| `on:close={fn}`                           | `onClose={fn}`                                                                  |
+| `click.stop={fn}`                         | `onClick={ { handler: fn, modifiers: { stop: true } } }`                        |
+| `if={cond}`                               | `<When when={cond}>...</When>`                                                  |
 
 ## 编译期硬约束
 
-| 写法                                                  | 结果                        |
-| ----------------------------------------------------- | --------------------------- |
-| 多个根节点                                            | 报错，需用 fragment 包裹    |
-| 原生元素上 spread                                     | 报错，spread 只允许组件标签 |
-| `html` 与子节点并存                                   | 报错                        |
-| `model` / `use` / 事件对象不是对象字面量              | 报错                        |
-| 对象字面量里的 spread / 计算属性名                    | 不支持                      |
-| `jsx-standard` 下使用 `model:` / `class:` / `use:` 等 | 报错                        |
-| 在未编译的普通 `.ts` 中调用 `onMount` 等              | compile-only 错误           |
-| 包名或路径别名导入的 props 类型                       | 不做类型展开                |
-| `Pick<T, K>`、泛型实例化等需要类型检查的 props 类型   | 不支持                      |
+| 写法                                                 | 结果                        |
+| ---------------------------------------------------- | --------------------------- |
+| 多个根节点                                           | 报错，需用 fragment 包裹    |
+| 原生元素上 spread                                    | 报错，spread 只允许组件标签 |
+| `html` 与子节点并存                                  | 报错                        |
+| `model` / `use` / 事件对象不是对象字面量             | 报错                        |
+| 对象字面量里的 spread / 计算属性名                   | 不支持                      |
+| 使用 `model:` / `class:` / `use:` / `on:` 等旧式指令 | 报错                        |
+| 在未编译的普通 `.ts` 中调用 `onMount` 等             | compile-only 错误           |
+| 包名或路径别名导入的 props 类型                      | 不做类型展开                |
+| `Pick<T, K>`、泛型实例化等需要类型检查的 props 类型  | 不支持                      |
 
 ## 与 React JSX 的差异
 
@@ -343,4 +341,4 @@ createExpose(props, { focus: () => inputRef?.focus() });
 
 - [模板与绑定](/guide/templates)：每个绑定的运行时语义。
 - [条件与列表](/guide/control-flow)：增强组件的完整用法。
-- [工程配置](/guide/configuration)：如何在项目里开启另一种语法模式。
+- [工程配置](/guide/configuration)：Vite 插件与编译选项。

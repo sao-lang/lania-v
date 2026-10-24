@@ -898,7 +898,6 @@ validatePropValue(...)
 ```
 
 `onXxx` 在原生标签上映射为小写 DOM 事件（`onKeyDown` → `keydown`），在组件标签上映射为组件事件（`onToggle` → `toggle`）。
-`directive-extended` 模式下还额外支持 `on:close`、`onClick.stop` 这类指令式写法。
 
 ### 解析事件名
 
@@ -908,13 +907,11 @@ parseEventBindingName(sourceName: string): ParsedEventBindingName | null
 
 支持的形态：
 
-| 写法           | 结果                                         |
-| -------------- | -------------------------------------------- |
-| `onClick`      | DOM `click`                                  |
-| `onKeyDown`    | DOM `keydown`（事件名转小写）                |
-| `onToggle`     | 组件事件 `toggle`                            |
-| `on:close`     | 组件事件 `close`（`directive-extended`）     |
-| `onClick.stop` | DOM `click` + `stop`（`directive-extended`） |
+| 写法        | 结果                          |
+| ----------- | ----------------------------- |
+| `onClick`   | DOM `click`                   |
+| `onKeyDown` | DOM `keydown`（事件名转小写） |
+| `onToggle`  | 组件事件 `toggle`             |
 
 ### 修饰符
 

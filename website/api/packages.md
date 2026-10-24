@@ -401,7 +401,6 @@ import {
   analyzeTsxBindingName,
   type CompiledTsxFunctionComponent,
   type CompiledTsxModule,
-  type TsxTemplateSyntaxMode,
 } from '@lania-v/compiler-tsx';
 ```
 

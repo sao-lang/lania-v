@@ -128,14 +128,14 @@ const content = html`<strong>${title()}</strong>`;
 
 事件名解析规则：
 
-| 写法                     | 目标                        | 适用模式                |
-| ------------------------ | --------------------------- | ----------------------- |
-| `onClick`                | DOM `click`                 | 全部模式                |
-| `onKeyDown`              | DOM `keydown`               | 全部模式                |
-| `onToggle`（组件标签上） | 组件事件 `toggle`           | 全部模式                |
-| `on:close`（组件标签上） | 组件事件 `close`            | 仅 `directive-extended` |
-| `onClick.stop`           | DOM `click` + `stop` 修饰符 | 全部模式                |
-| `click.stop`             | 小写事件名 + 修饰符         | 仅 `directive-extended` |
+| 写法                     | 目标                        |
+| ------------------------ | --------------------------- |
+| `onClick`                | DOM `click`                 |
+| `onKeyDown`              | DOM `keydown`               |
+| `onToggle`（组件标签上） | 组件事件 `toggle`           |
+| `onClick.stop`           | DOM `click` + `stop` 修饰符 |
+
+`on:close`、`click.stop` 这类旧式写法会在编译期报错。
 
 ::: warning 组件标签上的 `onXxx` 是事件，不是普通 prop
 编译器会把组件标签上的 `onXxx` 一律当作组件事件（子组件通过 `emit()` 派发）。
@@ -143,7 +143,7 @@ const content = html`<strong>${title()}</strong>`;
 或用 `props` 显式传入。
 :::
 
-标准 JSX 模式（默认）下使用对象写法表达修饰符：
+使用对象写法表达修饰符：
 
 ```tsx
 <button
@@ -154,7 +154,7 @@ const content = html`<strong>${title()}</strong>`;
 />
 ```
 
-扩展语法模式（`directive-extended`）可以直接把修饰符写在事件名上：
+也可以把修饰符直接写在事件名上：
 
 ```tsx
 <button onClick.stop.prevent={submit} />
@@ -199,7 +199,7 @@ const content = html`<strong>${title()}</strong>`;
 `debounce` / `throttle` 需要额外监听，编译器会把它们降级成运行时的 `withEventHint()`，也可以自己包：
 
 ```tsx
-<input onInput.debounce={search} />                 {/* directive-extended */}
+<input onInput.debounce={search} />
 <input onInput={{ handler: search, modifiers: { debounce: true } }} />
 
 // 等价的手写形式
@@ -225,11 +225,10 @@ import { withEventHint } from '@lania-v/runtime';
 
 ### 组件事件
 
-组件标签上的 `onXxx` / `on:xxx` 是**组件事件**，由子组件通过 `emit()` 派发：
+组件标签上的 `onXxx` 是**组件事件**，由子组件通过 `emit()` 派发：
 
 ```tsx
 <child-card onToggle={handleToggle} />
-<child-card on:close={handleClose} /> {/* directive-extended */}
 ```
 
 组件事件只支持 `listener` 选项，不接受 DOM 修饰符：
@@ -303,7 +302,7 @@ interface ModelSourceBinding<T> {
 - `number`：转换成 `Number`；
 - `lazy`：保留给“变更时再同步”的策略。
 
-没有 `model` 参数时等价于 `model:value`。
+`prop` 缺省为 `'value'`。
 
 ## `ref`
 
@@ -375,8 +374,6 @@ registerDirective('watermark', {
 | `mounted`   | 首次写入             |
 | `updated`   | 同一个 Slot 后续写入 |
 | `unmounted` | 节点销毁或 Slot 释放 |
-
-`directive-extended` 模式还兼容 `use:watermark={...}`。
 
 ## 条件与列表
 

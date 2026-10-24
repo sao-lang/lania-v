@@ -255,15 +255,14 @@ useFormValidity(() =>
 
 ### 事件
 
-| 源码                                 | 编译后                                       |
-| ------------------------------------ | -------------------------------------------- |
-| `onClick={fn}`                       | DOM event slot                               |
-| `onKeyDown={fn}`                     | DOM `keydown` 事件 slot（事件名转小写）      |
-| `onToggle={fn}`（组件标签）          | 组件事件 `toggle`                            |
-| `onClick={ { handler, modifiers } }` | 带修饰符的事件 slot                          |
-| `onClick={ { handler, listener } }`  | 带原生监听选项、不走委托的事件 slot          |
-| `on:close={fn}`                      | 组件事件 `close`（`directive-extended`）     |
-| `onClick.stop={fn}`                  | DOM `click` + `stop`（`directive-extended`） |
+| 源码                                 | 编译后                                  |
+| ------------------------------------ | --------------------------------------- |
+| `onClick={fn}`                       | DOM event slot                          |
+| `onKeyDown={fn}`                     | DOM `keydown` 事件 slot（事件名转小写） |
+| `onToggle={fn}`（组件标签）          | 组件事件 `toggle`                       |
+| `onClick={ { handler, modifiers } }` | 带修饰符的事件 slot                     |
+| `onClick={ { handler, listener } }`  | 带原生监听选项、不走委托的事件 slot     |
+| `onClick.stop={fn}`                  | DOM `click` + `stop` 修饰符             |
 
 ### 指令
 
@@ -292,14 +291,13 @@ useFormValidity(() =>
 compileFunctionComponentTsx(
   fileName: string,
   source: string,
-  options?: CompilerPluginOptions,
-  mode?: TsxTemplateSyntaxMode
+  options?: CompilerPluginOptions
 ): CompiledTsxFunctionComponent
 ```
 
 流程：
 
-1. `parseFunctionComponentTsx(fileName, source, mode)`；
+1. `parseFunctionComponentTsx(fileName, source)`；
 2. `runComponentCompilerPipeline(program, options)`；
 3. `generateClassComponentCode()` 为每个组件生成类代码；
 4. 返回入口组件与所有组件产物。
@@ -367,8 +365,7 @@ interface CompiledTsxFunctionComponent {
 compileFunctionComponentTsxToModule(
   fileName: string,
   source: string,
-  options?: CompilerPluginOptions,
-  mode?: TsxTemplateSyntaxMode
+  options?: CompilerPluginOptions
 ): string
 ```
 
@@ -380,8 +377,7 @@ compileFunctionComponentTsxToModule(
 compileFunctionComponentTsxModule(
   fileName: string,
   source: string,
-  options?: CompilerPluginOptions,
-  mode?: TsxTemplateSyntaxMode
+  options?: CompilerPluginOptions
 ): CompiledTsxModule
 ```
 
@@ -426,17 +422,6 @@ createCompiledTsxModuleMap(
 ```
 
 生成整段替换式 sourcemap。
-
-### `TsxTemplateSyntaxMode`
-
-```ts
-type TsxTemplateSyntaxMode = 'jsx-standard' | 'directive-extended';
-```
-
-| 模式                 | 支持                                                                                          |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| `jsx-standard`       | 标准 JSX；`model={ {...} }`、`html={...}`、`className`、对象事件                              |
-| `directive-extended` | 额外兼容 `model:value.trim`、`style:width.px`、`class:active`、`use:name`、`click.stop`、`if` |
 
 ### 其他导出
 

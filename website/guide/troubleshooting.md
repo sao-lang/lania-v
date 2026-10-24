@@ -40,17 +40,17 @@ return (<><p>a</p><p>b</p></>);
 
 ### `Legacy TSX directive syntax "..." is not supported in standard TSX mode`
 
-在 `jsx-standard`（默认）下写了旧式指令。二选一：
+命中了已移除的旧式指令写法，按错误提示改成标准 JSX：
 
 ```tsx
-// 改成对象协议
-<input model={{ target: draft, modifiers: { trim: true } }} />
-<div class={{ active: isActive() }} />
+// ❌ model:value={draft}
+<input model={{ target: draft }} />
 
-// 或者把 tsxTemplateSyntaxMode 切成 'directive-extended'
+// ❌ class:active={isActive()}
+<div class={{ active: isActive() }} />
 ```
 
-两种写法的完整对照见 [语法参考 · 两种语法模式](/guide/syntax#两种语法模式)。
+完整对照见 [语法参考 · 不支持的指令写法](/guide/syntax#不支持的指令写法)。
 
 ### `spread: Spread attributes are only supported on component tags`
 

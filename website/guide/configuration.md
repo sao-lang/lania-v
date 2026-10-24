@@ -58,19 +58,17 @@ export default defineConfig(({ command }) => ({
 
 ## 插件选项
 
-| 选项                    | 默认              | 作用                                      |
-| ----------------------- | ----------------- | ----------------------------------------- |
-| `tsxInclude`            | `/\.lania\.tsx$/` | 需要编译的文件                            |
-| `tsxExclude`            | `undefined`       | 排除规则（例如 `node_modules`）           |
-| `tsxTemplateSyntaxMode` | `'jsx-standard'`  | `jsx-standard` 或 `directive-extended`    |
-| `debug`                 | `false`           | 开发态输出编译快照并注入 `__laniaCompile` |
-| `hotReload`             | `true`            | 开发态生成可重跑的 `__laniaSetup()`       |
-| `compilerPlugins`       | `undefined`       | 传给 `compiler-core` 的插件数组           |
+| 选项              | 默认              | 作用                                      |
+| ----------------- | ----------------- | ----------------------------------------- |
+| `tsxInclude`      | `/\.lania\.tsx$/` | 需要编译的文件                            |
+| `tsxExclude`      | `undefined`       | 排除规则（例如 `node_modules`）           |
+| `debug`           | `false`           | 开发态输出编译快照并注入 `__laniaCompile` |
+| `hotReload`       | `true`            | 开发态生成可重跑的 `__laniaSetup()`       |
+| `compilerPlugins` | `undefined`       | 传给 `compiler-core` 的插件数组           |
 
 ```ts
 laniaFcVitePlugin({
   tsxExclude: /node_modules/,
-  tsxTemplateSyntaxMode: 'jsx-standard',
   compilerPlugins: [statsPlugin],
 });
 ```

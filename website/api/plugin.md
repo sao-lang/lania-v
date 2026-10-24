@@ -41,7 +41,6 @@ interface LaniaFcVitePluginOptions {
   compilerPlugins?: CompilerPlugin[];
   tsxInclude?: RegExp;
   tsxExclude?: RegExp;
-  tsxTemplateSyntaxMode?: 'jsx-standard' | 'directive-extended';
   debug?: boolean;
   hotReload?: boolean;
 }
@@ -84,23 +83,6 @@ laniaFcVitePlugin({
   tsxInclude: /\.lania\.tsx$/,
   tsxExclude: /node_modules/,
 });
-```
-
-### `tsxTemplateSyntaxMode`
-
-| 模式                   | 支持                                                                                          |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `jsx-standard`（默认） | 标准 JSX 属性；`model={ {...} }`、`html={...}`、`className`、对象事件                         |
-| `directive-extended`   | 额外兼容 `model:value.trim`、`style:width.px`、`class:active`、`use:name`、`click.stop`、`if` |
-
-示例：
-
-```tsx
-// jsx-standard
-<input model={{ target: draft, modifiers: { trim: true } }} />
-
-// directive-extended
-<input model:value.trim={draft} />
 ```
 
 ### `debug`
@@ -180,7 +162,7 @@ laniaVitePlugin(options?): Plugin // 旧名，行为相同
 ```text
 Vite transform(id, code)
   → createFilter(tsxInclude, tsxExclude)
-  → compileFunctionComponentTsxModule(fileName, code, options, mode)
+  → compileFunctionComponentTsxModule(fileName, code, options)
   → TypeScript transpileModule（ES2022 / ESNext / ReactJSX）
   → 生成 sourcemap
   → 开发态追加 HMR import + accept

@@ -6,7 +6,7 @@
 
 ```text
 Vite transform
-  → compileFunctionComponentTsxModule(fileName, source, options, mode)
+  → compileFunctionComponentTsxModule(fileName, source, options)
       → parseFunctionComponentTsx
       → runComponentCompilerPipeline
       → generateClassComponentCode
@@ -15,19 +15,19 @@ Vite transform
 
 ## 1. TSX 预处理
 
-`syntax/tsx-binding.ts` 负责把扩展绑定名改成 TypeScript 能解析的形态：
+`syntax/tsx-binding.ts` 负责把带修饰符的属性名改成 TypeScript 能解析的形态：
 
 ```text
-model:value.trim  → model__LANIA_DOT__value__LANIA_DOT__trim
-style:width.px    → style__LANIA_DOT__width__LANIA_DOT__px
+onClick.stop    → onClick__LANIA_DOT__stop
+onKeydown.enter → onKeydown__LANIA_DOT__enter
 ```
 
 解析后再还原。这样做的原因：
 
 - TypeScript 的 JSX 属性名不允许 `.`；
-- 预处理可以把扩展语法集中在入口处理，后续阶段只面对统一名字。
+- 预处理把后缀修饰符集中在入口处理，后续阶段只面对统一名字。
 
-`jsx-standard` 模式不做这层扩展，只接受标准属性。
+旧式指令（`model:value`、`class:active`、`on:close`、`click.stop`、`if`）在同一个入口直接报迁移错误，不会进入后续阶段。
 
 ## 2. 函数组件解析
 

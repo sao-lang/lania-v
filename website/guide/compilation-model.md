@@ -22,15 +22,15 @@
 
 ## 1. TSX 预处理
 
-TypeScript 的 JSX 解析器只接受标准属性名。`lania-v` 的 `directive-extended` 模式支持 `model:value.trim`、`style:width.px`、`click.stop` 这类写法，因此编译器会先把 `.` 转义成占位符，解析后再还原。
+TypeScript 的 JSX 解析器只接受标准属性名。`lania-v` 支持 `onClick.stop` 这类后缀修饰符，因此编译器会先把属性名中的 `.` 转义成占位符，解析后再还原。
 
-默认的 `jsx-standard` 模式只接受标准 JSX 属性：
+标准 JSX 属性写法：
 
 ```tsx
 <input model={{ target: draft, modifiers: { trim: true } }} />
 ```
 
-两种模式的差异见 [Vite 插件配置](/api/plugin#tsxtemplatesyntaxmode)。
+`model:value`、`class:active`、`on:close` 等旧式指令写法会在入口直接报迁移错误。
 
 ## 2. Component IR
 

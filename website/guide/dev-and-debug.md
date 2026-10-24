@@ -14,7 +14,6 @@ export default defineConfig({
       debug: true,
       hotReload: true,
       tsxInclude: /\.lania\.tsx$/,
-      tsxTemplateSyntaxMode: 'jsx-standard',
     }),
   ],
   esbuild: {
@@ -24,14 +23,13 @@ export default defineConfig({
 });
 ```
 
-| 选项                    | 默认              | 说明                                                   |
-| ----------------------- | ----------------- | ------------------------------------------------------ |
-| `debug`                 | `false`           | 开发态输出编译快照，并暴露 `globalThis.__laniaCompile` |
-| `hotReload`             | `true`            | 开发态生成可重跑的 `__laniaSetup()`                    |
-| `tsxInclude`            | `/\.lania\.tsx$/` | 需要编译的文件                                         |
-| `tsxExclude`            | `undefined`       | 排除规则                                               |
-| `tsxTemplateSyntaxMode` | `jsx-standard`    | `jsx-standard` 或 `directive-extended`                 |
-| `compilerPlugins`       | `undefined`       | 传给 compiler-core 的插件                              |
+| 选项              | 默认              | 说明                                                   |
+| ----------------- | ----------------- | ------------------------------------------------------ |
+| `debug`           | `false`           | 开发态输出编译快照，并暴露 `globalThis.__laniaCompile` |
+| `hotReload`       | `true`            | 开发态生成可重跑的 `__laniaSetup()`                    |
+| `tsxInclude`      | `/\.lania\.tsx$/` | 需要编译的文件                                         |
+| `tsxExclude`      | `undefined`       | 排除规则                                               |
+| `compilerPlugins` | `undefined`       | 传给 compiler-core 的插件                              |
 
 ## 编译快照
 
